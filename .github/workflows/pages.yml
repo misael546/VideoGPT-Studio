@@ -26,28 +26,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Prepare same-origin FFmpeg worker
+      - name: Validate upload-only page
         run: |
           set -euo pipefail
-          mkdir -p public/vendor/ffmpeg
-          base="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm"
-          for asset in worker.js const.js errors.js; do
-            curl --fail --location --silent --show-error "$base/$asset" -o "public/vendor/ffmpeg/$asset"
-            test -s "public/vendor/ffmpeg/$asset"
-          done
-          printf '%s\n' 'FFmpeg.wasm @ffmpeg/ffmpeg 0.12.10; MIT license; upstream source: https://github.com/ffmpegwasm/ffmpeg.wasm' > public/vendor/ffmpeg/NOTICE.txt
-      - name: Validate browser editor before publishing
-        run: |
-          node --check public/editor.js
-          node --check public/vendor/ffmpeg/worker.js
-          node --check public/vendor/ffmpeg/const.js
-          node --check public/vendor/ffmpeg/errors.js
-          test -s public/vendor/ffmpeg/NOTICE.txt
           test -s public/editor.html
           test -s public/editor.css
           grep -q 'id="videoFile"' public/editor.html
-          grep -q 'id="exportButton"' public/editor.html
-          grep -q 'classWorkerURL' public/editor.js
+          grep -q 'id="videoPreview"' public/editor.html
+          grep -q 'Selecciona o arrastra tu video aquí' public/editor.html
+          if grep -q 'id="exportButton"' public/editor.html; then
+            echo "Unexpected editing/export controls found in upload-only page."
+            exit 1
+          fi
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
