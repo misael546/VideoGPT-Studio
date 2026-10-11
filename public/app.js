@@ -56,57 +56,124 @@ document.querySelector('#heroCreate').addEventListener('click', openChatGPTForEd
 document.querySelector('#topCreate').addEventListener('click', openChatGPTForEditing);
 document.querySelector('#galleryCreate').addEventListener('click', openChatGPTForEditing);
 
+function openVideoDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('VideoGPTStudioLibrary', 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains('videos')) request.result.createObjectStore('videos', { keyPath: 'id' });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function readLocalVideos() {
+  try {
+    const db = await openVideoDB();
+    const items = await new Promise((resolve, reject) => {
+      const request = db.transaction('videos', 'readonly').objectStore('videos').getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return items.sort((a, b) => String(b.addedAt).localeCompare(String(a.addedAt)));
+  } catch {
+    return [];
+  }
+}
+
 async function loadGallery() {
+  galleryGrid.replaceChildren();
+  let shown = 0;
+  const localItems = await readLocalVideos();
+  for (const item of localItems) {
+    if (!item?.blob || typeof item.name !== 'string') continue;
+    shown += 1;
+    const card = document.createElement('article');
+    card.className = 'video-card';
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(item.blob);
+    video.controls = true;
+    video.preload = 'metadata';
+    video.playsInline = true;
+    video.setAttribute('aria-label', item.name);
+    const details = document.createElement('div');
+    details.className = 'video-card-details';
+    const meta = document.createElement('div');
+    meta.className = 'video-card-meta';
+    const category = document.createElement('span');
+    category.className = 'video-category';
+    category.textContent = 'TU VIDEO';
+    const index = document.createElement('span');
+    index.className = 'video-index';
+    index.textContent = 'GUARDADO LOCALMENTE';
+    meta.append(category, index);
+    const heading = document.createElement('h3');
+    heading.textContent = item.name;
+    const description = document.createElement('p');
+    const mb = (Number(item.size || item.blob.size || 0) / (1024 * 1024)).toFixed(1);
+    description.textContent = mb + ' MB · Disponible solo en este navegador y dispositivo.';
+    const editLink = document.createElement('a');
+    editLink.className = 'outline-cta';
+    editLink.href = 'https://chatgpt.com/';
+    editLink.target = '_blank';
+    editLink.rel = 'noopener noreferrer';
+    editLink.textContent = 'Abrir ChatGPT para pedir edición';
+    details.append(meta, heading, description, editLink);
+    card.append(video, details);
+    galleryGrid.append(card);
+  }
+
   try {
     const response = await fetch('./videos/gallery.json', { cache: 'no-store' });
     if (!response.ok) throw new Error('No se pudo cargar el catálogo.');
     const items = await response.json();
-    galleryGrid.replaceChildren();
-    if (!Array.isArray(items) || items.length === 0) {
-      galleryCount.textContent = '0';
-      galleryGrid.innerHTML = '<p class="gallery-empty">Todavía no hay videos en la galería. Cuando publiques tu primer corto, aparecerá aquí.</p>';
-      return;
+    if (Array.isArray(items)) {
+      for (const item of items) {
+        if (!item || typeof item.title !== 'string' || typeof item.src !== 'string') continue;
+        shown += 1;
+        const card = document.createElement('article');
+        card.className = 'video-card';
+        const video = document.createElement('video');
+        video.src = item.src;
+        video.controls = true;
+        video.preload = 'metadata';
+        video.playsInline = true;
+        video.setAttribute('aria-label', item.title);
+        const details = document.createElement('div');
+        details.className = 'video-card-details';
+        const meta = document.createElement('div');
+        meta.className = 'video-card-meta';
+        const category = document.createElement('span');
+        category.className = 'video-category';
+        category.textContent = typeof item.category === 'string' && item.category.trim() ? item.category : 'VIDEO';
+        const index = document.createElement('span');
+        index.className = 'video-index';
+        index.textContent = 'VIDEO ' + String(shown).padStart(2, '0');
+        meta.append(category, index);
+        const heading = document.createElement('h3');
+        heading.textContent = item.title;
+        const description = document.createElement('p');
+        description.textContent = item.description || 'Video guardado en VideoGPT Studio.';
+        details.append(meta, heading, description);
+        card.append(video, details);
+        galleryGrid.append(card);
+      }
     }
-    let shown = 0;
-    for (const item of items) {
-      if (!item || typeof item.title !== 'string' || typeof item.src !== 'string') continue;
-      shown += 1;
-      const card = document.createElement('article');
-      card.className = 'video-card';
-      const video = document.createElement('video');
-      video.src = item.src;
-      video.controls = true;
-      video.preload = 'metadata';
-      video.playsInline = true;
-      video.setAttribute('aria-label', item.title);
-      const details = document.createElement('div');
-      details.className = 'video-card-details';
-      const meta = document.createElement('div');
-      meta.className = 'video-card-meta';
-      const category = document.createElement('span');
-      category.className = 'video-category';
-      category.textContent = typeof item.category === 'string' && item.category.trim() ? item.category : 'VIDEO';
-      const index = document.createElement('span');
-      index.className = 'video-index';
-      index.textContent = 'VIDEO ' + String(shown).padStart(2, '0');
-      meta.append(category, index);
-      const heading = document.createElement('h3');
-      heading.textContent = item.title;
-      const description = document.createElement('p');
-      description.textContent = item.description || 'Video guardado en VideoGPT Studio.';
-      details.append(meta, heading, description);
-      card.append(video, details);
-      galleryGrid.append(card);
-    }
-    galleryCount.textContent = String(shown);
-    if (shown === 0) galleryGrid.innerHTML = '<p class="gallery-empty">El catálogo no contiene videos válidos todavía.</p>';
   } catch {
-    galleryCount.textContent = '—';
-    galleryGrid.replaceChildren();
-    const message = document.createElement('p');
-    message.className = 'gallery-empty';
-    message.textContent = 'No se pudo cargar la galería. Actualiza la página e inténtalo de nuevo.';
-    galleryGrid.append(message);
+    if (shown === 0) {
+      const message = document.createElement('p');
+      message.className = 'gallery-empty';
+      message.textContent = 'No se pudo cargar la galería. Actualiza la página e inténtalo de nuevo.';
+      galleryGrid.append(message);
+    }
+  }
+  galleryCount.textContent = String(shown);
+  if (shown === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'gallery-empty';
+    empty.textContent = 'Todavía no hay videos en la galería. Sube uno desde “Editar video”.';
+    galleryGrid.append(empty);
   }
 }
 
