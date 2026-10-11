@@ -31,7 +31,7 @@ export function normalizeCasualSpanish(input) {
 }
 
 function inferQualityPlan(text, durationSeconds) {
-  const normalized = normalizeCasualSpanish(text).toLocaleLowerCase('es');
+  const normalized = normalizeCasualSpanish(text).toLocaleLowerCase('es').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
   const asksPolish = /\b(profesional|pulido|mejoralo|mejorarlo|mejorar el video|que se vea mejor|mas atractivo|mas dinamico)\b/.test(normalized);
   if (!asksPolish) return null;
 
