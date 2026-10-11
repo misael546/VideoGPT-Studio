@@ -3,6 +3,8 @@ const input = document.querySelector('#message');
 const sendBtn = document.querySelector('#sendBtn');
 const welcome = document.querySelector('#welcome');
 const workspace = document.querySelector('#workspace');
+const gallery = document.querySelector('#gallery');
+const galleryGrid = document.querySelector('#galleryGrid');
 const conversation = document.querySelector('#conversation');
 const title = document.querySelector('#projectTitle');
 const status = document.querySelector('#projectStatus');
@@ -14,9 +16,15 @@ let currentPrompt = '';
 let generationAvailable = false;
 let activeTask = false;
 
+function showSection(section) {
+  welcome.classList.toggle('hidden', section !== 'welcome');
+  workspace.classList.toggle('hidden', section !== 'create');
+  gallery.classList.toggle('hidden', section !== 'gallery');
+  document.querySelector('#navCreate').classList.toggle('active', section === 'create' || section === 'welcome');
+  document.querySelector('#navGallery').classList.toggle('active', section === 'gallery');
+}
 function beginProject(prompt = '') {
-  welcome.classList.add('hidden');
-  workspace.classList.remove('hidden');
+  showSection('create');
   if (prompt) input.value = prompt;
   input.focus();
 }
@@ -28,6 +36,32 @@ function resetVideo() {
   generateBtn.disabled = !generationAvailable || !currentPrompt || activeTask;
   generateBtn.textContent = generationAvailable ? 'Generar video' : 'Configurar proveedor para generar';
 }
+document.querySelector('#navCreate').addEventListener('click', () => { showSection('welcome'); });
+document.querySelector('#navGallery').addEventListener('click', () => { showSection('gallery'); loadGallery(); });
+async function loadGallery() {
+  try {
+    const response = await fetch('/videos/gallery.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error('No se pudo cargar el catálogo.');
+    const items = await response.json();
+    galleryGrid.replaceChildren();
+    if (!Array.isArray(items) || items.length === 0) {
+      galleryGrid.innerHTML = '<p class="gallery-empty">Todavía no hay videos en la galería.</p>';
+      return;
+    }
+    for (const item of items) {
+      if (!item || typeof item.title !== 'string' || typeof item.src !== 'string') continue;
+      const card = document.createElement('article'); card.className = 'video-card';
+      const video = document.createElement('video'); video.src = item.src; video.controls = true; video.preload = 'metadata'; video.playsInline = true; video.setAttribute('aria-label', item.title);
+      const details = document.createElement('div'); details.className = 'video-card-details';
+      const heading = document.createElement('h3'); heading.textContent = item.title;
+      const description = document.createElement('p'); description.textContent = item.description || 'Video guardado en VideoGPT Studio.';
+      details.append(heading, description); card.append(video, details); galleryGrid.append(card);
+    }
+  } catch {
+    galleryGrid.replaceChildren(); const message = document.createElement('p'); message.className = 'gallery-empty';
+    message.textContent = 'No se pudo cargar la galería. Actualiza la página e inténtalo de nuevo.'; galleryGrid.append(message);
+  }
+}
 document.querySelector('#newProject').addEventListener('click', () => {
   input.value = '';
   conversation.replaceChildren();
@@ -36,8 +70,7 @@ document.querySelector('#newProject').addEventListener('click', () => {
   currentPrompt = '';
   activeTask = false;
   resetVideo();
-  welcome.classList.remove('hidden');
-  workspace.classList.add('hidden');
+  showSection('welcome');
   input.focus();
 });
 document.querySelectorAll('[data-prompt]').forEach(button => {
