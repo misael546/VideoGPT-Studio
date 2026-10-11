@@ -24,7 +24,7 @@ export function interpretVideoInstructions(input, durationSeconds = 0) {
   let recognized = 0;
 
   const range = matchOne(text, [
-    new RegExp('(?:de|desde|del segundo)\\s*' + number + '\\s*(?:a|hasta|al)\\s*' + number + '(?:\\s*' + timeWord + ')?'),
+    new RegExp('(?:de|desde|del segundo)\\s*(?:el\\s+segundo\\s*)?' + number + '\\s*(?:a|hasta|al)\\s*(?:el\\s+segundo\\s*)?' + number + '(?:\\s*' + timeWord + ')?'),
     new RegExp('entre\\s*' + number + '\\s*y\\s*' + number + '\\s*' + timeWord)
   ]);
   const start = matchOne(text, [
@@ -111,7 +111,7 @@ export function interpretVideoInstructions(input, durationSeconds = 0) {
   }
 
   const unsupported = text.split(/\s+/).filter(word =>
-    /\b(efecto|efectos|subtitulos|subtitulos automaticos|traduce|traducir|elimina el fondo|quita el fondo|estabiliza|estabilizar|color cinematografico|corrige el color|mejora la calidad|4k|8k|ia|inteligencia artificial|voz de|narracion|musica|cancion|zoom|transicion|transiciones|filtro|filtros)\b/.test(word)
+    /\b(efecto|efectos|subtitulos|subtitulos automaticos|traduce|traducir|elimina el fondo|quita el fondo|estabiliza|estabilizar|color cinematografico|corrige el color|mejora la calidad|4k|8k|ia|inteligencia artificial|voz de|narracion|musica|cancion|zoom|filtro|filtros)\b/.test(word)
   );
   if (recognized === 0 && questions.length === 0) {
     return {
