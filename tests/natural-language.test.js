@@ -71,7 +71,7 @@ test('recognizes story edit, scene/frame analysis, dialogue/text and male narrat
   assert.equal(result.requestedFeatures.story, true);
   assert.equal(result.requestedFeatures.dialogue, true);
   assert.equal(result.requestedFeatures.narration, true);
-  assert.match(result.question, /no retoca automáticamente/i);
+  assert.match(result.question, /montaje vertical tipo historia/i);
   assert.match(result.question, /añadir narración/i);
 });
 
@@ -90,5 +90,14 @@ test('understands an informal frame-by-frame story edit request and flags unsupp
   assert.equal(result.requestedFeatures.imagePolish, true);
   assert.equal(result.plan.aspect, 'portrait');
   assert.match(result.question, /montaje tipo historia/i);
-  assert.match(result.question, /retoque automático/i);
+  assert.match(result.question, /montaje vertical tipo historia/i);
+});
+
+
+test('story montage instructions no longer claim montage is unavailable', () => {
+  const result = interpretVideoInstructions('Corta fotogramas y escenas y crea un vídeo tipo historia', 48);
+  assert.equal(result.status, 'partial');
+  assert.equal(result.requestedFeatures.story, true);
+  assert.match(result.question, /montaje vertical tipo historia/i);
+  assert.doesNotMatch(result.question, /todavía no.*montaje narrativo completo/i);
 });
