@@ -40,8 +40,10 @@
         <input id="videoFile" type="file" accept="video/mp4,video/quicktime,video/webm,video/*">
       </label>
       <div id="fileInfo" class="file-info hidden" aria-live="polite"></div>
+      <button id="saveToGallery" class="primary hidden" type="button" style="margin-top:1rem;width:100%">Guardar video en mi galería</button>
+      <p id="saveStatus" class="privacy-note" aria-live="polite"></p>
       <video id="videoPreview" class="preview hidden" controls playsinline></video>
-      <p class="privacy-note">El video que selecciones aquí permanece en este navegador; no se envía a este chat ni se sube a un servidor. Para que pueda trabajar directamente con el contenido, adjunta también el archivo en esta conversación de ChatGPT y después dime qué edición quieres.</p>
+      <p class="privacy-note">Al guardarlo, el video aparecerá en la galería de este mismo navegador y dispositivo. No se sube a un servidor ni se envía automáticamente a ChatGPT. Para que yo pueda editar el contenido, adjunta el archivo en este chat y dime qué resultado quieres.</p>
     </section>
     <footer><a href="./">← Volver a la galería</a><span>VideoGPT Studio</span></footer>
   </main>
@@ -50,7 +52,32 @@
     const info = document.getElementById('fileInfo');
     const preview = document.getElementById('videoPreview');
     const dropzone = document.getElementById('dropzone');
+    const saveButton = document.getElementById('saveToGallery');
+    const saveStatus = document.getElementById('saveStatus');
     let previewUrl = '';
+    let selectedFile = null;
+    function openVideoDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('VideoGPTStudioLibrary', 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains('videos')) db.createObjectStore('videos', { keyPath: 'id' });
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+    async function saveVideo(file) {
+      const db = await openVideoDB();
+      const record = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), name: file.name, type: file.type || 'video/mp4', size: file.size, addedAt: new Date().toISOString(), blob: file };
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('videos', 'readwrite');
+        tx.objectStore('videos').put(record);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    }
     function showFile(file) {
       if (!file) return;
       if (!file.type.startsWith('video/')) {
@@ -59,6 +86,9 @@
         preview.classList.add('hidden');
         return;
       }
+      selectedFile = file;
+      saveButton.classList.remove('hidden');
+      saveStatus.textContent = '';
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       previewUrl = URL.createObjectURL(file);
       info.textContent = file.name + ' · ' + (file.size / (1024 * 1024)).toFixed(1) + ' MB · seleccionado';
@@ -67,6 +97,20 @@
       preview.classList.remove('hidden');
     }
     picker.addEventListener('change', () => showFile(picker.files && picker.files[0]));
+    saveButton.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      saveButton.disabled = true;
+      saveButton.textContent = 'Guardando…';
+      try {
+        await saveVideo(selectedFile);
+        saveStatus.textContent = 'Guardado en este dispositivo. Abre la galería en este mismo navegador para encontrarlo.';
+        saveButton.textContent = 'Guardado en mi galería';
+      } catch (error) {
+        saveStatus.textContent = 'No se pudo guardar en este dispositivo. Puede faltar espacio disponible en el navegador.';
+        saveButton.disabled = false;
+        saveButton.textContent = 'Reintentar guardado';
+      }
+    });
     dropzone.addEventListener('dragover', event => { event.preventDefault(); });
     dropzone.addEventListener('drop', event => {
       event.preventDefault();
