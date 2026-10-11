@@ -48,6 +48,12 @@ const narrationVolumeValue = $('#narrationVolumeValue');
 const musicVolumeValue = $('#musicVolumeValue');
 const effectsVolumeValue = $('#effectsVolumeValue');
 const audioStatus = $('#audioStatus');
+const guidedGoalPanel = $('#guidedGoalPanel');
+const editingWorkspace = $('#editingWorkspace');
+const guidedGoalStatus = $('#guidedGoalStatus');
+const goalCustomText = $('#goalCustomText');
+const prepareGuidedEditButton = $('#prepareGuidedEdit');
+let selectedGoal = '';
 
 
 
@@ -142,6 +148,77 @@ function applyNaturalInstructions() {
   editSummary.textContent = 'Cambios aplicados: ' + applied.join(' · ') + '. Revisa los controles antes de exportar.';
 }
 applyInstructions.addEventListener('click', applyNaturalInstructions);
+
+const goalPresets = {
+  improve: { title: 'Mejorar el video', speed: '1', aspect: 'original', volume: '90', fade: true },
+  shorts: { title: 'TikTok / Shorts / Reels', speed: '1.25', aspect: 'portrait', volume: '80', fade: true },
+  youtube: { title: 'Video para YouTube', speed: '1', aspect: 'landscape', volume: '90', fade: true },
+  recap: { title: 'Resumen de anime o manhwa', speed: '1.25', aspect: 'portrait', volume: '80', fade: true },
+  custom: { title: 'Edición personalizada', speed: '1', aspect: 'original', volume: '100', fade: false }
+};
+document.querySelectorAll('[data-goal]').forEach(button => {
+  button.addEventListener('click', () => {
+    selectedGoal = button.dataset.goal || '';
+    document.querySelectorAll('[data-goal]').forEach(option => {
+      const isSelected = option === button;
+      option.classList.toggle('selected', isSelected);
+      option.setAttribute('aria-pressed', String(isSelected));
+    });
+    prepareGuidedEditButton.disabled = !selectedGoal;
+    guidedGoalStatus.textContent = 'Elegiste: ' + (goalPresets[selectedGoal]?.title || 'Edición personalizada') + '. Si quieres, agrega detalles antes de preparar el plan.';
+  });
+});
+prepareGuidedEditButton.addEventListener('click', () => {
+  clearError();
+  if (!selectedFile || !durationSeconds || !goalPresets[selectedGoal]) {
+    showError('Primero carga un video compatible y elige qué quieres hacer.');
+    return;
+  }
+  const preset = goalPresets[selectedGoal];
+  speedInput.value = preset.speed;
+  aspectInput.value = preset.aspect;
+  volumeInput.value = preset.volume;
+  volumeValue.textContent = preset.volume + '%';
+  fadeInput.checked = preset.fade;
+  trimStart.value = '0';
+  trimEnd.value = durationSeconds.toFixed(1);
+  const extra = goalCustomText.value.trim();
+  if (extra) {
+    editInstructions.value = extra;
+    const before = {
+      start: trimStart.value, end: trimEnd.value, speed: speedInput.value,
+      aspect: aspectInput.value, volume: volumeInput.value, fade: fadeInput.checked
+    };
+    applyNaturalInstructions();
+    if (errorBox.classList.contains('hidden')) {
+      // The compatible instruction parser refined the preset.
+    } else {
+      trimStart.value = before.start;
+      trimEnd.value = before.end;
+      speedInput.value = before.speed;
+      aspectInput.value = before.aspect;
+      volumeInput.value = before.volume;
+      volumeValue.textContent = before.volume + '%';
+      fadeInput.checked = before.fade;
+      clearError();
+      guidedGoalStatus.textContent = 'Apliqué el preset inicial. Parte de los detalles escritos no se reconocen como operaciones compatibles; puedes revisar las instrucciones en el editor.';
+    }
+  }
+  const preparedPlan = {
+    version: 1,
+    title: preset.title,
+    trim: { start: Number(trimStart.value), end: Number(trimEnd.value || durationSeconds) },
+    speed: Number(speedInput.value),
+    aspect: aspectInput.value,
+    volume: Number(volumeInput.value),
+    fade: Boolean(fadeInput.checked)
+  };
+  editPlanJson.value = JSON.stringify(preparedPlan, null, 2);
+  refreshSummary();
+  guidedGoalStatus.textContent = 'Plan preparado: ' + preset.title + '. Revisa los ajustes y pulsa “Procesar y exportar MP4” cuando estés listo.';
+  editingWorkspace.classList.remove('hidden');
+  editingWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 function applyChatGPTPlan(planOverride) {
   clearError();
   let plan = planOverride;
@@ -429,6 +506,12 @@ function setFile(file) {
     return;
   }
   selectedFile = file;
+  guidedGoalPanel.classList.add('hidden');
+  editingWorkspace.classList.add('hidden');
+  selectedGoal = '';
+  document.querySelectorAll('[data-goal]').forEach(button => button.classList.remove('selected'));
+  prepareGuidedEditButton.disabled = true;
+  guidedGoalStatus.textContent = 'El video todavía no se procesa. Elegiremos primero el objetivo.';
   durationSeconds = 0;
   captureFramesButton.disabled = true;
   downloadContactSheetButton.disabled = true;
@@ -455,6 +538,9 @@ function setFile(file) {
     frameStatus.textContent = 'Video listo. Elige cada cuántos segundos quieres capturar un cuadro.'
     sourceInfo.textContent = file.name + ' · ' + (file.size / (1024 * 1024)).toFixed(1) + ' MB · ' + formatTime(durationSeconds) + ' · ' + sourcePreview.videoWidth + '×' + sourcePreview.videoHeight;
     refreshSummary();
+    guidedGoalPanel.classList.remove('hidden');
+    guidedGoalStatus.textContent = 'Video listo (' + formatTime(durationSeconds) + '). Selecciona qué resultado quieres y preparo los ajustes.';
+    guidedGoalPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 }
 fileInput.addEventListener('change', () => setFile(fileInput.files?.[0]));
