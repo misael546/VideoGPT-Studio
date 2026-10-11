@@ -20,9 +20,9 @@ function detectAdvancedIntent(text) {
   return {
     story: has(text, /\b(historia|story|narrativ[oa]|montaje|resumen|recap|escenas?|momentos importantes|fotogramas?|cuadros clave|estilo cinematografico)\b/) || /\b(corta|cortar|recorta|recortar|selecciona)\b.{0,24}\b(escenas?|fragmentos|momentos)\b/.test(text),
     dialogue: has(text, /\b(dialogos?|conversaciones?|lo que dicen|transcrib(?:e|ir|irlos)|subtitulos?|letras|texto en pantalla|palabras que aparecen)\b/),
-    narration: has(text, /\b(narracion|narrador|voz masculina|voz de hombre|voz en off|locucion|que una voz|voz generada|hablado por|narra|narrame|cuenta la historia)\b/),
-    backgroundMusic: has(text, /\b(musica de fondo|pon musica|agrega musica|anade musica|añade musica|musica ambiental|banda sonora|soundtrack|musica epica|musica alegre|musica triste)\b/),
-    soundEffects: has(text, /\b(efectos de sonido|efectos sonoros|efectos|sonidos de transicion|whoosh|golpes de sonido|impactos sonoros)\b/),
+    narration: has(text, /\b(narracion|narrador|voz masculina|voz de hombre|voz en off|locucion|que una voz|voz generada|hablado por|narra|narrame|cuenta la historia)\b/) && !has(text, /\b(sin|no|quita|elimina)\s+(?:la\s+)?(?:voz|narracion|narrador)\b/),
+    backgroundMusic: has(text, /\b(musica|banda sonora|soundtrack)\b/) && !has(text, /\b(sin|no|quita|elimina)\s+(?:la\s+)?musica\b/),
+    soundEffects: has(text, /\b(efectos de sonido|efectos sonoros|efectos|sonidos de transicion|whoosh|golpes de sonido|impactos sonoros)\b/) && !has(text, /\b(sin|no|quita|elimina)\s+(?:los\s+)?efectos\b/),
     visualAnalysis: has(text, /\b(analiza|analizar|observa|revisa|detecta|reconoce|identifica)\b/) &&
       has(text, /\b(video|escenas?|personajes?|acciones?|fotogramas?|dialogos?|letras|texto)\b/),
     imagePolish: !has(text, /\b(no|sin|nada de|no quiero)\s+(?:retoques?|retocar|mejoras? visuales?|mejorar las imagenes)\b/) && has(text, /\b(pule|pula|pulas|pulir|pules|mejora|mejorar|retoca|retocar|nitidez|calidad visual)\b/)
