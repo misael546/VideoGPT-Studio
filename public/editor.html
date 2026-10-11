@@ -29,6 +29,26 @@
       <p class="privacy-note">Privacidad: el archivo permanece en la memoria de tu dispositivo. El editor descarga FFmpeg desde una CDN pública para poder funcionar.</p>
       <div id="sourceInfo" class="source-info hidden"></div>
       <video id="sourcePreview" class="preview hidden" controls playsinline></video>
+
+      <div class="frame-tools">
+        <div class="frame-tools-head">
+          <div><p class="eyebrow">HERRAMIENTA DE ESCENAS</p><h3>Extraer cuadros del video</h3></div>
+        </div>
+        <p class="privacy-note">Genera una hoja de escenas dentro de tu dispositivo. Las imágenes no se suben a ningún servidor.</p>
+        <div class="frame-actions">
+          <label>Capturar cada
+            <select id="frameInterval">
+              <option value="2">2 segundos</option>
+              <option value="5" selected>5 segundos</option>
+              <option value="10">10 segundos</option>
+            </select>
+          </label>
+          <button id="captureFrames" class="secondary" type="button" disabled>Capturar cuadros</button>
+          <button id="downloadContactSheet" class="secondary" type="button" disabled>Descargar hoja de escenas</button>
+        </div>
+        <p id="frameStatus" class="frame-status" aria-live="polite">Carga un video para extraer cuadros.</p>
+        <div id="frameGallery" class="frame-gallery"></div>
+      </div>
     </section>
     <section class="editor-panel" aria-labelledby="editTitle">
       <div class="section-head"><div><p class="eyebrow">PASO 2</p><h2 id="editTitle">Ajusta la edición</h2></div></div>
