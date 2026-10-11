@@ -244,8 +244,10 @@ generateFromAssistant.addEventListener('click', async () => {
   editInstructions.value = combined;
   const result = applyNaturalInstructions();
   const wantsStory = Boolean(result?.requestedFeatures?.story);
-  const wantsPolish = Boolean(result?.requestedFeatures?.imagePolish) || /\b(profesional|pulir|pule|pula|mejorar las imagenes|mejora las imagenes|nitidez|calidad visual)\b/i.test(combined.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
-  autoEnhanceVideo = wantsPolish || wantsStory;
+  const normalizedCombined = combined.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
+  const explicitlyNoRetouch = /\b(no|sin|nada de|no quiero)\s+(?:retoques?|retocar|mejoras? visuales?|mejorar las imagenes)\b/.test(normalizedCombined);
+  const wantsPolish = !explicitlyNoRetouch && (Boolean(result?.requestedFeatures?.imagePolish) || /\b(profesional|pulir|pule|pula|mejorar las imagenes|mejora las imagenes|nitidez|calidad visual)\b/i.test(normalizedCombined));
+  autoEnhanceVideo = wantsPolish;
   autoStoryMode = wantsStory;
   autoStorySceneTimes = [];
   if (wantsStory) {
@@ -258,7 +260,7 @@ generateFromAssistant.addEventListener('click', async () => {
     trimStart.value = '0';
     trimEnd.value = String(durationSeconds);
   }
-  if (!result || result.status === 'clarify' || (result.status === 'partial' && !result.plan && !result.partialPlan)) {
+  if (!result || result.status === 'clarify' || (result.status === 'partial' && !result.plan && !result.partialPlan && !result.requestedFeatures?.story)) {
     assistantNeedsClarification = true;
     const message = result?.question || errorBox.textContent || '¿Puedes explicar esa parte con otras palabras?';
     addAssistantMessage(message, 'assistant');
@@ -949,7 +951,6 @@ exportButton.addEventListener('click', async () => {
       }
       const actualClipCount = clipStarts.length;
       resultDuration = actualClipCount * clipDuration;
-      resultDuration = clipCount * clipDuration;
       const graph = [];
       const videoSources = clipStarts.map((_, index) => '[vsrc' + index + ']').join('');
       graph.push('[0:v]split=' + actualClipCount + videoSources);
@@ -960,7 +961,7 @@ exportButton.addEventListener('click', async () => {
         graph.push('[vsrc' + index + ']trim=start=' + clipStart.toFixed(3) +
           ':duration=' + clipDuration.toFixed(3) +
           ',setpts=PTS-STARTPTS,scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,' +
-          'eq=contrast=1.06:saturation=1.10:brightness=0.01,unsharp=5:5:0.35:3:3:0.0,' +
+          (autoEnhanceVideo ? 'eq=contrast=1.06:saturation=1.10:brightness=0.01,unsharp=5:5:0.35:3:3:0.0,' : '') +
           'fade=t=in:st=0:d=0.2,fade=t=out:st=' + fadeOutStart + ':d=0.2' + label);
         videoOutputs.push(label);
       });
@@ -969,7 +970,7 @@ exportButton.addEventListener('click', async () => {
       args.push('-hide_banner', '-y', '-i', inputName);
       if (hasOriginalAudio) {
         const audioSources = clipStarts.map((_, index) => '[asrc' + index + ']').join('');
-        graph.push('[0:a]asplit=' + clipCount + audioSources);
+        graph.push('[0:a]asplit=' + actualClipCount + audioSources);
         const audioOutputs = [];
         clipStarts.forEach((clipStart, index) => {
           const label = '[a' + index + ']';
