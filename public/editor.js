@@ -253,6 +253,9 @@ generateFromAssistant.addEventListener('click', async () => {
   autoEnhanceVideo = wantsPolish;
   autoStoryMode = wantsStory;
   autoStorySceneTimes = [];
+  if (wantsNarration) volumeInput.value = '25';
+  else if (wantsMusic && Number(volumeInput.value) > 70) volumeInput.value = '60';
+  volumeValue.textContent = volumeInput.value + '%';
   if (wantsStory) {
     // Story requests are handled for the user: portrait output, gentle transitions,
     // conservative image enhancement, then export without sending them to tool panels.
@@ -1010,7 +1013,7 @@ exportButton.addEventListener('click', async () => {
         clipStarts.forEach((clipStart, index) => {
           const label = '[a' + index + ']';
           graph.push('[asrc' + index + ']atrim=start=' + clipStart.toFixed(3) +
-            ':duration=' + clipDuration.toFixed(3) + ',asetpts=PTS-STARTPTS' + label);
+            ':duration=' + clipDuration.toFixed(3) + ',asetpts=PTS-STARTPTS,volume=' + volume.toFixed(2) + label);
           audioOutputs.push(label);
         });
         graph.push(audioOutputs.join('') + 'concat=n=' + actualClipCount + ':v=0:a=1[origstory]');
