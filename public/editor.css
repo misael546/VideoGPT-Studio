@@ -34,3 +34,18 @@
 .audio-effect-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,150px);gap:12px}
 .audio-offset input{width:100%;min-width:0;min-height:34px;padding:7px;border:1px solid #39354d;border-radius:8px;background:#1b1927;color:#f1edff}
 @media(max-width:560px){.audio-track{grid-template-columns:1fr;gap:12px}.audio-effect-controls{grid-template-columns:1fr}.audio-mixer{padding:12px}}
+
+/* Flujo guiado: elegir el objetivo antes de mostrar los controles de edición */
+.guided-panel{margin:18px 0;padding:20px;border:1px solid #403750;border-radius:16px;background:linear-gradient(145deg,#191624,#100f18)}
+.guided-panel h2{margin:0;font:700 clamp(21px,4vw,30px)/1.15 'Space Grotesk',sans-serif;letter-spacing:-.7px}
+.guided-intro{color:#aaa4bf;font-size:12px;line-height:1.6}
+.goal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+.goal-card{display:grid;gap:7px;min-height:94px;padding:14px;text-align:left;border:1px solid #39354d;border-radius:11px;background:#171521;color:#f1edff;cursor:pointer}
+.goal-card strong{font-size:12px}.goal-card span{color:#aaa4bf;font-size:11px;line-height:1.45}
+.goal-card:hover,.goal-card.selected{border-color:#ad96ff;background:#242034;box-shadow:inset 0 0 0 1px #ad96ff}
+.goal-card:focus-visible{outline:2px solid #c6b5ff;outline-offset:2px}
+.goal-custom-label{display:grid;gap:7px;color:#c9c2db;font-size:11px;font-weight:600}
+.goal-custom-label textarea{width:100%;box-sizing:border-box;padding:11px;border:1px solid #39354d;border-radius:9px;background:#1b1927;color:#f1edff;font:12px/1.5 'DM Sans',sans-serif;resize:vertical}
+.guided-status{color:#d5c9ff;font-size:12px;line-height:1.5}
+.guided-panel .primary{width:100%}
+@media(max-width:540px){.guided-panel{padding:15px}.goal-grid{grid-template-columns:1fr}.goal-card{min-height:74px}}
