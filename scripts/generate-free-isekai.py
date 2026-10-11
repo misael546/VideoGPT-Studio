@@ -113,21 +113,81 @@ def make_scene(kind, path):
     d.text((68,49), title, font=font(28), fill=(255,238,195), stroke_width=1, stroke_fill=(40,32,48))
     im.save(path, quality=95)
 
+def make_animation_frame(base_path, out_path, kind, frame, total):
+    """Render an individual hand-crafted frame; the MP4 is assembled from this image stack."""
+    im = Image.open(base_path).convert("RGB")
+    d = ImageDraw.Draw(im, "RGBA")
+    t = frame / max(1, total - 1)
+    import math, random
+    rng = random.Random(frame * 37 + {"old": 1, "soul": 2, "baby": 3, "kingdom": 4}[kind])
+    # Each frame gets changing particles, light and small motion cues rather than a static slide.
+    if kind == "old":
+        glow = int(100 + 65 * (0.5 + 0.5 * math.sin(frame * 0.35)))
+        d.ellipse((805, 260, 980, 485), fill=(255, 167, 82, glow // 3))
+        d.ellipse((840, 315, 950, 465), fill=(255, 206, 121, glow // 2))
+        # Fireflies drifting around the window.
+        for j in range(12):
+            x = int(865 + math.sin(frame * .17 + j) * (35 + j * 2))
+            y = int(365 + math.cos(frame * .12 + j * 1.7) * (24 + j))
+            r = 2 + (j % 3)
+            d.ellipse((x-r,y-r,x+r,y+r), fill=(255, 229, 156, 180))
+    elif kind == "soul":
+        cx, cy = 640, int(345 + 12 * math.sin(frame * .22))
+        for j in range(18):
+            a = frame * .13 + j * math.tau / 18
+            radius = 75 + (j % 4) * 28
+            x = int(cx + math.cos(a) * radius)
+            y = int(cy + math.sin(a) * radius * .72)
+            r = 2 + j % 3
+            d.ellipse((x-r,y-r,x+r,y+r), fill=(255, 228, 148, 190))
+        d.ellipse((cx-72,cy-115,cx+72,cy+35), outline=(255,242,191,100), width=4)
+    elif kind == "baby":
+        # Soft magical dust and a gentle rocking light across the cradle.
+        shift = int(4 * math.sin(frame * .24))
+        d.ellipse((430, 380+shift, 755, 445+shift), fill=(255, 244, 218, 28))
+        for j in range(9):
+            x = int(410 + ((j * 83 + frame * (2 + j % 3)) % 420))
+            y = int(280 + ((j * 61 - frame * (1 + j % 2)) % 270))
+            d.ellipse((x-2,y-2,x+2,y+2), fill=(255, 238, 180, 165))
+        if frame % 22 in (0, 1):
+            # Blink animation: briefly cover and redraw the eyes.
+            d.ellipse((530, 365, 568, 390), fill=(235, 199, 172, 255))
+            d.ellipse((625, 365, 663, 390), fill=(235, 199, 172, 255))
+            d.line((536, 379, 562, 379), fill=(70, 66, 87, 255), width=4)
+            d.line((631, 379, 657, 379), fill=(70, 66, 87, 255), width=4)
+    else:
+        # Cloud wisps and drifting embers in front of the distant kingdom.
+        for j in range(10):
+            x = int((j * 157 + frame * (1.4 + j % 3)) % (W + 100) - 50)
+            y = 190 + j * 23
+            d.ellipse((x-28,y-5,x+28,y+5), fill=(255, 245, 224, 25))
+        for j in range(8):
+            x = int((j * 191 + frame * 2.3) % W)
+            y = int(520 + 20 * math.sin(frame * .1 + j))
+            d.ellipse((x-2,y-2,x+2,y+2), fill=(255, 221, 145, 140))
+    # Subtle grain makes the illustrated layers feel less like flat presentation slides.
+    for _ in range(180):
+        x, y = rng.randrange(W), rng.randrange(H)
+        shade = rng.choice([0, 255])
+        d.point((x, y), fill=(shade, shade, shade, 10))
+    im.save(out_path, quality=94)
+
 def run(args):
     subprocess.run(args, check=True)
 
 def make_voice():
-    """Prefer free neural Spanish TTS; fall back locally if the service is unavailable."""
+    """Prefer free neural Spanish male narration; fall back to a deeper local voice."""
     wavs=[]
     for i,(line,kind) in enumerate(LINES):
         mp3=f"{WORK}/voice-{i}.mp3"
         wav_path=f"{WORK}/voice-{i}.wav"
         try:
-            run(["edge-tts","--voice","es-MX-DaliaNeural","--rate=-7%","--pitch=-2Hz",
+            # Mexican Spanish male voice; slower and lower-pitched for a mature, resonant narrator.
+            run(["edge-tts","--voice","es-MX-JorgeNeural","--rate=-16%","--pitch=-12Hz",
                  "--text",line,"--write-media",mp3])
             run(["ffmpeg","-y","-i",mp3,"-ar","24000","-ac","1",wav_path])
         except (subprocess.CalledProcessError, FileNotFoundError):
-            run(["espeak-ng","-v","es","-s","138","-p","48","-w",wav_path,line])
+            run(["espeak-ng","-v","es+m3","-s","122","-p","28","-a","175","-w",wav_path,line])
         wavs.append(wav_path)
     combined=f"{WORK}/narration.wav"
     with wave.open(wavs[0],"rb") as first:
@@ -142,34 +202,72 @@ def make_voice():
                 with wave.open(p,"rb") as audio:
                     chunks.append(audio.readframes(audio.getnframes()))
                     if i < len(wavs)-1:
-                        chunks.append(b"\\x00" * int(params.framerate*0.55)*params.sampwidth*params.nchannels)
+                        chunks.append(b"\x00" * int(params.framerate*0.7)*params.sampwidth*params.nchannels)
         with wave.open(combined,"wb") as out:
             out.setparams(params)
             out.writeframes(b"".join(chunks))
     return combined
 
+def make_sound_effects(path, duration):
+    """Create free synthesized wind, soft footsteps, transition swishes and magic chimes."""
+    import random
+    rate = 44100
+    count = int(rate * duration)
+    rng = random.Random(91027)
+    samples = []
+    # Four short events: gentle room/wind ambience, transition swishes and tiny magical chimes.
+    for n in range(count):
+        t = n / rate
+        ambient = 0.025 * math.sin(2 * math.pi * 72 * t) + 0.012 * math.sin(2 * math.pi * 94 * t)
+        # Soft wind-like noise with a slow amplitude envelope.
+        noise = (rng.random() * 2 - 1) * (0.012 + 0.012 * (0.5 + 0.5 * math.sin(t * 0.55)))
+        effect = 0.0
+        for event in (5.45, 11.45, 17.45):
+            local = t - event
+            if 0 <= local <= 0.85:
+                envelope = math.sin(math.pi * local / 0.85) ** 2
+                effect += envelope * (0.08 * math.sin(2 * math.pi * (160 - 95 * local) * local))
+                effect += envelope * 0.025 * math.sin(2 * math.pi * 540 * local)
+        # Tiny sparkling tones appear in the magical soul and rebirth scenes.
+        for event in (6.6, 7.8, 9.2, 12.8, 15.3, 19.1, 21.4):
+            local = t - event
+            if 0 <= local <= 0.35:
+                envelope = math.exp(-local * 9)
+                effect += 0.045 * envelope * math.sin(2 * math.pi * (880 - 200 * local) * local)
+        value = max(-0.8, min(0.8, ambient + noise + effect))
+        samples.append(int(value * 32767))
+    with wave.open(path, "wb") as out:
+        out.setnchannels(1)
+        out.setsampwidth(2)
+        out.setframerate(rate)
+        out.writeframes(struct.pack("<" + "h" * len(samples), *samples))
+
 def main():
     clips=[]
+    frame_rate = 8
+    frames_per_scene = FPS * SCENE_SECONDS // (FPS // frame_rate)
+    # Every scene is rendered as a stack of individual images, then assembled as moving footage.
     for i,(line,kind) in enumerate(LINES):
-        img=f"{WORK}/scene-{i}.png"
+        base=f"{WORK}/scene-{i}.jpg"
+        make_scene(kind,base)
+        frame_dir=f"{WORK}/frames-{i}"
+        os.makedirs(frame_dir,exist_ok=True)
+        for frame in range(frames_per_scene):
+            frame_path=f"{frame_dir}/frame-{frame:03d}.jpg"
+            make_animation_frame(base,frame_path,kind,frame,frames_per_scene)
         clip=f"{WORK}/clip-{i}.mp4"
-        make_scene(kind,img)
-        # Gentle camera movement, fades, and a Spanish caption at the bottom.
         caption=f"{WORK}/caption-{i}.txt"
         with open(caption,"w",encoding="utf-8") as f: f.write(line)
-        if i % 2 == 0:
-            camera = f"zoompan=z='min(1.0+0.0009*on,1.055)':x='iw/2-(iw/zoom/2)+10*sin(on/38)':y='ih/2-(ih/zoom/2)+7*cos(on/45)':d={FPS*SCENE_SECONDS}:s={W}x{H}:fps={FPS}"
-        else:
-            camera = f"zoompan=z='max(1.055-0.0008*on,1.0)':x='iw/2-(iw/zoom/2)+12*sin(on/42)':y='ih/2-(ih/zoom/2)+8*sin(on/51)':d={FPS*SCENE_SECONDS}:s={W}x{H}:fps={FPS}"
-        vf=(f"{camera},fade=t=in:st=0:d=0.65,"
-            f"fade=t=out:st={SCENE_SECONDS-0.65}:d=0.65,"
+        # Frame-by-frame animation first, then smooth output cadence and cinematic captions.
+        vf=(f"fps={FPS},fade=t=in:st=0:d=0.45,"
+            f"fade=t=out:st={SCENE_SECONDS-0.45}:d=0.45,"
             f"drawbox=x=30:y=590:w=1220:h=90:color=black@0.58:t=fill,"
             f"drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:"
             f"textfile={caption}:fontcolor=white:fontsize=27:"
             f"x=(w-text_w)/2:y=620")
-        run(["ffmpeg","-y","-loop","1","-i",img,"-vf",vf,"-t",str(SCENE_SECONDS),
-             "-r",str(FPS),"-an","-c:v","libx264","-preset","veryfast","-crf","24",
-             "-pix_fmt","yuv420p",clip])
+        run(["ffmpeg","-y","-framerate",str(frame_rate),"-i",f"{frame_dir}/frame-%03d.jpg",
+             "-vf",vf,"-t",str(SCENE_SECONDS),"-r",str(FPS),"-an",
+             "-c:v","libx264","-preset","veryfast","-crf","22","-pix_fmt","yuv420p",clip])
         clips.append(clip)
     concat=f"{WORK}/concat.txt"
     with open(concat,"w",encoding="utf-8") as f:
@@ -177,15 +275,20 @@ def main():
     silent=f"{WORK}/video.mp4"
     run(["ffmpeg","-y","-f","concat","-safe","0","-i",concat,"-c","copy","-movflags","+faststart",silent])
     voice=make_voice()
+    duration=len(LINES)*SCENE_SECONDS
+    effects=f"{WORK}/effects.wav"
+    make_sound_effects(effects,duration)
     final=f"{OUT}/isekai-test.mp4"
-    # A quiet synthesized ambient bed keeps the short cinematic without external assets.
-    run(["ffmpeg","-y","-i",silent,"-i",voice,"-f","lavfi","-i",
-         "sine=frequency=110:sample_rate=44100:duration=24",
-         "-filter_complex","[1:a]highpass=f=90,lowpass=f=10000,acompressor=threshold=0.10:ratio=2.5:attack=20:release=180,volume=1.15[voice];[2:a]volume=0.018,lowpass=f=260[amb];[voice][amb]amix=inputs=2:duration=longest:dropout_transition=1[a]",
-         "-map","0:v:0","-map","[a]","-t",str(len(LINES)*SCENE_SECONDS),
-         "-c:v","copy","-c:a","aac","-b:a","128k","-movflags","+faststart",final])
+    # Voice remains clear; effects add wind, swishes and magical chimes without external audio assets.
+    run(["ffmpeg","-y","-i",silent,"-i",voice,"-i",effects,
+         "-filter_complex",
+         "[1:a]highpass=f=75,lowpass=f=9500,acompressor=threshold=0.12:ratio=2.8:attack=18:release=220,volume=1.35[voice];"
+         "[2:a]volume=0.72[fx];[voice][fx]amix=inputs=2:duration=longest:dropout_transition=1[a]",
+         "-map","0:v:0","-map","[a]","-t",str(duration),
+         "-c:v","copy","-c:a","aac","-b:a","160k","-movflags","+faststart",final])
     run(["ffprobe","-v","error","-show_entries","format=duration,size","-of","default=noprint_wrappers=1",final])
     print(f"Video gratuito validado: {final}")
+
 
 if __name__ == "__main__":
     try:
