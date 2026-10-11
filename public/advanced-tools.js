@@ -23,6 +23,7 @@ let transcriberPromise = null;
 let ttsPromise = null;
 let detectedScenes = [];
 let activeFile = null;
+let lastSceneAnalysisSucceeded = false;
 
 function setStatus(element, message) { if (element) element.textContent = message; }
 function setBusy(button, busy, label) {
@@ -101,7 +102,7 @@ function renderScenes() {
 async function analyzeScenes() {
   if (!activeFile || sceneBusy) return;
   sceneBusy = true; setBusy(sceneButton, true, 'Analizando cuadros…');
-  detectedScenes = []; sceneList.replaceChildren();
+  detectedScenes = []; lastSceneAnalysisSucceeded = false; sceneList.replaceChildren();
   const duration = Number(sourceVideo.duration);
   const originalTime = sourceVideo.currentTime || 0;
   const sampleStep = Math.max(.5, Math.min(1.5, duration / 180));
@@ -123,6 +124,7 @@ async function analyzeScenes() {
       setStatus(sceneStatus, 'Comparando cuadros ' + (i + 1) + ' de ' + maxSamples + ' (' + Math.round((i + 1) / maxSamples * 100) + '%)…');
     }
     renderScenes();
+    lastSceneAnalysisSucceeded = true;
     setStatus(sceneStatus, 'Análisis listo: ' + detectedScenes.length + ' puntos de posible cambio visual. Detecta diferencias entre cuadros; no identifica por sí solo personajes ni el significado de la escena.');
   } catch (error) {
     setStatus(sceneStatus, error.message || 'No se pudo analizar este video.');
@@ -334,3 +336,22 @@ function resetForFile() {
   for (const button of [sceneButton, transcriptButton, narrationButton]) if (button) button.disabled = !activeFile;
 }
 resetForFile();
+
+
+// Public, programmatic hooks let the conversational assistant run these tools itself.
+// The advanced panel can stay hidden; users do not need to operate it manually.
+window.videoGPTAdvancedTools = {
+  async analyzeScenesAutomatically() {
+    await analyzeScenes();
+    return lastSceneAnalysisSucceeded ? detectedScenes.map(scene => scene.time) : [];
+  },
+  async transcribeAutomatically() {
+    await transcribeVideo();
+    return String(transcriptText?.value || '').trim();
+  },
+  async narrateAutomatically(text) {
+    if (typeof text === 'string' && text.trim()) narrationText.value = text.trim();
+    await generateNarration();
+    return Boolean(narrationFileInput?.files?.length);
+  }
+};
