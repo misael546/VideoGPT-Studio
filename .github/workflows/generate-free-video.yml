@@ -32,6 +32,24 @@ jobs:
           sudo apt-get install -y ffmpeg espeak-ng fonts-dejavu-core
           python -m pip install --upgrade pip
           python -m pip install Pillow edge-tts cairosvg
+      - name: Validate generator and reusable resource catalog
+        run: |
+          python -m py_compile scripts/generate-free-isekai.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root = Path(".").resolve()
+          catalog = json.loads((root / "recursos/catalogo.json").read_text(encoding="utf-8"))
+          for item in catalog.get("resources", []):
+              if item.get("type") != "image_overlay":
+                  continue
+              path = (root / item["path"]).resolve()
+              assert root in path.parents and path.is_file(), f"Recurso local ausente o fuera del repo: {item.get('path')}"
+              if path.suffix.lower() == ".svg":
+                  ET.parse(path)
+          print("Catálogo JSON, rutas locales y SVG: OK")
+          PY
       - name: Generate illustrated video without paid APIs
         run: python scripts/generate-free-isekai.py
       - name: Verify extended video and audio
