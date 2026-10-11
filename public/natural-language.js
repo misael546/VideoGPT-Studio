@@ -29,14 +29,14 @@ function detectAdvancedIntent(text) {
 function advancedMessage(intents, understood) {
   const requested = [];
   if (intents.story) requested.push('montaje narrativo y selección de escenas/fotogramas');
-  if (intents.dialogue) requested.push('detección de diálogos o texto');
+  if (intents.dialogue) requested.push('transcripción de diálogos o letras');
   if (intents.narration) requested.push('narración con voz masculina');
-  if (intents.visualAnalysis) requested.push('análisis del contenido visual');
+  if (intents.visualAnalysis) requested.push('análisis visual');
   const parts = [];
   if (requested.length) parts.push('Entendí que quieres ' + requested.join(', ') + '.');
-  if (understood.length) parts.push('También entendí estos cambios compatibles: ' + understood.join(', ') + '.');
-  parts.push('Esta versión todavía no puede reconocer automáticamente el significado de las escenas, transcribir diálogos/letras ni crear una voz masculina. Sí puede recortar, cambiar formato, ajustar velocidad y volumen, y aplicar fundidos. No voy a fingir que esas funciones avanzadas ya se hicieron.');
-  parts.push('¿Quieres que prepare solo los cambios compatibles por ahora, o prefieres esperar a que integremos análisis de escenas, transcripción y voz?');
+  if (understood.length) parts.push('También detecté cambios compatibles: ' + understood.join(', ') + '.');
+  parts.push('Las herramientas avanzadas están en el panel de esta página: “Detectar cambios de escena”, “Transcribir diálogos” y “Generar narración”. No las marcaré como hechas hasta que ejecutes cada herramienta y termine correctamente.');
+  parts.push('Si tu petición también incluye cambios básicos, puedo preparar esos ajustes compatibles sin bloquearlos por las funciones avanzadas.');
   return parts.join(' ');
 }
 
