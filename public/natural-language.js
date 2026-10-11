@@ -18,7 +18,7 @@ function matchOne(text, patterns) {
 
 function detectAdvancedIntent(text) {
   return {
-    story: has(text, /\b(historia|story|narrativ[oa]|montaje|resumen|recap|escenas?|momentos importantes|fotogramas?|cuadros clave|mas pulido|mas profesional|estilo cinematografico|ritmo dinamico|edicion dinamica)\b/),
+    story: has(text, /\b(historia|story|narrativ[oa]|montaje|resumen|recap|escenas?|momentos importantes|fotogramas?|cuadros clave|estilo cinematografico)\b/),
     dialogue: has(text, /\b(dialogos?|conversaciones?|lo que dicen|transcrib(?:e|ir|irlos)|subtitulos?|letras|texto en pantalla|palabras que aparecen)\b/),
     narration: has(text, /\b(narracion|narrador|voz masculina|voz de hombre|voz masculina|voz en off|locucion|que una voz|voz generada|hablado por)\b/),
     visualAnalysis: has(text, /\b(analiza|analizar|observa|revisa|detecta|reconoce|identifica)\b/) &&
