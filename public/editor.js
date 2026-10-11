@@ -270,7 +270,9 @@ generateFromAssistant.addEventListener('click', async () => {
   assistantPreviousPrompt = '';
   const understoodText = (result.understood || []).join(', ') || 'los ajustes compatibles detectados';
   const responseText = wantsStory
-    ? 'Me encargo yo: elegiré automáticamente varios fragmentos repartidos por el video, los uniré en una historia vertical y aplicaré mejora visual suave y transiciones. No necesitas entrar a herramientas manuales.'
+    ? (explicitlyNoRetouch
+      ? 'Me encargo yo: seleccionaré automáticamente fragmentos por cambios de escena y los uniré en una historia vertical, sin aplicar retoques visuales. Mantendré la calidad lo más cercana posible al original; la exportación requiere volver a codificar el video. No necesitas entrar a herramientas manuales.'
+      : 'Me encargo yo: elegiré automáticamente fragmentos por cambios de escena, los uniré en una historia vertical y aplicaré transiciones. No necesitas entrar a herramientas manuales.')
     : wantsPolish
       ? 'Me encargo yo: aplicaré una mejora visual suave y exportaré el resultado.'
       : 'Entendí: ' + understoodText + '. Aplicaré esos cambios y exportaré el video.';
