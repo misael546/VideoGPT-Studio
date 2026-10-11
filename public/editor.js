@@ -532,6 +532,7 @@ function setFile(file) {
     return;
   }
   selectedFile = file;
+  window.dispatchEvent(new CustomEvent('videogpt:file-loaded', { detail: { file } }));
   guidedGoalPanel.classList.add('hidden');
   editingWorkspace.classList.add('hidden');
   selectedGoal = '';
