@@ -1,0 +1,16 @@
+{
+  "name": "videogpt-studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Interfaz conversacional para crear y editar proyectos de video con IA",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
