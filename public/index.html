@@ -14,14 +14,20 @@
       <div class="brand"><span class="brand-mark">▶</span><span>VideoGPT <b>Studio</b></span></div>
       <button class="new-project" id="newProject">＋ Nuevo proyecto</button>
       <div class="side-label">ESPACIO DE TRABAJO</div>
-      <div class="nav-item active">✦ <span>Crear con IA</span></div>
-      <div class="nav-item muted">▧ <span>Mis proyectos</span><small>Próximamente</small></div>
+      <button class="nav-item active nav-button" id="navCreate">✦ <span>Crear con IA</span></button>
+      <button class="nav-item nav-button" id="navGallery">▧ <span>Galería de videos</span></button>
       <div class="sidebar-bottom">
         <div class="avatar">VG</div><div><strong>Espacio personal</strong><p>Prototipo inicial</p></div>
       </div>
     </aside>
     <main class="main">
       <header class="topbar"><div class="mobile-brand">▶ VideoGPT Studio</div><span class="secure">● Proyecto privado en este navegador</span></header>
+      <section class="gallery hidden" id="gallery">
+        <div class="eyebrow">TU COLECCIÓN</div>
+        <h1 class="gallery-title">Galería de videos</h1>
+        <p class="intro gallery-intro">Videos guardados en el estudio. Cada nuevo video se puede agregar sin reemplazar los anteriores.</p>
+        <div class="gallery-grid" id="galleryGrid"><p class="gallery-empty">Cargando galería…</p></div>
+      </section>
       <section class="welcome" id="welcome">
         <div class="eyebrow"><span>✦</span> TU ESTUDIO CREATIVO CON IA</div>
         <h1>¿Qué video vamos<br> a crear hoy?</h1>
@@ -58,7 +64,7 @@
           <textarea id="message" rows="2" placeholder="Describe el video que quieres crear o cómo quieres editarlo..." required maxlength="8000"></textarea>
           <div class="composer-footer"><span>Cuéntame el estilo, duración, formato o cambios que necesitas.</span><button id="sendBtn" type="submit" aria-label="Enviar">↑</button></div>
         </form>
-        <div class="disclaimer">La IA prepara el plan. La generación final requiere un proveedor conectado y puede tener costo.</div>
+        <div class="disclaimer">La IA prepara el plan. La generación con proveedores externos puede tener límites o costos; el generador gratuito se ejecuta desde GitHub Actions.</div>
       </div>
     </main>
   </div>
