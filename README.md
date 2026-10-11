@@ -1,51 +1,59 @@
 # VideoGPT Studio
 
-Proyecto independiente para preparar ideas y reproducir videos generados con IA.
+Proyecto independiente para preparar ideas y reproducir videos.
 
 ## Estado
+
 - Interfaz web adaptable a móvil y escritorio.
 - Prototipo de planificación y generación existente con Agnes AI.
 - Endpoints protegidos para integraciones externas.
-- Flujo experimental manual para crear un corto isekai por cuatro escenas con Google Veo 3.1 Fast, unirlas con FFmpeg y guardar el MP4 en el repositorio.
-- Ningún video se considera terminado hasta que exista el archivo final y la generación haya concluido correctamente.
+- **Generador gratuito sin API**: crea un corto ilustrado con movimiento de cámara, textos en español, narración sintetizada y sonido ambiental usando Python, Pillow, FFmpeg y eSpeak NG.
+- Existe un flujo Veo experimental, pero requiere acceso al modelo y puede generar cargos; no es el flujo recomendado para un presupuesto de $0.
+- Ningún video se considera terminado hasta que exista el archivo final y se valide correctamente.
 
-## Requisitos
-- Node.js 20+
-- Para el generador experimental: clave de Google Gemini API con acceso al modelo de video Veo 3.1 Fast.
-- FFmpeg para normalizar y unir clips.
+## Crear un video gratis
 
-## Ejecutar localmente
+1. Abre la pestaña **Actions** del repositorio.
+2. Selecciona **Generate free illustrated video**.
+3. Pulsa **Run workflow** y confirma.
+4. Al terminar, el flujo valida el MP4 y lo guarda en `public/videos/isekai-test.mp4` mediante un commit.
+
+Workflow: [Generate free illustrated video](.github/workflows/generate-free-video.yml)
+
+Este modo no requiere `GEMINI_API_KEY`, claves de Agnes ni facturación. Genera un corto ilustrado; no usa un modelo generativo de video y, por tanto, no produce el mismo tipo de realismo que Veo. GitHub Actions puede estar sujeto a los límites de uso de la cuenta, así que el proyecto no promete ejecuciones ilimitadas.
+
+## Ejecutar el generador gratuito localmente
+
+Requisitos: Python 3.12+, Pillow, FFmpeg y eSpeak NG.
+
+```bash
+python -m pip install Pillow
+python scripts/generate-free-isekai.py
+```
+
+El MP4 se escribe en `public/videos/isekai-test.mp4`. No requiere credenciales.
+
+## Generador experimental con Google Veo
+
+El script `scripts/generate-isekai.mjs` intenta crear cuatro clips con Google Veo 3.1 Fast y unirlos con FFmpeg. Requiere acceso al modelo y una clave válida de Google AI. Puede generar cargos y fallar por cuota o disponibilidad.
+
+**No ejecutar este flujo con el presupuesto actual de $0.** La clave, si alguna vez se autoriza su uso, debe guardarse solo como secreto de GitHub `GEMINI_API_KEY`; nunca en archivos, commits, issues ni en el chat.
+
+## Ejecutar el servidor web localmente
+
 ```bash
 npm install
 cp .env.example .env
 npm run dev
 ```
+
 Abre `http://localhost:3000`.
 
-## Generador experimental del corto isekai
-
-El script `scripts/generate-isekai.mjs` crea cuatro clips de fantasía anime, los normaliza a 1280x720 y los une en `public/videos/isekai-test.mp4`.
-
-### Configuración segura
-1. En GitHub, abre **Settings → Secrets and variables → Actions**.
-2. Crea el secreto `GEMINI_API_KEY` con tu clave privada de Google AI. No la escribas en archivos, commits, issues ni en el chat.
-3. En **Actions**, ejecuta **Generate isekai test video** manualmente y elige `sí` para confirmar que autorizas una operación que puede consumir créditos.
-4. El flujo genera cuatro clips de hasta 8 segundos cada uno. El modelo, la disponibilidad, el precio y el tiempo de espera dependen de Google; el flujo no se ejecutará si no confirmas la generación.
-5. Si finaliza correctamente, el MP4 se guarda en `public/videos/isekai-test.mp4` y se añade un commit a la rama seleccionada en Actions.
-
-El video se almacena en GitHub para pruebas; Git no es almacenamiento multimedia optimizado y los archivos grandes pueden hacer crecer el repositorio. Para uso continuo, conviene guardar los MP4 en almacenamiento de objetos y conservar en GitHub solo los metadatos y enlaces.
-
-### Ejecutar el script localmente
-Instala FFmpeg, instala las dependencias con `npm install`, configura `GEMINI_API_KEY` en el entorno local y ejecuta:
-```bash
-node scripts/generate-isekai.mjs
-```
-No subas archivos `.env` ni claves.
-
 ## Variables de entorno del servidor
+
 Configúralas solo en el hosting. Nunca pongas claves privadas en el navegador ni las subas a GitHub.
 
-- `AGNES_API_KEY`: clave privada de Agnes AI para las funciones existentes.
+- `AGNES_API_KEY`: clave privada de Agnes AI para funciones existentes; verifica límites y posibles costos antes de usarla.
 - `AGNES_API_BASE`: base de API de Agnes AI.
 - `AGNES_TEXT_MODEL`: modelo de chat de Agnes AI.
 - `AGNES_VIDEO_MODEL`: modelo de video de Agnes AI.
@@ -53,17 +61,18 @@ Configúralas solo en el hosting. Nunca pongas claves privadas en el navegador n
 - `PORT`: puerto local, por defecto 3000.
 
 ## Publicación en Vercel
+
 1. Importa `misael546/VideoGPT-Studio` desde Vercel.
-2. Configura las variables de entorno requeridas para las funciones que realmente vayas a usar.
+2. Configura solo las variables necesarias para las funciones que realmente vayas a usar.
 3. Despliega la rama aprobada.
 4. Comprueba `/api/health` y prueba las rutas relevantes.
 
-**Antes de habilitar uso público:** añade autenticación, cuotas persistentes por usuario, limitación de solicitudes y almacenamiento permanente. No prometas generación ilimitada.
+Antes de habilitar uso público, añade autenticación, cuotas persistentes por usuario, limitación de solicitudes y almacenamiento permanente. No prometas generación ilimitada.
 
 ## Integración segura para un asistente externo
 
 El archivo `assistant-openapi.yaml` documenta endpoints protegidos para iniciar una generación y consultar el estado hasta obtener un enlace real. Esto permite configurar una integración de acciones en un asistente compatible; **no conecta automáticamente esta conversación de ChatGPT**.
 
-Para habilitarla, configura un secreto largo en `VIDEOGPT_ASSISTANT_TOKEN` en el hosting y conserva `AGNES_API_KEY` como secreto de servidor. No envíes tokens al navegador. La API aún no implementa cuentas de usuario ni cuotas persistentes, así que no la publiques como servicio abierto.
+Para habilitarla, configura un secreto largo en `VIDEOGPT_ASSISTANT_TOKEN` en el hosting y conserva las claves de proveedores como secretos del servidor. No envíes tokens al navegador. La API aún no implementa cuentas de usuario ni cuotas persistentes, así que no la publiques como servicio abierto.
 
 Lee `PROJECT_RULES.md` antes de cada actualización.
