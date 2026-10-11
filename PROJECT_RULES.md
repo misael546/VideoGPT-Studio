@@ -60,3 +60,7 @@
 47. Explicar que el puente actual es mediante copiar/pegar el plan entre ChatGPT y el editor; no afirmar conexión directa de la web con esta conversación.
 
 48. El extractor de cuadros debe funcionar localmente en el navegador, limitar la cantidad de capturas, permitir descargar cuadros y hoja de escenas, y restaurar la posición de reproducción al terminar.
+
+49. El editor de VideoGPT Studio puede mezclar localmente hasta tres pistas externas opcionales: narración, música de fondo en bucle y efectos de sonido con retardo configurable; los volúmenes se ajustan antes de exportar.
+50. Si se añaden pistas, detectar si el vídeo original contiene audio y mezclarlo cuando exista. No prometer generación automática de voz; la narración se carga como archivo de audio y todo se procesa localmente.
+51. Documentar que el audio externo se incorpora solo tras pulsar exportar, y que los formatos dependen del soporte de FFmpeg WebAssembly y del navegador.
