@@ -544,6 +544,84 @@ function setFile(file) {
   };
 }
 fileInput.addEventListener('change', () => setFile(fileInput.files?.[0]));
+
+async function loadSavedVideoIntoEditor() {
+  const select = document.querySelector('#savedVideoSelect');
+  const loadButton = document.querySelector('#loadSavedVideo');
+  const libraryStatus = document.querySelector('#libraryStatus');
+  if (!select || !loadButton || !libraryStatus) return;
+  let savedItems = [];
+  try {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('VideoGPTStudioLibrary', 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    savedItems = await new Promise((resolve, reject) => {
+      const request = db.transaction('videos', 'readonly').objectStore('videos').getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+  } catch (error) {
+    select.replaceChildren(new Option('No se pudo leer la galería', ''));
+    libraryStatus.textContent = 'No se pudo acceder al almacenamiento local del navegador.';
+    return;
+  }
+  savedItems = savedItems.filter(item => item && item.id && item.blob && typeof item.name === 'string')
+    .sort((a, b) => String(b.addedAt || '').localeCompare(String(a.addedAt || '')));
+  select.replaceChildren();
+  if (!savedItems.length) {
+    select.add(new Option('No hay videos guardados en este navegador', ''));
+    loadButton.disabled = true;
+    libraryStatus.textContent = 'Si tu video aparece en otra cuenta, navegador o dispositivo, no estará disponible aquí. Abre la galería en el mismo navegador donde lo guardaste.';
+    return;
+  }
+  select.add(new Option('Selecciona un video guardado…', ''));
+  for (const item of savedItems) {
+    const size = (Number(item.size || item.blob.size || 0) / (1024 * 1024)).toFixed(1);
+    select.add(new Option(item.name + ' · ' + size + ' MB', item.id));
+  }
+  loadButton.disabled = false;
+  libraryStatus.textContent = savedItems.length + ' video(s) encontrados en tu galería local.';
+  const requestedId = new URLSearchParams(location.search).get('videoId');
+  if (requestedId && savedItems.some(item => item.id === requestedId)) {
+    select.value = requestedId;
+    loadButton.click();
+  }
+}
+document.querySelector('#loadSavedVideo')?.addEventListener('click', async () => {
+  const select = document.querySelector('#savedVideoSelect');
+  const status = document.querySelector('#libraryStatus');
+  const id = select?.value;
+  if (!id) {
+    if (status) status.textContent = 'Selecciona primero un video guardado.';
+    return;
+  }
+  try {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('VideoGPTStudioLibrary', 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const item = await new Promise((resolve, reject) => {
+      const request = db.transaction('videos', 'readonly').objectStore('videos').get(id);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    if (!item?.blob) throw new Error('No se encontró el archivo guardado.');
+    const file = new File([item.blob], item.name || 'video-guardado.mp4', { type: item.type || item.blob.type || 'video/mp4', lastModified: Date.now() });
+    setFile(file);
+    if (status) status.textContent = 'Video cargado desde tu galería. Ya puedes elegir la edición.';
+    history.replaceState(null, '', './editor.html');
+  } catch (error) {
+    if (status) status.textContent = 'No se pudo abrir el video guardado. Puede que el navegador haya liberado su almacenamiento.';
+    showError(error?.message || 'No se pudo cargar el video de la galería.');
+  }
+});
+
+loadSavedVideoIntoEditor();
 for (const eventName of ['dragenter', 'dragover']) {
   dropzone.addEventListener(eventName, event => {
     event.preventDefault();
