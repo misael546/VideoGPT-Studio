@@ -942,8 +942,10 @@ exportButton.addEventListener('click', async () => {
       // Automatically build a short story-style highlight montage from evenly
       // distributed moments. This is a visual sampling heuristic, not semantic AI.
       const sourceDuration = Math.max(0.1, end - start);
-      const clipCount = Math.min(6, Math.max(2, Math.floor(sourceDuration / 3)));
-      const clipDuration = Math.min(2.5, sourceDuration / clipCount);
+      // Use enough highlights to tell a fuller story instead of exporting only 15 seconds.
+      // A 48-second source produces about nine 3.2-second highlights (~29 seconds total).
+      const clipCount = Math.min(10, Math.max(4, Math.round(sourceDuration / 5.5)));
+      const clipDuration = Math.min(3.2, sourceDuration / clipCount);
       const latestStart = Math.max(start, end - clipDuration);
       const sceneCandidates = autoStorySceneTimes
         .filter(time => Number.isFinite(time) && time >= start && time <= latestStart)
@@ -971,12 +973,12 @@ exportButton.addEventListener('click', async () => {
         const fadeOutStart = Math.max(0, clipDuration - 0.2).toFixed(3);
         graph.push('[vsrc' + index + ']trim=start=' + clipStart.toFixed(3) +
           ':duration=' + clipDuration.toFixed(3) +
-          ',setpts=PTS-STARTPTS,scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,' +
+          ',setpts=PTS-STARTPTS,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2:color=black,' +
           (autoEnhanceVideo ? 'eq=contrast=1.06:saturation=1.10:brightness=0.01,unsharp=5:5:0.35:3:3:0.0,' : '') +
-          'fade=t=in:st=0:d=0.2,fade=t=out:st=' + fadeOutStart + ':d=0.2' + label);
+          'setsar=1' + label);
         videoOutputs.push(label);
       });
-      graph.push(videoOutputs.join('') + 'concat=n=' + actualClipCount + ':v=1:a=0[vout]');
+      graph.push(videoOutputs.join('') + 'concat=n=' + actualClipCount + ':v=1:a=0,fade=t=in:st=0:d=0.35,fade=t=out:st=' + Math.max(0, resultDuration - 0.45).toFixed(3) + ':d=0.45[vout]');
       args.length = 0;
       args.push('-hide_banner', '-y', '-i', inputName);
       if (hasOriginalAudio) {
@@ -995,7 +997,8 @@ exportButton.addEventListener('click', async () => {
       if (hasOriginalAudio) args.push('-map', '[aout]');
       progressDetail.textContent = 'Montando automáticamente ' + actualClipCount + ' fragmentos verticales' + (sceneCandidates.length >= 2 ? ' elegidos por cambios de escena.' : ' distribuidos por el video.');
     }
-    args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', outputName);
+    // Slightly higher export quality; source files remain untouched.
+    args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', outputName);
     progressLabel.textContent = 'Procesando video…';
     progressDetail.textContent = 'La duración, resolución y potencia del dispositivo afectan el tiempo de exportación.';
     const exitCode = await ffmpeg.exec(args);
