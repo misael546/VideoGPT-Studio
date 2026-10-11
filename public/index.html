@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101114">
+  <meta name="description" content="Convierte tus ideas en proyectos de video con ayuda de IA.">
+  <title>VideoGPT Studio — Crea videos con tus ideas</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">▶</span><span>VideoGPT <b>Studio</b></span></div>
+      <button class="new-project" id="newProject">＋ Nuevo proyecto</button>
+      <div class="side-label">ESPACIO DE TRABAJO</div>
+      <div class="nav-item active">✦ <span>Crear con IA</span></div>
+      <div class="nav-item muted">▧ <span>Mis proyectos</span><small>Próximamente</small></div>
+      <div class="sidebar-bottom">
+        <div class="avatar">VG</div><div><strong>Espacio personal</strong><p>Prototipo inicial</p></div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div class="mobile-brand">▶ VideoGPT Studio</div><span class="secure">● Proyecto privado en este navegador</span></header>
+      <section class="welcome" id="welcome">
+        <div class="eyebrow"><span>✦</span> TU ESTUDIO CREATIVO CON IA</div>
+        <h1>¿Qué video vamos<br> a crear hoy?</h1>
+        <p class="intro">Describe tu idea con tus propias palabras. Podemos preparar escenas, estilo visual y un plan de edición para tu proyecto.</p>
+        <div class="suggestions">
+          <button class="suggestion" data-prompt="Crea el concepto para un tráiler cinematográfico de zombis en una ciudad abandonada, con lluvia y tensión."><span>▣</span><b>Tráiler cinematográfico</b><small>Una idea convertida en escenas</small></button>
+          <button class="suggestion" data-prompt="Ayúdame a editar un video de viaje de 60 segundos con ritmo dinámico, transiciones suaves y títulos."><span>✂</span><b>Editar un video</b><small>Ritmo, cortes y transiciones</small></button>
+          <button class="suggestion" data-prompt="Diseña un video promocional vertical de 15 segundos para una pequeña tienda, con texto y escenas sugeridas."><span>▤</span><b>Video para redes</b><small>Formato vertical y gancho inicial</small></button>
+        </div>
+      </section>
+      <section class="workspace hidden" id="workspace">
+        <div class="workspace-heading"><div><div class="eyebrow">PROYECTO ACTUAL</div><h2 id="projectTitle">Nuevo proyecto</h2></div><span class="status" id="projectStatus">Borrador</span></div>
+        <div class="preview"><div class="preview-icon">▶</div><strong>Vista previa del proyecto</strong><p>El video aparecerá aquí cuando conectemos un proveedor de generación o edición.</p><div class="preview-bar"><span></span></div></div>
+        <div class="timeline"><div class="timeline-title">LÍNEA DE TIEMPO <span>Preparada para una futura integración</span></div><div class="timeline-track"><span>Escenas</span><i></i><i></i><i></i><i></i></div><div class="timeline-track audio"><span>Audio</span><i></i></div></div>
+        <div class="conversation" id="conversation"></div>
+      </section>
+      <div class="composer-wrap">
+        <form class="composer" id="chatForm">
+          <textarea id="message" rows="2" placeholder="Describe el video que quieres crear o cómo quieres editarlo..." required maxlength="8000"></textarea>
+          <div class="composer-footer"><span>Cuéntame el estilo, duración, formato o cambios que necesitas.</span><button id="sendBtn" type="submit" aria-label="Enviar">↑</button></div>
+        </form>
+        <div class="disclaimer">Los resultados de video reales requieren conectar un servicio compatible. No se mostrará un enlace de exportación hasta que exista un archivo real.</div>
+      </div>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>
