@@ -101,3 +101,20 @@ test('story montage instructions no longer claim montage is unavailable', () => 
   assert.match(result.question, /montaje vertical tipo historia/i);
   assert.doesNotMatch(result.question, /todavía no.*montaje narrativo completo/i);
 });
+
+
+test('recognizes automatic background music, transition effects, and Spanish male narration', () => {
+  const result = interpretVideoInstructions('Crea una historia vertical con música de fondo, efectos de sonido y voz de hombre', 48);
+  assert.equal(result.status, 'partial');
+  assert.equal(result.requestedFeatures.story, true);
+  assert.equal(result.requestedFeatures.backgroundMusic, true);
+  assert.equal(result.requestedFeatures.soundEffects, true);
+  assert.equal(result.requestedFeatures.narration, true);
+});
+
+test('respects an explicit request to omit music and effects', () => {
+  const result = interpretVideoInstructions('Haz un montaje por escenas sin música y sin efectos', 48);
+  assert.equal(result.requestedFeatures.story, true);
+  assert.equal(result.requestedFeatures.backgroundMusic, false);
+  assert.equal(result.requestedFeatures.soundEffects, false);
+});
