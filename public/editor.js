@@ -238,7 +238,7 @@ generateFromAssistant.addEventListener('click', async () => {
   assistantPreviousPrompt = combined;
   editInstructions.value = combined;
   const result = applyNaturalInstructions();
-  if (!result || result.status === 'clarify' || result.status === 'partial') {
+  if (!result || result.status === 'clarify' || (result.status === 'partial' && !result.plan && !result.partialPlan)) {
     assistantNeedsClarification = true;
     const message = result?.question || errorBox.textContent || '¿Puedes explicar esa parte con otras palabras?';
     addAssistantMessage(message, 'assistant');
@@ -246,7 +246,12 @@ generateFromAssistant.addEventListener('click', async () => {
   }
   assistantNeedsClarification = false;
   assistantPreviousPrompt = '';
-  addAssistantMessage('Entendí: ' + result.understood.join(', ') + '. Voy a generar el video con esos cambios.', 'assistant');
+  const understoodText = (result.understood || []).join(', ') || 'los ajustes compatibles detectados';
+  const advancedNote = result.status === 'partial'
+    ? ' Las funciones avanzadas no se ejecutan automáticamente desde esta frase; puedes usar “Detectar cambios de escena”, “Transcribir diálogos” y “Generar narración” en el panel de herramientas avanzadas.'
+    : '';
+  addAssistantMessage('Entendí: ' + understoodText + '. Prepararé el video con los cambios compatibles.' + advancedNote, 'assistant');
+  clearError();
   editingWorkspace.classList.remove('hidden');
   exportButton.click();
   if (!busy) {
