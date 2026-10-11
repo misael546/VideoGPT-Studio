@@ -7,7 +7,8 @@ Proyecto independiente para preparar ideas y reproducir videos.
 - Interfaz web adaptable a móvil y escritorio.
 - Prototipo de planificación y generación existente con Agnes AI.
 - Endpoints protegidos para integraciones externas.
-- **Generador gratuito sin API**: crea un corto ilustrado con movimiento de cámara, textos en español, narración sintetizada y sonido ambiental usando Python, Pillow, FFmpeg y eSpeak NG.
+- **Galería de videos**: la sección Galería carga `public/videos/gallery.json`; se pueden añadir nuevos videos como entradas independientes sin borrar los anteriores.
+- **Generador gratuito sin API**: crea un corto ilustrado ensamblado a partir de decenas de fotogramas por escena, narración masculina en español mexicano (Edge TTS gratuito si está disponible; eSpeak NG local como respaldo) y efectos de viento, transiciones y destellos sintetizados con Python, Pillow y FFmpeg.
 - Existe un flujo Veo experimental, pero requiere acceso al modelo y puede generar cargos; no es el flujo recomendado para un presupuesto de $0.
 - Ningún video se considera terminado hasta que exista el archivo final y se valide correctamente.
 
@@ -20,6 +21,15 @@ Proyecto independiente para preparar ideas y reproducir videos.
 
 Workflow: [Generate free illustrated video](.github/workflows/generate-free-video.yml)
 
+## Agregar videos a la galería
+
+1. Sube el archivo final a `public/videos/` con un nombre único (por ejemplo, `fantasia-capitulo-02.mp4`).
+2. Añade un objeto a `public/videos/gallery.json` con `title`, `description` y `src` (ruta pública como `/videos/fantasia-capitulo-02.mp4`).
+3. No reemplaces el video anterior salvo que sea una actualización intencional del mismo video.
+4. Verifica que el MP4 exista y se pueda reproducir antes de publicarlo en el catálogo.
+
+La galería actual usa un catálogo estático en GitHub; no es todavía una carga de archivos desde el navegador.
+
 Este modo no requiere `GEMINI_API_KEY`, claves de Agnes ni facturación. Genera un corto ilustrado; no usa un modelo generativo de video y, por tanto, no produce el mismo tipo de realismo que Veo. GitHub Actions puede estar sujeto a los límites de uso de la cuenta, así que el proyecto no promete ejecuciones ilimitadas.
 
 ## Ejecutar el generador gratuito localmente
@@ -31,7 +41,7 @@ python -m pip install Pillow
 python scripts/generate-free-isekai.py
 ```
 
-El MP4 se escribe en `public/videos/isekai-test.mp4`. No requiere credenciales.
+El MP4 se escribe en `public/videos/isekai-test.mp4`. No requiere credenciales. El generador intenta usar la voz `es-MX-JorgeNeural`, con ritmo lento y tono más grave; si el servicio gratuito no responde, usa una voz masculina local menos natural. Los efectos sonoros se sintetizan localmente, sin descargar audio protegido.
 
 ## Generador experimental con Google Veo
 
