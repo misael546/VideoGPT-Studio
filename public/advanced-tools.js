@@ -155,7 +155,9 @@ async function getFFmpeg() {
         const [core, wasm] = await Promise.all([coreResponse.blob(), wasmResponse.blob()]);
         const coreURL = URL.createObjectURL(new Blob([core], { type: 'text/javascript' }));
         const wasmURL = URL.createObjectURL(new Blob([wasm], { type: 'application/wasm' }));
-        await engine.load({ coreURL, wasmURL, classWorkerURL: new URL('./vendor/ffmpeg/worker.js', location.href).href });
+        const { toBlobURL } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
+        const classWorkerURL = await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js', 'text/javascript');
+        await engine.load({ coreURL, wasmURL, classWorkerURL });
         ffmpeg = engine;
         return engine;
       } catch (error) { lastError = error; }
