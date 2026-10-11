@@ -2,17 +2,16 @@
 
 Proyecto independiente para preparar ideas, planes y generación de clips de video con IA.
 
-## Estado inicial
+## Estado
 - Interfaz web adaptable a móvil y escritorio.
-- Chat de instrucciones y espacio de trabajo.
-- Integración inicial con OpenAI Responses API para preparar el plan.
-- Integración con Runway API para iniciar generación de video desde texto y consultar el resultado.
-- No afirma que un video está terminado hasta recibir un resultado real del proveedor.
+- Chat de planificación conectado a Agnes AI.
+- Generación de video desde texto mediante la API de Agnes AI.
+- Consulta asíncrona del estado y reproducción/enlace del video cuando el proveedor confirma que terminó.
+- No afirma que un video está terminado sin una respuesta confirmada del proveedor y una URL válida.
 
 ## Requisitos
 - Node.js 20+
-- Clave de API de OpenAI para el asistente de planificación.
-- Cuenta de Runway Dev y créditos disponibles para generación de video.
+- Una clave de API de Agnes AI habilitada para chat y video.
 
 ## Ejecutar localmente
 ```bash
@@ -25,24 +24,24 @@ Abre `http://localhost:3000`.
 ## Variables de entorno
 Configúralas solo en el servidor/hosting. Nunca pongas claves privadas en el navegador ni las subas a GitHub.
 
-- `OPENAI_API_KEY`: clave privada de OpenAI.
-- `OPENAI_MODEL`: modelo de texto disponible en tu cuenta.
-- `RUNWAYML_API_SECRET`: clave privada de Runway Dev.
-- `RUNWAY_MODEL`: modelo de video; por defecto `gen4.5`.
-- `PORT`: puerto del servidor, por defecto 3000.
+- `AGNES_API_KEY`: clave privada de Agnes AI.
+- `AGNES_API_BASE`: base de API; por defecto `https://apihub.agnes-ai.com`.
+- `AGNES_TEXT_MODEL`: modelo de chat; por defecto `agnes-3.0-flash`.
+- `AGNES_VIDEO_MODEL`: modelo de video; por defecto `agnes-video-2.5-flash`.
+- `PORT`: puerto local, por defecto 3000.
 
 ## Generación de video
-El usuario debe pulsar explícitamente Generar video y confirmar que entiende que puede consumir créditos. La API crea una tarea asíncrona y consulta su estado. El enlace de salida lo entrega el proveedor y puede caducar; descarga los resultados que quieras conservar.
+El usuario debe pulsar explícitamente Generar video y confirmar el envío a Agnes AI. La solicitud es asíncrona. Se consulta el estado del proveedor y solo se muestra como terminado cuando se recibe el estado completado y una URL de salida válida. Los enlaces del proveedor pueden caducar; descarga los resultados que quieras conservar.
 
-La generación depende de los permisos, modelos, saldo, límites y condiciones de la cuenta Runway. Verifica sus precios antes de probar.
+El proveedor puede imponer cuotas, límites de frecuencia, condiciones de acceso o cambios de disponibilidad en su nivel gratuito. No se garantiza generación ilimitada ni disponibilidad permanente.
 
 ## Publicación en Vercel
 1. Importa `misael546/VideoGPT-Studio` desde el panel de Vercel.
-2. Mantén el directorio raíz como `.` y configura `OPENAI_API_KEY`, `OPENAI_MODEL`, `RUNWAYML_API_SECRET` y `RUNWAY_MODEL` en Environment Variables. No escribas las claves en archivos públicos ni en el frontend.
-3. Despliega. `api/index.js` y `vercel.json` enrutan las peticiones al servidor Express; el mismo servidor sigue pudiéndose ejecutar localmente con `npm run dev`.
-4. Comprueba `/api/health` y prueba primero el chat sin iniciar una generación de pago.
+2. En **Settings → Environment Variables**, añade `AGNES_API_KEY` con tu clave privada. Opcionalmente configura `AGNES_API_BASE`, `AGNES_TEXT_MODEL` y `AGNES_VIDEO_MODEL`. No escribas la clave en archivos públicos ni en el frontend.
+3. Despliega la rama aprobada. `api/index.js` y `vercel.json` enrutan las peticiones al servidor Express.
+4. Comprueba `/api/health`, después prueba el chat y por último una generación corta.
 
-**Importante:** este proyecto todavía no incluye inicio de sesión, cuotas persistentes por usuario ni almacenamiento permanente de videos. No habilites la generación pública hasta añadir esas protecciones. Los enlaces del proveedor pueden caducar y no se garantiza conservación del resultado.
+**Antes de habilitar uso público:** este prototipo aún no incluye inicio de sesión, cuotas persistentes por usuario ni almacenamiento permanente de videos. Añade estas protecciones antes de ofrecerlo públicamente. Los enlaces del proveedor pueden caducar.
 
 ## Reglas
 Lee `PROJECT_RULES.md` antes de cada actualización.
