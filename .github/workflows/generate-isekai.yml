@@ -4,19 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       confirm_paid_generation:
-        description: "Confirmo que la generación puede consumir créditos de Google AI"
+        description: "I confirm this generation may consume Google AI credits"
         required: true
         type: choice
         options:
           - "no"
-          - "sí"
+          - "yes"
 
 permissions:
   contents: write
 
 jobs:
   generate:
-    if: ${{ inputs.confirm_paid_generation == 'sí' }}
+    if: ${{ inputs.confirm_paid_generation == 'yes' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
