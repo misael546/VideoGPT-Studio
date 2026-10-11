@@ -1,5 +1,163 @@
 {
   "version": 1,
-  "description": "Catálogo de recursos reutilizables de VideoGPT Studio. Las rutas son relativas a la raíz del repositorio.",
-  "resources": []
+  "description": "Catálogo de recursos reutilizables y paquetes externos verificados para VideoGPT Studio. Las rutas locales son relativas a la raíz del repositorio.",
+  "resources": [
+    {
+      "id": "kenney-retro-textures-fantasy",
+      "type": "external_pack",
+      "category": "textures",
+      "title": "Retro Textures Fantasy",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/retro-textures-fantasy",
+      "mirror_source": "https://opengameart.org/content/retro-textures-fantasy",
+      "license": "CC0 1.0",
+      "attribution": "Kenney.nl (no obligatoria; recomendada)",
+      "tags": [
+        "fantasia",
+        "texturas",
+        "retro",
+        "paredes",
+        "techos",
+        "escenarios"
+      ],
+      "compatible_scenes": [
+        "old",
+        "soul",
+        "kingdom"
+      ],
+      "status": "catalogado_pendiente_de_importacion",
+      "note": "Paquete anunciado con 115 texturas PNG. Importar únicamente archivos necesarios y mantener esta procedencia."
+    },
+    {
+      "id": "kenney-foliage-pack",
+      "type": "external_pack",
+      "category": "images",
+      "title": "Foliage Pack",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/foliage-pack",
+      "license": "CC0 1.0",
+      "attribution": "Kenney.nl (no obligatoria; recomendada)",
+      "tags": [
+        "naturaleza",
+        "arboles",
+        "vegetacion",
+        "escenarios"
+      ],
+      "compatible_scenes": [
+        "old",
+        "soul",
+        "kingdom"
+      ],
+      "status": "catalogado_pendiente_de_importacion",
+      "note": "Paquete 2D de vegetación. Revisar dimensiones y optimizar antes de incorporarlo."
+    },
+    {
+      "id": "kenney-generic-items",
+      "type": "external_pack",
+      "category": "images",
+      "title": "Generic Items",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/generic-items",
+      "license": "CC0 1.0",
+      "attribution": "Kenney.nl (no obligatoria; recomendada)",
+      "tags": [
+        "objetos",
+        "utileria",
+        "fantasia",
+        "inventario"
+      ],
+      "compatible_scenes": [
+        "old",
+        "soul",
+        "baby",
+        "kingdom"
+      ],
+      "status": "catalogado_pendiente_de_importacion",
+      "note": "Paquete 2D de objetos genéricos; seleccionar solo elementos coherentes con cada escena."
+    },
+    {
+      "id": "kenney-impact-sounds",
+      "type": "external_pack",
+      "category": "sound_effects",
+      "title": "Impact Sounds",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0 1.0",
+      "attribution": "Kenney.nl (no obligatoria; recomendada)",
+      "tags": [
+        "impactos",
+        "golpes",
+        "foley",
+        "efectos"
+      ],
+      "compatible_scenes": [
+        "all"
+      ],
+      "status": "catalogado_pendiente_de_importacion",
+      "note": "Paquete de 130 sonidos; escuchar y elegir solo los que encajen con el montaje."
+    },
+    {
+      "id": "kenney-interface-sounds",
+      "type": "external_pack",
+      "category": "sound_effects",
+      "title": "Interface Sounds",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/interface-sounds",
+      "license": "CC0 1.0",
+      "attribution": "Kenney.nl (no obligatoria; recomendada)",
+      "tags": [
+        "interfaz",
+        "clic",
+        "botones",
+        "transiciones"
+      ],
+      "compatible_scenes": [
+        "all"
+      ],
+      "status": "catalogado_pendiente_de_importacion",
+      "note": "Paquete de sonidos de interfaz; usar solo cuando tenga sentido narrativo."
+    },
+    {
+      "id": "kenney-ui-audio",
+      "type": "external_pack",
+      "category": "sound_effects",
+      "title": "UI Audio",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/ui-audio",
+      "license": "CC0 1.0",
+      "attribution": "Kenney.nl (no obligatoria; recomendada)",
+      "tags": [
+        "interfaz",
+        "clic",
+        "switch",
+        "sonidos"
+      ],
+      "compatible_scenes": [
+        "all"
+      ],
+      "status": "catalogado_pendiente_de_importacion",
+      "note": "Paquete de audio para UI; evitar repetir sonidos demasiado evidentes."
+    },
+    {
+      "id": "kenney-music-jingles",
+      "type": "external_pack",
+      "category": "music",
+      "title": "Music Jingles",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/music-jingles",
+      "license": "CC0 1.0",
+      "attribution": "Kenney.nl (no obligatoria; recomendada)",
+      "tags": [
+        "musica",
+        "jingles",
+        "transiciones",
+        "fantasia"
+      ],
+      "compatible_scenes": [
+        "all"
+      ],
+      "status": "por_verificar",
+      "note": "Referencia por revisar directamente antes de descargar; confirmar licencia y contenido en la página del recurso."
+    }
+  ]
 }
