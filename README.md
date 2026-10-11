@@ -72,3 +72,7 @@ python scripts/generate-free-isekai.py
 ## Presupuesto y seguridad
 
 El presupuesto del proyecto es estrictamente $0. No activar facturación ni llamar APIs que puedan generar cargos. El flujo experimental de Veo y los endpoints antiguos de proveedores no forman parte del camino activo de la web.
+
+## Mantenimiento periódico de la biblioteca
+
+La tarea programada **Mejorar biblioteca VideoGPT** revisa semanalmente el repositorio, la biblioteca, el catálogo, las rutas, la procedencia de los recursos y posibles mejoras visuales. Si una herramienta de generación de imágenes no está disponible, debe usar solo alternativas originales/procedurales verificables o informar que no hubo cambios útiles. No entrena un modelo automáticamente ni habilita APIs pagadas. Los materiales externos solo se reutilizan tras verificar su licencia y atribución.
