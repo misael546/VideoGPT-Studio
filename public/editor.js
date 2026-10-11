@@ -144,10 +144,20 @@ function setFile(file) {
   resultPanel.classList.add('hidden');
   if (!file) return;
   if (!file.type.startsWith('video/')) {
+    selectedFile = null;
+    durationSeconds = 0;
+    exportButton.disabled = true;
+    sourcePreview.classList.add('hidden');
+    sourceInfo.classList.add('hidden');
     showError('Selecciona un archivo de video válido.');
     return;
   }
   if (file.size > 120 * 1024 * 1024) {
+    selectedFile = null;
+    durationSeconds = 0;
+    exportButton.disabled = true;
+    sourcePreview.classList.add('hidden');
+    sourceInfo.classList.add('hidden');
     showError('Este archivo supera 120 MB. Para evitar que el navegador del teléfono se quede sin memoria, usa un video más pequeño.');
     return;
   }
