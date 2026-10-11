@@ -30,6 +30,18 @@ Esta lista es una selección inicial de paquetes que declaran licencia CC0 en su
 6. No registrar un archivo como local ni utilizable por el generador hasta que exista en el repositorio y haya sido probado.
 7. Los paquetes `external_pack` no se procesan como `image_overlay` por el generador actual.
 
+
+## Recursos originales ya guardados localmente
+
+Se añadieron cuatro ilustraciones SVG originales dentro del repositorio y quedaron registradas como `image_overlay` en el catálogo:
+
+- `recursos/imagenes/objetos/farol-antiguo.svg` — escena `old`.
+- `recursos/imagenes/personajes/viajero.svg` — escena `village`.
+- `recursos/imagenes/escenarios/runas-antiguas.svg` — escena `forest`.
+- `recursos/imagenes/objetos/chispas-magicas.svg` — escenas `soul`, `baby` y `portal`.
+
+El generador convierte estos SVG a PNG en tiempo de ejecución con CairoSVG; el workflow instala esa dependencia. Son recursos vectoriales originales del proyecto, no descargas de Kenney. La compatibilidad real se considera confirmada únicamente cuando el workflow termina correctamente.
+
 ## Estado de importación
 
 Los paquetes anteriores están catalogados como fuentes, pero todavía no se han descargado ni incorporado como archivos locales. El intento de descarga directa de Retro Textures Fantasy falló en el entorno de trabajo por un error de resolución de red. No deben tratarse como activos listos para usar hasta importarlos y probarlos. La biblioteca también incluye una referencia musical marcada como pendiente de verificación.
