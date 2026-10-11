@@ -26,13 +26,27 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Prepare same-origin FFmpeg worker
+        run: |
+          set -euo pipefail
+          mkdir -p public/vendor/ffmpeg
+          base="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm"
+          for asset in worker.js const.js errors.js; do
+            curl --fail --location --silent --show-error "$base/$asset" -o "public/vendor/ffmpeg/$asset"
+            test -s "public/vendor/ffmpeg/$asset"
+          done
+          curl --fail --location --silent --show-error "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/LICENSE" -o public/vendor/ffmpeg/LICENSE
       - name: Validate browser editor before publishing
         run: |
           node --check public/editor.js
+          node --check public/vendor/ffmpeg/worker.js
+          node --check public/vendor/ffmpeg/const.js
+          node --check public/vendor/ffmpeg/errors.js
           test -s public/editor.html
           test -s public/editor.css
           grep -q 'id="videoFile"' public/editor.html
           grep -q 'id="exportButton"' public/editor.html
+          grep -q 'classWorkerURL' public/editor.js
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
