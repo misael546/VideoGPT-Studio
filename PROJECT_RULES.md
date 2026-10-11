@@ -64,3 +64,7 @@
 49. El editor de VideoGPT Studio puede mezclar localmente hasta tres pistas externas opcionales: narración, música de fondo en bucle y efectos de sonido con retardo configurable; los volúmenes se ajustan antes de exportar.
 50. Si se añaden pistas, detectar si el vídeo original contiene audio y mezclarlo cuando exista. No prometer generación automática de voz; la narración se carga como archivo de audio y todo se procesa localmente.
 51. Documentar que el audio externo se incorpora solo tras pulsar exportar, y que los formatos dependen del soporte de FFmpeg WebAssembly y del navegador.
+
+52. El flujo guiado debe preguntar qué resultado quiere el usuario después de cargar un video y antes de mostrar la zona de edición.
+53. Los presets guiados solo pueden aplicar operaciones existentes y probadas localmente; no afirmar que generan automáticamente guion, narración, escenas nuevas o análisis semántico.
+54. Después de preparar el preset, mostrar el plan y permitir revisarlo antes de exportar. El archivo original no debe sobrescribirse y el procesamiento sigue siendo local sin servicios de pago.
