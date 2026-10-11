@@ -302,9 +302,9 @@ async function captureVideoFrames() {
   capturedFrames = [];
   const originalTime = sourcePreview.currentTime || 0;
   const interval = Math.max(1, Number(frameInterval.value) || 5);
-  const times = [];
-  for (let time = 0; time < durationSeconds && times.length < 60; time += interval) times.push(time);
-  if (!times.length || times[times.length - 1] < durationSeconds - 0.5) times.push(Math.max(0, durationSeconds - 0.1));
+  const requestedCount = Math.ceil(durationSeconds / interval);
+  const frameCount = Math.min(60, Math.max(1, requestedCount + 1));
+  const times = Array.from({ length: frameCount }, (_, index) => frameCount === 1 ? 0 : index * Math.max(0, durationSeconds - 0.1) / (frameCount - 1));
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   if (!context) {
@@ -327,7 +327,7 @@ async function captureVideoFrames() {
       capturedFrames.push({ time, dataUrl: canvas.toDataURL('image/jpeg', 0.82) });
     }
     renderFrameGallery();
-    frameStatus.textContent = 'Listo: ' + capturedFrames.length + ' cuadros capturados cada ' + interval + ' s. Puedes descargar cuadros individuales o una hoja de escenas.';
+    frameStatus.textContent = 'Listo: ' + capturedFrames.length + ' cuadros distribuidos por todo el video. ' + (requestedCount + 1 > 60 ? 'Se limitó a 60 cuadros para cuidar la memoria del teléfono. ' : 'Intervalo aproximado: ' + interval + ' s. ') + 'Puedes descargar cuadros individuales o una hoja de escenas.';
   } catch (error) {
     showError(error?.message || 'No se pudieron capturar los cuadros de este video.');
     frameStatus.textContent = 'La captura se detuvo. Prueba con otro intervalo.';
@@ -416,6 +416,11 @@ function setFile(file) {
   }
   selectedFile = file;
   durationSeconds = 0;
+  captureFramesButton.disabled = true;
+  downloadContactSheetButton.disabled = true;
+  frameGallery.replaceChildren();
+  capturedFrames = [];
+  frameStatus.textContent = 'Leyendo video…';
   releaseUrl(sourceUrl);
   sourceUrl = URL.createObjectURL(file);
   sourcePreview.src = sourceUrl;
