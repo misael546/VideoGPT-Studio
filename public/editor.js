@@ -211,6 +211,9 @@ let assistantPreviousPrompt = '';
 let assistantNeedsClarification = false;
 
 function addAssistantMessage(message, kind) {
+  const previous = assistantConversation.lastElementChild;
+  if (previous && previous.textContent.trim() === String(message).trim() &&
+      previous.classList.contains(kind === 'user' ? 'assistant-user' : 'assistant-reply')) return;
   const item = document.createElement('p');
   item.className = 'assistant-message ' + (kind === 'user' ? 'assistant-user' : 'assistant-reply');
   item.textContent = message;
@@ -238,6 +241,19 @@ generateFromAssistant.addEventListener('click', async () => {
   assistantPreviousPrompt = combined;
   editInstructions.value = combined;
   const result = applyNaturalInstructions();
+  if (result?.status === 'partial' && result.requestedFeatures?.story) {
+    assistantNeedsClarification = false;
+    assistantPreviousPrompt = '';
+    clearError();
+    const sceneButton = $('#analyzeScenes');
+    if (sceneButton && !sceneButton.disabled) {
+      addAssistantMessage('Entendí: quieres revisar los fotogramas, elegir cortes y preparar un montaje tipo historia. Estoy iniciando el análisis de cambios de escena. Esta versión todavía no mejora automáticamente cada imagen ni une las escenas en un montaje completo; te mostraré los puntos de corte disponibles sin afirmar que ya hice esos pasos.', 'assistant');
+      sceneButton.click();
+    } else {
+      addAssistantMessage('Entendí que quieres revisar fotogramas y montar una historia. Primero carga el video para habilitar el análisis de escenas. El retoque automático de imágenes y el montaje narrativo completo aún no están implementados.', 'assistant');
+    }
+    return;
+  }
   if (!result || result.status === 'clarify' || (result.status === 'partial' && !result.plan && !result.partialPlan)) {
     assistantNeedsClarification = true;
     const message = result?.question || errorBox.textContent || '¿Puedes explicar esa parte con otras palabras?';
