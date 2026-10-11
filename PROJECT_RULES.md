@@ -33,3 +33,8 @@
 28. La web publicada no debe depender de Vercel; usar GitHub Pages para servir el contenido de `public/`.
 29. La generación gratuita corre en GitHub Actions y guarda los MP4 pequeños en el repositorio; no afirmar que la página convierte prompts arbitrarios en videos personalizados hasta implementarlo y validarlo.
 30. Mantener la página funcional sin claves de proveedores ni APIs que puedan cobrar; presupuesto $0.
+
+31. Mantener una biblioteca reutilizable en `recursos/`, con imágenes, sonidos, música, plantillas y un catálogo JSON; mantenerla separada de los videos terminados.
+32. El generador gratuito debe leer `recursos/catalogo.json` de forma tolerante a errores. Las entradas visuales de tipo `image_overlay` pueden componerse solo si la ruta existe dentro del repositorio y coincide con la escena; los recursos ausentes se omiten sin romper la generación.
+33. La biblioteca no equivale a entrenar un modelo. No prometer entrenamiento automático ni compatibilidad de audio/fondos hasta implementar y probar esas funciones.
+34. Añadir únicamente recursos propios o con licencia compatible; optimizar archivos y no incluir videos finales en `recursos/`.
