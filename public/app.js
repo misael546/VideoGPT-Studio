@@ -115,10 +115,8 @@ async function loadGallery() {
     description.textContent = mb + ' MB · Disponible solo en este navegador y dispositivo.';
     const editLink = document.createElement('a');
     editLink.className = 'outline-cta';
-    editLink.href = 'https://chatgpt.com/';
-    editLink.target = '_blank';
-    editLink.rel = 'noopener noreferrer';
-    editLink.textContent = 'Abrir ChatGPT para pedir edición';
+    editLink.href = './editor.html?videoId=' + encodeURIComponent(item.id);
+    editLink.textContent = 'Editar este video';
     details.append(meta, heading, description, editLink);
     card.append(video, details);
     galleryGrid.append(card);
