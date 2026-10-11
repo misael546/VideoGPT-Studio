@@ -29,6 +29,24 @@
       <p class="privacy-note">Privacidad: el archivo permanece en la memoria de tu dispositivo. El editor descarga FFmpeg desde una CDN pública para poder funcionar.</p>
       <div id="sourceInfo" class="source-info hidden"></div>
       <video id="sourcePreview" class="preview hidden" controls playsinline></video>
+      <section id="guidedGoalPanel" class="guided-panel hidden" aria-labelledby="guidedGoalTitle">
+        <p class="eyebrow">PASO 2 · CUÉNTAME TU OBJETIVO</p>
+        <h2 id="guidedGoalTitle">¿Qué quieres hacer con este video?</h2>
+        <p class="guided-intro">Primero elegimos el resultado. Después preparo una propuesta de edición y la aplico a las herramientas locales disponibles.</p>
+        <div class="goal-grid" role="group" aria-label="Tipo de edición">
+          <button type="button" class="goal-card" data-goal="improve"><strong>Mejorar el video</strong><span>Conservar el estilo y aplicar ajustes suaves.</span></button>
+          <button type="button" class="goal-card" data-goal="shorts"><strong>TikTok / Shorts / Reels</strong><span>Prepararlo en formato vertical y con ritmo más rápido.</span></button>
+          <button type="button" class="goal-card" data-goal="youtube"><strong>Video para YouTube</strong><span>Formato horizontal y ajustes equilibrados.</span></button>
+          <button type="button" class="goal-card" data-goal="recap"><strong>Resumen de anime o manhwa</strong><span>Formato vertical y ritmo dinámico; la narración debe añadirse por separado.</span></button>
+          <button type="button" class="goal-card" data-goal="custom"><strong>Otra cosa</strong><span>Describe el resultado que tienes en mente.</span></button>
+        </div>
+        <label class="goal-custom-label" for="goalCustomText">Detalles adicionales (opcional)
+          <textarea id="goalCustomText" rows="3" placeholder="Ej.: elimina silencios, conserva las escenas importantes y hazlo más dinámico."></textarea>
+        </label>
+        <p id="guidedGoalStatus" class="guided-status" aria-live="polite">El video todavía no se procesa. Elegiremos primero el objetivo.</p>
+        <button id="prepareGuidedEdit" class="primary" type="button" disabled>Preparar mi edición</button>
+        <p class="privacy-note">Sin APIs de pago: el montaje compatible se realiza en tu navegador. Esta versión no genera automáticamente guion, voz o escenas nuevas ni está conectada directamente a este chat.</p>
+      </section>
 
       <div class="frame-tools">
         <div class="frame-tools-head">
@@ -50,8 +68,8 @@
         <div id="frameGallery" class="frame-gallery"></div>
       </div>
     </section>
-    <section class="editor-panel" aria-labelledby="editTitle">
-      <div class="section-head"><div><p class="eyebrow">PASO 2</p><h2 id="editTitle">Ajusta la edición</h2></div></div>
+    <section id="editingWorkspace" class="editor-panel hidden" aria-labelledby="editTitle">
+      <div class="section-head"><div><p class="eyebrow">PASO 3</p><h2 id="editTitle">Revisa el plan preparado</h2></div></div>
       <div class="controls-grid">
         <label>Inicio del recorte (segundos)<input id="trimStart" type="number" min="0" step="0.1" value="0"></label>
         <label>Final del recorte (segundos)<input id="trimEnd" type="number" min="0" step="0.1" placeholder="Duración completa"></label>
@@ -98,7 +116,7 @@
         <label for="editInstructions">O describe los cambios que quieres</label>
         <textarea id="editInstructions" rows="3" placeholder="Ej.: quita los primeros 5 segundos, acelera a 1.5x, ponlo vertical y baja el volumen al 50%"></textarea>
         <button id="applyInstructions" class="secondary" type="button">Aplicar instrucciones compatibles</button>
-        <p>Reconoce instrucciones sencillas en español y las traduce a los controles de arriba; no usa una IA externa ni interpreta cualquier petición.</p>
+        <p>Permite ajustar manualmente solo operaciones compatibles. Si una petición requiere generar voz, escribir un guion o seleccionar escenas con comprensión semántica, esta versión todavía no puede hacerlo automáticamente.</p>
       </div>
       <div class="instruction-box plan-box">
         <label for="editPlanJson">Plan de edición preparado por ChatGPT (JSON)</label>
