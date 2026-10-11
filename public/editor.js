@@ -810,7 +810,7 @@ async function loadEngine() {
     let workerSource = await workerResponse.text();
     // El worker es un módulo y su import relativo dejaría de resolverse al crear una URL Blob.
     // Convertimos esa dependencia en una URL absoluta de la misma versión de FFmpeg.
-    workerSource = workerSource.replace(/(['\"])\.\/const\.js\1/g, '\"https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/const.js\"');
+    workerSource = workerSource.replace(/(['\"])\.\/(const|errors)\.js\1/g, (match, quote, moduleName) => quote + "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/" + moduleName + ".js" + quote);
     const workerBlobURL = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
     engineAssetUrls.push(workerBlobURL);
     await ffmpeg.load({ coreURL, wasmURL, classWorkerURL: workerBlobURL });
