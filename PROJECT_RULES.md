@@ -28,3 +28,8 @@
 25. Los videos se agregan como entradas independientes en `public/videos/gallery.json`; nunca sobrescribir un video anterior sin intención explícita.
 26. El generador gratuito debe construir animación con una secuencia de fotogramas, usar voz masculina grave en español si está disponible y añadir efectos sonoros sintetizados sin APIs pagadas.
 27. Si la voz neuronal gratuita falla, usar el respaldo local y documentar que la calidad puede ser más robótica; no usar APIs que cobren ni habilitar facturación.
+
+
+28. La web publicada no debe depender de Vercel; usar GitHub Pages para servir el contenido de `public/`.
+29. La generación gratuita corre en GitHub Actions y guarda los MP4 pequeños en el repositorio; no afirmar que la página convierte prompts arbitrarios en videos personalizados hasta implementarlo y validarlo.
+30. Mantener la página funcional sin claves de proveedores ni APIs que puedan cobrar; presupuesto $0.
