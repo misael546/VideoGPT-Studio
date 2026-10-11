@@ -31,6 +31,13 @@ const editPlanJson = $('#editPlanJson');
 const applyPlanButton = $('#applyPlan');
 const loadPlanExampleButton = $('#loadPlanExample');
 
+const frameInterval = $('#frameInterval');
+const captureFramesButton = $('#captureFrames');
+const downloadContactSheetButton = $('#downloadContactSheet');
+const frameStatus = $('#frameStatus');
+const frameGallery = $('#frameGallery');
+
+
 let selectedFile = null;
 let sourceUrl = null;
 let outputUrl = null;
@@ -237,6 +244,146 @@ function refreshSummary() {
 function releaseUrl(url) {
   if (url) URL.revokeObjectURL(url);
 }
+
+let capturedFrames = [];
+
+function waitForVideoSeek(video, targetTime) {
+  if (Math.abs(video.currentTime - targetTime) < 0.015) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      video.removeEventListener('seeked', onSeeked);
+      reject(new Error('El video tardó demasiado en saltar a una escena.'));
+    }, 5000);
+    const onSeeked = () => {
+      window.clearTimeout(timeout);
+      resolve();
+    };
+    video.addEventListener('seeked', onSeeked, { once: true });
+    video.currentTime = targetTime;
+  });
+}
+
+function downloadDataUrl(dataUrl, filename) {
+  const link = document.createElement('a');
+  link.href = dataUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function renderFrameGallery() {
+  frameGallery.replaceChildren();
+  capturedFrames.forEach((frame, index) => {
+    const card = document.createElement('article');
+    card.className = 'frame-card';
+    const image = document.createElement('img');
+    image.src = frame.dataUrl;
+    image.alt = 'Cuadro capturado en ' + frame.time.toFixed(1) + ' segundos';
+    image.loading = 'lazy';
+    const time = document.createElement('p');
+    time.textContent = 'Escena ' + (index + 1) + ' · ' + formatTime(frame.time);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Descargar cuadro';
+    button.addEventListener('click', () => downloadDataUrl(frame.dataUrl, 'escena-' + String(index + 1).padStart(2, '0') + '.jpg'));
+    card.append(image, time, button);
+    frameGallery.appendChild(card);
+  });
+  downloadContactSheetButton.disabled = capturedFrames.length === 0;
+}
+
+async function captureVideoFrames() {
+  if (!selectedFile || !durationSeconds || busy) return;
+  clearError();
+  captureFramesButton.disabled = true;
+  downloadContactSheetButton.disabled = true;
+  frameGallery.replaceChildren();
+  capturedFrames = [];
+  const originalTime = sourcePreview.currentTime || 0;
+  const interval = Math.max(1, Number(frameInterval.value) || 5);
+  const times = [];
+  for (let time = 0; time < durationSeconds && times.length < 60; time += interval) times.push(time);
+  if (!times.length || times[times.length - 1] < durationSeconds - 0.5) times.push(Math.max(0, durationSeconds - 0.1));
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) {
+    showError('Este navegador no permite capturar cuadros.');
+    captureFramesButton.disabled = false;
+    return;
+  }
+  sourcePreview.pause();
+  try {
+    for (let index = 0; index < times.length; index++) {
+      const time = Math.min(times[index], Math.max(0, durationSeconds - 0.05));
+      frameStatus.textContent = 'Capturando cuadro ' + (index + 1) + ' de ' + times.length + '…';
+      await waitForVideoSeek(sourcePreview, time);
+      const sourceWidth = sourcePreview.videoWidth || 640;
+      const sourceHeight = sourcePreview.videoHeight || 360;
+      const scale = Math.min(1, 480 / Math.max(sourceWidth, sourceHeight));
+      canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+      canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+      context.drawImage(sourcePreview, 0, 0, canvas.width, canvas.height);
+      capturedFrames.push({ time, dataUrl: canvas.toDataURL('image/jpeg', 0.82) });
+    }
+    renderFrameGallery();
+    frameStatus.textContent = 'Listo: ' + capturedFrames.length + ' cuadros capturados cada ' + interval + ' s. Puedes descargar cuadros individuales o una hoja de escenas.';
+  } catch (error) {
+    showError(error?.message || 'No se pudieron capturar los cuadros de este video.');
+    frameStatus.textContent = 'La captura se detuvo. Prueba con otro intervalo.';
+  } finally {
+    try { await waitForVideoSeek(sourcePreview, Math.min(originalTime, Math.max(0, durationSeconds - 0.05))); } catch {}
+    captureFramesButton.disabled = false;
+  }
+}
+
+function downloadFrameContactSheet() {
+  if (!capturedFrames.length) return;
+  const columns = 3;
+  const cellWidth = 320;
+  const cellHeight = 220;
+  const rows = Math.ceil(capturedFrames.length / columns);
+  const canvas = document.createElement('canvas');
+  canvas.width = columns * cellWidth;
+  canvas.height = rows * cellHeight;
+  const context = canvas.getContext('2d');
+  if (!context) {
+    showError('No se pudo crear la hoja de escenas en este navegador.');
+    return;
+  }
+  context.fillStyle = '#101018';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  const drawAt = (index) => new Promise((resolve) => {
+    const frame = capturedFrames[index];
+    const img = new Image();
+    img.onload = () => {
+      const col = index % columns;
+      const row = Math.floor(index / columns);
+      const x = col * cellWidth;
+      const y = row * cellHeight;
+      const pad = 8;
+      const maxW = cellWidth - pad * 2;
+      const maxH = cellHeight - 34;
+      const scale = Math.min(maxW / img.width, maxH / img.height);
+      const width = img.width * scale;
+      const height = img.height * scale;
+      context.drawImage(img, x + (cellWidth - width) / 2, y + 5 + (maxH - height) / 2, width, height);
+      context.fillStyle = '#f6f4ff';
+      context.font = '14px sans-serif';
+      context.fillText('Escena ' + (index + 1) + ' · ' + formatTime(frame.time), x + 8, y + cellHeight - 10);
+      resolve();
+    };
+    img.onerror = () => resolve();
+    img.src = frame.dataUrl;
+  });
+  Promise.all(capturedFrames.map((_, index) => drawAt(index))).then(() => {
+    downloadDataUrl(canvas.toDataURL('image/jpeg', 0.88), 'hoja-de-escenas.jpg');
+  });
+}
+
+captureFramesButton.addEventListener('click', captureVideoFrames);
+downloadContactSheetButton.addEventListener('click', downloadFrameContactSheet);
+
 function setFile(file) {
   clearError();
   resultPanel.classList.add('hidden');
@@ -247,6 +394,10 @@ function setFile(file) {
     exportButton.disabled = true;
     sourcePreview.classList.add('hidden');
     sourceInfo.classList.add('hidden');
+    captureFramesButton.disabled = true;
+    frameGallery.replaceChildren();
+    capturedFrames = [];
+    frameStatus.textContent = 'Carga un video para extraer cuadros.';
     showError('Selecciona un archivo de video válido.');
     return;
   }
@@ -256,6 +407,10 @@ function setFile(file) {
     exportButton.disabled = true;
     sourcePreview.classList.add('hidden');
     sourceInfo.classList.add('hidden');
+    captureFramesButton.disabled = true;
+    frameGallery.replaceChildren();
+    capturedFrames = [];
+    frameStatus.textContent = 'Carga un video para extraer cuadros.';
     showError('Este archivo supera 120 MB. Para evitar que el navegador del teléfono se quede sin memoria, usa un video más pequeño.');
     return;
   }
@@ -277,6 +432,8 @@ function setFile(file) {
       return;
     }
     trimEnd.value = durationSeconds.toFixed(1);
+    captureFramesButton.disabled = false;
+    frameStatus.textContent = 'Video listo. Elige cada cuántos segundos quieres capturar un cuadro.'
     sourceInfo.textContent = file.name + ' · ' + (file.size / (1024 * 1024)).toFixed(1) + ' MB · ' + formatTime(durationSeconds) + ' · ' + sourcePreview.videoWidth + '×' + sourcePreview.videoHeight;
     refreshSummary();
   };
