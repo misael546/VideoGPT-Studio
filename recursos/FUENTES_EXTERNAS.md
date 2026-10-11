@@ -12,6 +12,9 @@ Esta lista es una selección inicial de paquetes que declaran licencia CC0 en su
 | Impact Sounds — Kenney | Golpes e impactos | CC0 | https://kenney.nl/assets/impact-sounds |
 | Interface Sounds — Kenney | Sonidos de interfaz | CC0 | https://kenney.nl/assets/interface-sounds |
 | UI Audio — Kenney | Clics y sonidos de botones | CC0 | https://kenney.nl/assets/ui-audio |
+| 1-Bit Pack — Kenney | Sprites de personajes, objetos y tiles con estética monocromática | CC0 | https://kenney-assets.itch.io/1-bit-pack |
+| Block Pack — Kenney | Tiles, terreno, edificios, objetos y personajes para RPG | CC0 | https://kenney-assets.itch.io/block-pack |
+| Retro Medieval Kit — Kenney | Modelos 3D de estilo medieval retro; no compatible directamente con el generador 2D actual | CC0 | https://kenney-assets.itch.io/retro-medieval-kit |
 
 ## Pendiente de revisión directa
 
@@ -26,5 +29,9 @@ Esta lista es una selección inicial de paquetes que declaran licencia CC0 en su
 5. Mantener cada recurso local registrado en `recursos/catalogo.json` con ruta real.
 6. No registrar un archivo como local ni utilizable por el generador hasta que exista en el repositorio y haya sido probado.
 7. Los paquetes `external_pack` no se procesan como `image_overlay` por el generador actual.
+
+## Estado de importación
+
+Los paquetes anteriores están catalogados como fuentes, pero todavía no se han descargado ni incorporado como archivos locales. El intento de descarga directa de Retro Textures Fantasy falló en el entorno de trabajo por un error de resolución de red. No deben tratarse como activos listos para usar hasta importarlos y probarlos. La biblioteca también incluye una referencia musical marcada como pendiente de verificación.
 
 La guía de Wikimedia/Creative Commons recuerda que los archivos tienen condiciones individuales y que, cuando la licencia lo exige, deben conservarse autor, fuente y licencia: https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia/en y https://creativecommons.org/reusing-cc-licensed-content/.
