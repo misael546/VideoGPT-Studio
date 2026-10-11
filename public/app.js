@@ -5,6 +5,8 @@ const welcome = document.querySelector('#welcome');
 const workspace = document.querySelector('#workspace');
 const gallery = document.querySelector('#gallery');
 const galleryGrid = document.querySelector('#galleryGrid');
+const galleryCount = document.querySelector('#videoCount');
+const composerWrap = document.querySelector('#composerWrap');
 const conversation = document.querySelector('#conversation');
 const title = document.querySelector('#projectTitle');
 const status = document.querySelector('#projectStatus');
@@ -19,25 +21,33 @@ function showSection(section) {
   welcome.classList.toggle('hidden', section !== 'welcome');
   workspace.classList.toggle('hidden', section !== 'create');
   gallery.classList.toggle('hidden', section !== 'gallery');
+  composerWrap.classList.toggle('hidden', section === 'gallery');
   document.querySelector('#navCreate').classList.toggle('active', section === 'create' || section === 'welcome');
   document.querySelector('#navGallery').classList.toggle('active', section === 'gallery');
 }
 function beginProject(prompt = '') {
-  showSection('create');
+  showSection(prompt ? 'create' : 'welcome');
   if (prompt) input.value = prompt;
   input.focus();
 }
 function resetVideo() {
+  resultVideo.pause();
   resultVideo.classList.add('hidden');
   resultVideo.removeAttribute('src');
   resultLink.classList.add('hidden');
   resultLink.removeAttribute('href');
   generateBtn.disabled = false;
   generateBtn.textContent = 'Generar corto gratis en GitHub';
-  generationNote.textContent = 'Se abrirá GitHub Actions para iniciar el generador gratuito. Al terminar, el MP4 se guarda en el repositorio; la galería se actualiza al publicarse el sitio.';
+  generationNote.textContent = 'El corto gratuito actual es predefinido; todavía no se adapta automáticamente a tu descripción.';
 }
 document.querySelector('#navCreate').addEventListener('click', () => showSection('welcome'));
-document.querySelector('#navGallery').addEventListener('click', () => { showSection('gallery'); loadGallery(); });
+document.querySelector('#navGallery').addEventListener('click', () => {
+  showSection('gallery');
+  loadGallery();
+});
+for (const id of ['sidebarStart', 'topCreate', 'heroCreate', 'galleryCreate']) {
+  document.querySelector('#' + id).addEventListener('click', () => beginProject());
+}
 
 async function loadGallery() {
   try {
@@ -46,24 +56,45 @@ async function loadGallery() {
     const items = await response.json();
     galleryGrid.replaceChildren();
     if (!Array.isArray(items) || items.length === 0) {
-      galleryGrid.innerHTML = '<p class="gallery-empty">Todavía no hay videos en la galería.</p>';
+      galleryCount.textContent = '0';
+      galleryGrid.innerHTML = '<p class="gallery-empty">Todavía no hay videos en la galería. Cuando publiques tu primer corto, aparecerá aquí.</p>';
       return;
     }
+    let shown = 0;
     for (const item of items) {
       if (!item || typeof item.title !== 'string' || typeof item.src !== 'string') continue;
-      const card = document.createElement('article'); card.className = 'video-card';
+      shown += 1;
+      const card = document.createElement('article');
+      card.className = 'video-card';
       const video = document.createElement('video');
       video.src = item.src;
       video.controls = true;
       video.preload = 'metadata';
       video.playsInline = true;
       video.setAttribute('aria-label', item.title);
-      const details = document.createElement('div'); details.className = 'video-card-details';
-      const heading = document.createElement('h3'); heading.textContent = item.title;
-      const description = document.createElement('p'); description.textContent = item.description || 'Video guardado en VideoGPT Studio.';
-      details.append(heading, description); card.append(video, details); galleryGrid.append(card);
+      const details = document.createElement('div');
+      details.className = 'video-card-details';
+      const meta = document.createElement('div');
+      meta.className = 'video-card-meta';
+      const category = document.createElement('span');
+      category.className = 'video-category';
+      category.textContent = typeof item.category === 'string' && item.category.trim() ? item.category : 'VIDEO';
+      const index = document.createElement('span');
+      index.className = 'video-index';
+      index.textContent = 'VIDEO ' + String(shown).padStart(2, '0');
+      meta.append(category, index);
+      const heading = document.createElement('h3');
+      heading.textContent = item.title;
+      const description = document.createElement('p');
+      description.textContent = item.description || 'Video guardado en VideoGPT Studio.';
+      details.append(meta, heading, description);
+      card.append(video, details);
+      galleryGrid.append(card);
     }
+    galleryCount.textContent = String(shown);
+    if (shown === 0) galleryGrid.innerHTML = '<p class="gallery-empty">El catálogo no contiene videos válidos todavía.</p>';
   } catch {
+    galleryCount.textContent = '—';
     galleryGrid.replaceChildren();
     const message = document.createElement('p');
     message.className = 'gallery-empty';
@@ -83,14 +114,11 @@ document.querySelector('#newProject').addEventListener('click', () => {
   input.focus();
 });
 document.querySelectorAll('[data-prompt]').forEach(button => {
-  button.addEventListener('click', () => {
-    beginProject(button.dataset.prompt);
-    input.focus();
-  });
+  button.addEventListener('click', () => beginProject(button.dataset.prompt));
 });
 function addBubble(kind, text) {
   const node = document.createElement('div');
-  node.className = `bubble ${kind}`;
+  node.className = 'bubble ' + kind;
   node.textContent = text;
   conversation.append(node);
   node.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -98,7 +126,7 @@ function addBubble(kind, text) {
 }
 function makePlan(prompt) {
   return [
-    'Plan inicial preparado localmente (sin API de pago):',
+    'Plan inicial preparado en esta página (sin API de pago):',
     '',
     '1. Concepto: ' + prompt,
     '2. Escenas: apertura que establece el lugar; desarrollo con la acción principal; cierre con una imagen memorable.',
@@ -112,10 +140,9 @@ form.addEventListener('submit', event => {
   event.preventDefault();
   const message = input.value.trim();
   if (!message) return;
-  beginProject();
+  showSection('create');
   currentPrompt = message;
-  resultVideo.pause();
-  title.textContent = message.length > 42 ? `${message.slice(0, 42)}…` : message;
+  title.textContent = message.length > 42 ? message.slice(0, 42) + '…' : message;
   conversation.replaceChildren();
   addBubble('user', message);
   addBubble('assistant', makePlan(message));
@@ -126,6 +153,7 @@ form.addEventListener('submit', event => {
 generateBtn.addEventListener('click', () => {
   if (!currentPrompt) {
     generationNote.textContent = 'Primero describe tu idea para preparar el proyecto. El generador gratuito produce el corto de prueba actual, no un video personalizado basado en el texto.';
+    return;
   }
   window.open(ACTIONS_URL, '_blank', 'noopener,noreferrer');
 });
