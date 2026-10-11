@@ -1,7 +1,7 @@
 import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
 import { toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
 import { validateEditPlan } from './edit-plan.js';
-import { interpretVideoInstructions } from './natural-language.js';
+import { planVideoInstruction } from './assistant-planner.js';
 
 const $ = (selector) => document.querySelector(selector);
 const fileInput = $('#videoFile');
@@ -90,7 +90,7 @@ function applyNaturalInstructions() {
     showError('Escribe qué quieres cambiar del video.');
     return { status: 'clarify', question: '¿Qué cambio quieres hacer?' };
   }
-  const result = interpretVideoInstructions(inputText, durationSeconds);
+  const result = planVideoInstruction(inputText, durationSeconds);
   if (result.status === 'clarify') {
     showError(result.question);
     editSummary.textContent = result.question;
