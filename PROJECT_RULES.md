@@ -42,3 +42,9 @@
 35. La biblioteca de recursos debe revisarse semanalmente: buscar mejoras visuales, detectar duplicados/rutas rotas, validar procedencia y licencia, y añadir recursos originales solo cuando aporten valor.
 36. La revisión periódica puede comparar referencias públicas de composición, iluminación, detalle y movimiento, pero no debe copiar material protegido ni asumir que una imagen encontrada en internet es reutilizable sin verificar su licencia.
 37. La automatización semanal debe respetar el presupuesto $0, no habilitar servicios pagados y no afirmar que se generó arte con IA si la herramienta no estuvo disponible.
+
+
+38. El editor de video del sitio debe procesar archivos locales en el navegador cuando sea posible; no subir el material del usuario a servidores sin una acción clara y explicación.
+39. El editor gratuito no debe usar APIs de pago ni exponer credenciales. Las librerías públicas necesarias deben fijarse a versiones concretas y su descarga debe documentarse.
+40. No prometer que ChatGPT está conectado al editor ni que entiende cualquier instrucción automáticamente; describir con precisión las operaciones realmente implementadas.
+41. Validar el archivo exportado y comprobar errores de carga, recorte inválido, límites de memoria y compatibilidad móvil. Nunca reemplazar el video original automáticamente.
