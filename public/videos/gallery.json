@@ -4,5 +4,11 @@
     "description": "Corto ilustrado de fantasía con narración en español y efectos sonoros.",
     "src": "videos/isekai-test.mp4",
     "category": "Fantasía"
+  },
+  {
+    "title": "El comienzo de una segunda vida — versión extendida",
+    "description": "Corto ilustrado extendido de fantasía: ocho escenas animadas, narración en español y efectos sonoros originales.",
+    "src": "videos/isekai-mejorado.mp4",
+    "category": "Fantasía"
   }
 ]
