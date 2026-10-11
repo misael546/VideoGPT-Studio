@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Validate upload-only page
+      - name: Validate upload page and hidden editing workspace
         run: |
           set -euo pipefail
           test -s public/editor.html
@@ -34,10 +34,18 @@ jobs:
           grep -q 'id="videoFile"' public/editor.html
           grep -q 'id="videoPreview"' public/editor.html
           grep -q 'Selecciona o arrastra tu video aquí' public/editor.html
-          if grep -q 'id="exportButton"' public/editor.html; then
-            echo "Unexpected editing/export controls found in upload-only page."
-            exit 1
-          fi
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const html = readFileSync('public/editor.html', 'utf8');
+          const workspaceStart = html.indexOf('<section id="editingWorkspace" class="editor-panel hidden">');
+          const exportButton = html.indexOf('id="exportButton"');
+          const footer = html.indexOf('<footer', workspaceStart);
+          if (workspaceStart < 0) throw new Error('Editing workspace must be hidden on initial page load.');
+          if (exportButton < workspaceStart || footer < 0 || exportButton > footer) {
+            throw new Error('Export controls must remain inside the initially hidden editing workspace.');
+          }
+          console.log('Upload-first page verified; editing workspace is hidden until the user chooses a goal.');
+          NODE
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
