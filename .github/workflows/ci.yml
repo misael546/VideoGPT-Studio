@@ -21,7 +21,11 @@ jobs:
       - name: Check server syntax
         run: node --check src/server.js
       - name: Check browser script syntax
-        run: node --check public/app.js
+        run: |
+          node --check public/app.js
+          node --check public/editor.js
+          test -s public/editor.html
+          test -s public/editor.css
       - name: Check Vercel entrypoint syntax
         run: node --check api/index.js
       - name: Validate Vercel configuration
