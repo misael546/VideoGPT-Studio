@@ -1,7 +1,55 @@
 #!/usr/bin/env python3
 """Create a short illustrated isekai video without paid APIs or API keys."""
 from PIL import Image, ImageDraw, ImageFont
-import math, os, subprocess, wave, struct
+import math, os, subprocess, wave, struct, json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+CATALOG_PATH = ROOT / "recursos" / "catalogo.json"
+
+def load_resource_catalog():
+    """Load optional reusable resources; a missing/invalid catalog never breaks the free generator."""
+    try:
+        data = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+        resources = data.get("resources", []) if isinstance(data, dict) else []
+        return [item for item in resources if isinstance(item, dict)] if isinstance(resources, list) else []
+    except (OSError, json.JSONDecodeError, AttributeError):
+        print("Aviso: catálogo de recursos no disponible; se usarán las escenas base.")
+        return []
+
+def apply_image_overlays(image, scene_kind, resources):
+    """Composite catalogued transparent images over a scene, if matching files exist."""
+    from PIL import Image
+    for item in resources:
+        if item.get("type") != "image_overlay":
+            continue
+        scenes = item.get("scenes", ["all"])
+        if not isinstance(scenes, list) or (scene_kind not in scenes and "all" not in scenes):
+            continue
+        rel_path = item.get("path")
+        if not isinstance(rel_path, str) or not rel_path.strip():
+            continue
+        asset_path = (ROOT / rel_path).resolve()
+        # Do not allow catalog entries to read files outside this repository.
+        if ROOT.resolve() not in asset_path.parents or not asset_path.is_file():
+            continue
+        try:
+            overlay = Image.open(asset_path).convert("RGBA")
+            target_width = item.get("width")
+            target_height = item.get("height")
+            if isinstance(target_width, int) and target_width > 0:
+                if isinstance(target_height, int) and target_height > 0:
+                    size = (target_width, target_height)
+                else:
+                    size = (target_width, max(1, round(overlay.height * target_width / overlay.width)))
+                overlay = overlay.resize(size, Image.Resampling.LANCZOS)
+            x = item.get("x", 0)
+            y = item.get("y", 0)
+            if not isinstance(x, int) or not isinstance(y, int):
+                continue
+            image.paste(overlay, (x, y), overlay)
+        except (OSError, ValueError) as exc:
+            print(f"Aviso: se omitió recurso visual {rel_path}: {exc}")
 
 W, H = 1280, 720
 OUT = "public/videos"
@@ -20,6 +68,8 @@ LINES = [
 ]
 os.makedirs(OUT, exist_ok=True)
 os.makedirs(WORK, exist_ok=True)
+RESOURCE_CATALOG = load_resource_catalog()
+print(f"Recursos reutilizables cargados: {len(RESOURCE_CATALOG)}")
 
 def font(size):
     for p in ["/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -154,6 +204,8 @@ def make_scene(kind, path):
         for x,y in [(75,580),(150,610),(1090,600),(1190,570),(1030,640)]:
             d.ellipse((x-45,y-70,x+45,y+30), fill=(42,95,72))
             d.ellipse((x-30,y-95,x+25,y-25), fill=(57,119,82))
+    # Optional catalogued PNG overlays add reusable characters/objects to compatible scenes.
+    apply_image_overlays(im, kind, RESOURCE_CATALOG)
     # Cinematic title band
     d=ImageDraw.Draw(im)
     d.rounded_rectangle((45,35, min(W-45, 45+len(title)*25), 100), radius=14, fill=(18,22,43))
