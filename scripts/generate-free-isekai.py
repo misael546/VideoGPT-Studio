@@ -2,6 +2,7 @@
 """Create a short illustrated isekai video without paid APIs or API keys."""
 from PIL import Image, ImageDraw, ImageFont
 import math, os, subprocess, wave, struct, json
+from io import BytesIO
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,7 +35,12 @@ def apply_image_overlays(image, scene_kind, resources):
         if ROOT.resolve() not in asset_path.parents or not asset_path.is_file():
             continue
         try:
-            overlay = Image.open(asset_path).convert("RGBA")
+            if asset_path.suffix.lower() == ".svg":
+                import cairosvg
+                overlay_bytes = cairosvg.svg2png(url=str(asset_path))
+                overlay = Image.open(BytesIO(overlay_bytes)).convert("RGBA")
+            else:
+                overlay = Image.open(asset_path).convert("RGBA")
             target_width = item.get("width")
             target_height = item.get("height")
             if isinstance(target_width, int) and target_width > 0:
@@ -244,7 +250,7 @@ def make_scene(kind, path):
             d.ellipse((x,408,x+22,432), fill=(244,159,131))
             d.ellipse((x+6,400,x+16,414), fill=(255,222,162))
         d.line((145,150,230,150), fill=(238,177,143), width=6)
-    else:
+    elif kind == "kingdom":
         # Banners, crenellations, a winding path and layered foreground foliage.
         d.rectangle((475,300,495,330), fill=(222,203,177))
         d.rectangle((805,300,825,330), fill=(222,203,177))
@@ -306,6 +312,37 @@ def make_animation_frame(base_path, out_path, kind, frame, total):
             d.ellipse((625, 365, 663, 390), fill=(235, 199, 172, 255))
             d.line((536, 379, 562, 379), fill=(70, 66, 87, 255), width=4)
             d.line((631, 379, 657, 379), fill=(70, 66, 87, 255), width=4)
+    elif kind == "forest":
+        beam_x = int(560 + 24 * math.sin(frame * .08))
+        d.polygon([(beam_x-22,0),(beam_x+22,0),(beam_x+150,560),(beam_x+70,560)], fill=(210,255,180,18))
+        for j in range(18):
+            x = int(350 + ((j*71 + frame*(1+j%3)) % 600))
+            y = int(170 + ((j*43 - frame*(1+j%2)) % 440))
+            d.ellipse((x-2,y-2,x+3,y+3), fill=(222,255,165,150))
+    elif kind == "village":
+        for j in range(5):
+            x = int(280 + j*185 + 8*math.sin(frame*.12+j))
+            y = int(285 - ((frame*1.4+j*13)%70))
+            d.ellipse((x-10,y-14,x+10,y+14), fill=(240,229,214,35))
+        for j in range(12):
+            x = int((j*113 + frame*1.3) % W)
+            y = int(470 + 30*math.sin(frame*.08+j))
+            d.ellipse((x-2,y-2,x+2,y+2), fill=(255,225,155,100))
+    elif kind == "dragon":
+        pulse = int(70 + 45*(.5+.5*math.sin(frame*.24)))
+        d.ellipse((820,315,940,410), fill=(255,65,45,pulse//5))
+        for j in range(20):
+            x = int((j*83 + frame*(1.3+j%3)) % W)
+            y = int(490 + 130*math.sin(frame*.07+j))
+            d.ellipse((x-2,y-2,x+2,y+2), fill=(255,145,77,150))
+    elif kind == "portal":
+        pulse = int(2 + 3*(.5+.5*math.sin(frame*.16)))
+        d.ellipse((570-pulse,240-pulse,710+pulse,495+pulse), outline=(193,176,255,170), width=3)
+        for j in range(16):
+            a = frame*.09 + j*math.tau/16
+            x = int(640+math.cos(a)*(105+j%3*12))
+            y = int(365+math.sin(a)*(155+j%3*10))
+            d.ellipse((x-2,y-2,x+2,y+2), fill=(228,222,255,180))
     else:
         # Cloud wisps and drifting embers in front of the distant kingdom.
         for j in range(10):
@@ -373,14 +410,18 @@ def make_sound_effects(path, duration):
         # Soft wind-like noise with a slow amplitude envelope.
         noise = (rng.random() * 2 - 1) * (0.012 + 0.012 * (0.5 + 0.5 * math.sin(t * 0.55)))
         effect = 0.0
-        for event in (5.45, 11.45, 17.45):
+        transition_events = tuple(i * SCENE_SECONDS - 0.55 for i in range(1, len(LINES)))
+        for event in transition_events:
             local = t - event
             if 0 <= local <= 0.85:
                 envelope = math.sin(math.pi * local / 0.85) ** 2
                 effect += envelope * (0.08 * math.sin(2 * math.pi * (160 - 95 * local) * local))
                 effect += envelope * 0.025 * math.sin(2 * math.pi * 540 * local)
         # Tiny sparkling tones appear in the magical soul and rebirth scenes.
-        for event in (6.6, 7.8, 9.2, 12.8, 15.3, 19.1, 21.4):
+        magic_events = tuple(i * SCENE_SECONDS + offset for i, (_, kind) in enumerate(LINES)
+                             if kind in {"soul", "baby", "forest", "portal"}
+                             for offset in (1.4, 3.1, 5.2))
+        for event in magic_events:
             local = t - event
             if 0 <= local <= 0.35:
                 envelope = math.exp(-local * 9)
