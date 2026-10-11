@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101114">
   <meta name="description" content="Convierte tus ideas en proyectos de video con ayuda de IA.">
   <title>VideoGPT Studio — Crea videos con tus ideas</title>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <div class="shell">
@@ -21,11 +21,11 @@
       </div>
     </aside>
     <main class="main">
-      <header class="topbar"><div class="mobile-brand">▶ VideoGPT Studio</div><span class="secure">● Proyecto privado en este navegador</span></header>
+      <header class="topbar"><div class="mobile-brand">▶ VideoGPT Studio</div><span class="secure">● Sitio estático · videos en GitHub</span></header>
       <section class="gallery hidden" id="gallery">
         <div class="eyebrow">TU COLECCIÓN</div>
         <h1 class="gallery-title">Galería de videos</h1>
-        <p class="intro gallery-intro">Videos guardados en el estudio. Cada nuevo video se puede agregar sin reemplazar los anteriores.</p>
+        <p class="intro gallery-intro">Videos publicados en el repositorio. Los nuevos videos se agregan como entradas independientes.</p>
         <div class="gallery-grid" id="galleryGrid"><p class="gallery-empty">Cargando galería…</p></div>
       </section>
       <section class="welcome" id="welcome">
@@ -42,19 +42,19 @@
         <div class="workspace-heading"><div><div class="eyebrow">PROYECTO ACTUAL</div><h2 id="projectTitle">Nuevo proyecto</h2></div><span class="status" id="projectStatus">Borrador</span></div>
         <div class="preview" id="preview">
           <div class="preview-icon">▶</div><strong>Vista previa del proyecto</strong>
-          <p>Cuando el proveedor acepte tu solicitud, el video se procesará y aparecerá aquí al terminar.</p>
+          <p>El generador gratuito se ejecuta desde GitHub Actions. Al terminar y publicarse, el video aparecerá en la galería.</p>
           <video id="resultVideo" class="result-video hidden" controls playsinline></video>
           <a id="resultLink" class="result-link hidden" target="_blank" rel="noopener noreferrer">Abrir video generado ↗</a>
           <div class="preview-bar"><span></span></div>
         </div>
         <div class="generate-panel">
-          <div><strong>Generar video real</strong><p>Crear un clip puede consumir créditos del proveedor.</p></div>
+          <div><strong>Generador gratuito</strong><p>Abre GitHub Actions para crear el corto ilustrado de prueba.</p></div>
           <div class="generate-options">
             <label>Formato<select id="ratio"><option value="1280:720">Horizontal 16:9</option><option value="720:1280">Vertical 9:16</option></select></label>
             <label>Duración<select id="duration"><option value="5">5 segundos</option><option value="8">8 segundos</option><option value="10">10 segundos</option></select></label>
           </div>
-          <button id="generateVideo" class="generate-button" disabled>Configurar proveedor para generar</button>
-          <p id="generationNote" class="generation-note">La conexión con Runway y su clave privada aún deben configurarse en el servidor.</p>
+          <button id="generateVideo" class="generate-button">Generar corto gratis en GitHub</button>
+          <p id="generationNote" class="generation-note">No necesita Vercel ni claves de APIs pagadas. El corto gratuito actual es predefinido y no se adapta automáticamente a tu descripción.</p>
         </div>
         <div class="timeline"><div class="timeline-title">LÍNEA DE TIEMPO <span>Vista previa de estructura</span></div><div class="timeline-track"><span>Escenas</span><i></i><i></i><i></i><i></i></div><div class="timeline-track audio"><span>Audio</span><i></i></div></div>
         <div class="conversation" id="conversation"></div>
@@ -64,10 +64,10 @@
           <textarea id="message" rows="2" placeholder="Describe el video que quieres crear o cómo quieres editarlo..." required maxlength="8000"></textarea>
           <div class="composer-footer"><span>Cuéntame el estilo, duración, formato o cambios que necesitas.</span><button id="sendBtn" type="submit" aria-label="Enviar">↑</button></div>
         </form>
-        <div class="disclaimer">La IA prepara el plan. La generación con proveedores externos puede tener límites o costos; el generador gratuito se ejecuta desde GitHub Actions.</div>
+        <div class="disclaimer">El plan se prepara en esta página sin una API externa. El generador gratuito se ejecuta en GitHub Actions y guarda el MP4 en el repositorio.</div>
       </div>
     </main>
   </div>
-  <script src="/app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
