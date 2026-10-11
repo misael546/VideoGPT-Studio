@@ -123,7 +123,7 @@ export function interpretVideoInstructions(input, durationSeconds = 0) {
     questions.push('¿A qué velocidad lo quieres: 0.5x, 0.75x, 1x, 1.25x, 1.5x o 2x?');
   }
 
-  if (/\b(vertical|tiktok|reels?|shorts?|retrato|9:16|historia de instagram|story de instagram|formato de celular|vertical|tiktok|reels?|shorts?|retrato|9:16|historia de instagram|story de instagram|estilo historia|formato historia|historia para instagram|story format|formato de celular|pantalla del telefono)\b/.test(text)) {
+  if (/\\b(vertical|tiktok|reels?|shorts?|retrato|9:16|historia de instagram|story de instagram|estilo historia|formato historia|historia para instagram|story format|formato de celular|pantalla del telefono)\\b/.test(text)) {
     plan.aspect = 'portrait'; understood.push('formato vertical'); recognized++;
   } else if (/\b(cuadrado|1:1|post cuadrado)\b/.test(text)) {
     plan.aspect = 'square'; understood.push('formato cuadrado'); recognized++;
