@@ -151,6 +151,13 @@ app.get('/api/video/tasks/:id', async (req, res) => {
 
 app.get('*', (_req, res) => res.sendFile(path.join(here, '../public/index.html')));
 
-app.listen(port, '0.0.0.0', () => {
-  console.log(`[VideoGPT Studio] Servidor listo en el puerto ${port}`);
-});
+export default app;
+
+// Start a local server only when this file is executed directly.
+// Vercel imports the Express app through api/index.js instead.
+const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
+if (invokedPath === fileURLToPath(import.meta.url)) {
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`[VideoGPT Studio] Servidor listo en el puerto ${port}`);
+  });
+}
