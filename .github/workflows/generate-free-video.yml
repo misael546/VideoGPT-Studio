@@ -6,6 +6,8 @@ on:
     paths:
       - "scripts/generate-free-isekai.py"
       - ".github/workflows/generate-free-video.yml"
+      - "recursos/catalogo.json"
+      - "recursos/imagenes/**"
 
 permissions:
   contents: write
