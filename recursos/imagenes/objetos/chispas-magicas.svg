@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+<defs><radialGradient id="s"><stop stop-color="#fffbd5"/><stop offset="1" stop-color="#ffd47b" stop-opacity="0"/></radialGradient></defs>
+<circle cx="120" cy="120" r="118" fill="url(#s)" opacity=".5"/>
+<g fill="#fff2ae" stroke="#fffbd8" stroke-width="1">
+<path d="M120 10 L130 82 L202 92 L130 103 L120 175 L109 103 L38 92 L109 82 Z"/>
+<path d="M50 145 L56 174 L85 180 L56 186 L50 215 L44 186 L15 180 L44 174 Z"/>
+<path d="M194 30 L201 53 L224 60 L201 67 L194 90 L187 67 L164 60 L187 53 Z"/>
+</g><circle cx="160" cy="145" r="5" fill="#fffbd8"/><circle cx="82" cy="43" r="4" fill="#fffbd8"/><circle cx="180" cy="205" r="3" fill="#fffbd8"/>
+</svg>
