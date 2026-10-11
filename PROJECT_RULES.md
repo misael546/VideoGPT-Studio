@@ -73,3 +73,13 @@
 
 57. La página pública del editor debe mostrar únicamente la selección/carga del video y una vista previa opcional; no mostrar controles de edición, mezclador, extracción de escenas ni exportación hasta que el usuario indique qué desea hacer. Aclarar que seleccionar el archivo en GitHub Pages no lo adjunta automáticamente a este chat.
 58. La página Subir video debe ser mínima: selector/arrastrar archivo, vista previa opcional y botón para guardarlo en la biblioteca local del navegador. Los videos locales se muestran en la galería del mismo navegador/dispositivo; nunca afirmar que eso los sube a un servidor o los adjunta automáticamente a ChatGPT. La edición asistida requiere adjuntar el archivo directamente a la conversación mientras no exista un backend seguro de carga y transferencia.
+
+
+59. La prioridad vigente es una experiencia dirigida por ChatGPT, no integrar otra IA como asistente visible. No llamar a proveedores de IA externos que puedan cobrar; el presupuesto continúa en $0.
+60. La interfaz pública debe seguir siendo mínima: seleccionar un video, vista previa opcional y galería local. No volver a mostrar controles, mezclador o línea de tiempo como paso obligatorio del usuario.
+61. No afirmar que ChatGPT puede leer automáticamente un video guardado en IndexedDB ni que el sitio está conectado a esta conversación. La galería local solo pertenece al mismo navegador/dispositivo.
+62. La conexión directa solo puede anunciarse después de implementar y verificar una integración autenticada de extremo a extremo: transferencia segura del original, recepción de instrucciones preparadas por ChatGPT, procesamiento gratuito, validación del resultado y descarga/galería.
+63. Antes de seleccionar una arquitectura de backend, verificar que el alojamiento elegido permita procesar y almacenar videos dentro del presupuesto $0. GitHub Pages es estático y no procesa archivos subidos por usuarios; no dar por hecho que un endpoint Express está desplegado.
+64. No reutilizar los endpoints heredados de Agnes ni el archivo OpenAPI de generación pagada como si fueran el flujo de edición solicitado. No enviar videos del usuario a esos endpoints.
+65. La edición automática solo puede usar operaciones implementadas, seguras y probadas. Si una petición requiere capacidades que no están disponibles sin pago, explicar la limitación y no fingir que el archivo se modificó.
+66. Mantener el original intacto, validar el archivo de salida y comprobar el flujo en móvil y escritorio antes de declarar una función terminada.
