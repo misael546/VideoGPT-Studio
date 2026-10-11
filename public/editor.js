@@ -249,7 +249,8 @@ generateFromAssistant.addEventListener('click', async () => {
   };
   window.setTimeout(waitForExport, 800);
 });
-\nfunction applyChatGPTPlan(planOverride) {
+
+function applyChatGPTPlan(planOverride) {
   clearError();
   let rawPlan = planOverride;
   if (!rawPlan) {
