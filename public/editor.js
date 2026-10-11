@@ -70,6 +70,7 @@ let progressListenerAttached = false;
 let ffmpegLogMessages = [];
 let engineAssetUrls = [];
 let autoEnhanceVideo = false;
+let autoStoryMode = false;
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return '—';
@@ -245,6 +246,7 @@ generateFromAssistant.addEventListener('click', async () => {
   const wantsStory = Boolean(result?.requestedFeatures?.story);
   const wantsPolish = Boolean(result?.requestedFeatures?.imagePolish) || /\b(profesional|pulir|pule|pula|mejorar las imagenes|mejora las imagenes|nitidez|calidad visual)\b/i.test(combined.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
   autoEnhanceVideo = wantsPolish || wantsStory;
+  autoStoryMode = wantsStory;
   if (wantsStory) {
     // Story requests are handled for the user: portrait output, gentle transitions,
     // conservative image enhancement, then export without sending them to tool panels.
@@ -866,7 +868,8 @@ exportButton.addEventListener('click', async () => {
 
     const dimensions = outputDimensions();
     const filters = [];
-    if (dimensions) filters.push('scale=' + dimensions.width + ':' + dimensions.height + ':force_original_aspect_ratio=decrease', 'pad=' + dimensions.width + ':' + dimensions.height + ':(ow-iw)/2:(oh-ih)/2:color=black');
+    if (dimensions && autoStoryMode) filters.push('scale=' + dimensions.width + ':' + dimensions.height + ':force_original_aspect_ratio=increase', 'crop=' + dimensions.width + ':' + dimensions.height);
+    else if (dimensions) filters.push('scale=' + dimensions.width + ':' + dimensions.height + ':force_original_aspect_ratio=decrease', 'pad=' + dimensions.width + ':' + dimensions.height + ':(ow-iw)/2:(oh-ih)/2:color=black');
     if (autoEnhanceVideo) filters.push('eq=contrast=1.06:saturation=1.10:brightness=0.01', 'unsharp=5:5:0.35:3:3:0.0');
     if (speed !== 1) filters.push('setpts=PTS/' + speed);
     if (fadeInput.checked) {
