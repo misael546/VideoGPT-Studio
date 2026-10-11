@@ -34,8 +34,23 @@
       </section>
       <section class="workspace hidden" id="workspace">
         <div class="workspace-heading"><div><div class="eyebrow">PROYECTO ACTUAL</div><h2 id="projectTitle">Nuevo proyecto</h2></div><span class="status" id="projectStatus">Borrador</span></div>
-        <div class="preview"><div class="preview-icon">▶</div><strong>Vista previa del proyecto</strong><p>El video aparecerá aquí cuando conectemos un proveedor de generación o edición.</p><div class="preview-bar"><span></span></div></div>
-        <div class="timeline"><div class="timeline-title">LÍNEA DE TIEMPO <span>Preparada para una futura integración</span></div><div class="timeline-track"><span>Escenas</span><i></i><i></i><i></i><i></i></div><div class="timeline-track audio"><span>Audio</span><i></i></div></div>
+        <div class="preview" id="preview">
+          <div class="preview-icon">▶</div><strong>Vista previa del proyecto</strong>
+          <p>Después de configurar un proveedor de video, podrás solicitar una generación real desde aquí.</p>
+          <video id="resultVideo" class="result-video hidden" controls playsinline></video>
+          <a id="resultLink" class="result-link hidden" target="_blank" rel="noopener noreferrer">Abrir video generado ↗</a>
+          <div class="preview-bar"><span></span></div>
+        </div>
+        <div class="generate-panel">
+          <div><strong>Generar video real</strong><p>Crear un clip puede consumir créditos del proveedor.</p></div>
+          <div class="generate-options">
+            <label>Formato<select id="ratio"><option value="1280:720">Horizontal 16:9</option><option value="720:1280">Vertical 9:16</option><option value="960:960">Cuadrado 1:1</option><option value="1104:832">Horizontal 4:3</option><option value="832:1104">Vertical 3:4</option></select></label>
+            <label>Duración<select id="duration"><option value="5">5 segundos</option><option value="8">8 segundos</option><option value="10">10 segundos</option></select></label>
+          </div>
+          <button id="generateVideo" class="generate-button" disabled>Configurar proveedor para generar</button>
+          <p id="generationNote" class="generation-note">La conexión con Runway y su clave privada aún deben configurarse en el servidor.</p>
+        </div>
+        <div class="timeline"><div class="timeline-title">LÍNEA DE TIEMPO <span>Vista previa de estructura</span></div><div class="timeline-track"><span>Escenas</span><i></i><i></i><i></i><i></i></div><div class="timeline-track audio"><span>Audio</span><i></i></div></div>
         <div class="conversation" id="conversation"></div>
       </section>
       <div class="composer-wrap">
@@ -43,7 +58,7 @@
           <textarea id="message" rows="2" placeholder="Describe el video que quieres crear o cómo quieres editarlo..." required maxlength="8000"></textarea>
           <div class="composer-footer"><span>Cuéntame el estilo, duración, formato o cambios que necesitas.</span><button id="sendBtn" type="submit" aria-label="Enviar">↑</button></div>
         </form>
-        <div class="disclaimer">Los resultados de video reales requieren conectar un servicio compatible. No se mostrará un enlace de exportación hasta que exista un archivo real.</div>
+        <div class="disclaimer">La IA prepara el plan. La generación final requiere un proveedor conectado y puede tener costo.</div>
       </div>
     </main>
   </div>
