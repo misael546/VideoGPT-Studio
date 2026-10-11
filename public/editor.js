@@ -798,11 +798,17 @@ async function loadEngine() {
   }
   const coreURL = await fetchEngineAsset('ffmpeg-core.js', 'text/javascript', 'Motor FFmpeg (JavaScript)', 0);
   const wasmURL = await fetchEngineAsset('ffmpeg-core.wasm', 'application/wasm', 'Motor FFmpeg (WebAssembly)', 1);
-  const workerURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js';
   progressLabel.textContent = 'Iniciando motor de edición…';
-  progressDetail.textContent = 'Los componentes están descargados. Iniciando el trabajador de FFmpeg…';
+  progressDetail.textContent = 'Los componentes están descargados. Preparando el trabajador de FFmpeg desde este mismo sitio para evitar bloqueos entre dominios…';
   try {
-    await ffmpeg.load({ coreURL, wasmURL, classWorkerURL: workerURL });
+    // El navegador bloquea que Worker cargue directamente un script de otro origen.
+    // Cargamos el módulo remoto, lo convertimos a Blob local y damos esa URL al Worker.
+    const workerResponse = await fetch('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js', { cache: 'force-cache' });
+    if (!workerResponse.ok) throw new Error('No se pudo descargar el trabajador de FFmpeg (HTTP ' + workerResponse.status + ').');
+    const workerSource = await workerResponse.text();
+    const workerBlobURL = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
+    engineAssetUrls.push(workerBlobURL);
+    await ffmpeg.load({ coreURL, wasmURL, classWorkerURL: workerBlobURL });
   } catch (error) {
     progressDetail.textContent = 'No se pudo iniciar el trabajador de FFmpeg: ' + (error?.message || 'error desconocido');
     throw new Error('El motor de edición no pudo iniciarse en este navegador. Comprueba que no esté bloqueando trabajadores o WebAssembly y vuelve a intentarlo. Detalle: ' + (error?.message || 'sin detalles'));
