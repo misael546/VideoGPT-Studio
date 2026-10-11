@@ -60,6 +60,40 @@
         <label class="range-label">Volumen del audio <span id="volumeValue">100%</span><input id="volume" type="range" min="0" max="200" step="10" value="100"></label>
         <label class="check-label"><input id="fade" type="checkbox"> Aplicar entrada y salida suaves de 0.5 s</label>
       </div>
+      <div class="audio-mixer">
+        <div class="audio-mixer-heading"><p class="eyebrow">MEZCLADOR DE AUDIO</p><h3>Narración, música y efectos</h3></div>
+        <p class="privacy-note">Carga pistas de audio desde tu teléfono. Se mezclan localmente con el vídeo; nada se sube a un servidor. Para la voz masculina, selecciona un archivo de narración en español.</p>
+        <div class="audio-track">
+          <label class="audio-file-label">Narración / voz masculina
+            <input id="narrationFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg">
+          </label>
+          <label class="audio-range">Volumen de narración <span id="narrationVolumeValue">100%</span>
+            <input id="narrationVolume" type="range" min="0" max="200" step="5" value="100">
+          </label>
+        </div>
+        <div class="audio-track">
+          <label class="audio-file-label">Música de fondo
+            <input id="musicFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg">
+          </label>
+          <label class="audio-range">Volumen de música <span id="musicVolumeValue">18%</span>
+            <input id="musicVolume" type="range" min="0" max="100" step="1" value="18">
+          </label>
+        </div>
+        <div class="audio-track">
+          <label class="audio-file-label">Efectos de sonido
+            <input id="effectsFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg">
+          </label>
+          <div class="audio-effect-controls">
+            <label class="audio-range">Volumen de efectos <span id="effectsVolumeValue">65%</span>
+              <input id="effectsVolume" type="range" min="0" max="200" step="5" value="65">
+            </label>
+            <label class="audio-offset">Iniciar efectos en (segundos)
+              <input id="effectsOffset" type="number" min="0" step="0.1" value="0">
+            </label>
+          </div>
+        </div>
+        <p id="audioStatus" class="frame-status" aria-live="polite">Las pistas son opcionales. Si no seleccionas audio adicional, se conserva el sonido original del vídeo.</p>
+      </div>
       <div class="instruction-box">
         <label for="editInstructions">O describe los cambios que quieres</label>
         <textarea id="editInstructions" rows="3" placeholder="Ej.: quita los primeros 5 segundos, acelera a 1.5x, ponlo vertical y baja el volumen al 50%"></textarea>
