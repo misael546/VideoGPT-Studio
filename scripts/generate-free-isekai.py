@@ -503,7 +503,7 @@ def main():
         "src": relative_src,
         "category": "Fantasía"
     })
-    gallery_path.write_text(json.dumps(gallery, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    gallery_path.write_text(json.dumps(gallery, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Video gratuito validado: {final} ({actual_duration:.1f}s, {actual_size} bytes)")
 
 
