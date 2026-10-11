@@ -68,6 +68,7 @@ let ffmpegReady = false;
 let busy = false;
 let progressListenerAttached = false;
 let ffmpegLogMessages = [];
+let engineAssetUrls = [];
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return '—';
@@ -674,14 +675,69 @@ for (const control of [trimStart, trimEnd, speedInput, aspectInput, volumeInput,
   });
 }
 
+async function fetchEngineAsset(path, mime, label, assetIndex) {
+  const bases = [
+    'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm/',
+    'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/'
+  ];
+  let lastError;
+  for (const base of bases) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 120000);
+    try {
+      progressLabel.textContent = 'Descargando motor gratuito…';
+      progressDetail.textContent = label + ' · probando una CDN pública. Tu video no se sube.';
+      const response = await fetch(base + path, { signal: controller.signal, cache: 'force-cache' });
+      if (!response.ok) throw new Error('La CDN respondió HTTP ' + response.status + '.');
+      const total = Number(response.headers.get('content-length')) || 0;
+      const reader = response.body?.getReader();
+      if (!reader) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(new Blob([blob], { type: mime }));
+        engineAssetUrls.push(url);
+        return url;
+      }
+      const chunks = [];
+      let received = 0;
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        chunks.push(part.value);
+        received += part.value.byteLength;
+        if (total > 0) {
+          const fraction = Math.min(1, received / total);
+          const pct = Math.round((assetIndex + fraction) * 10);
+          progressBar.value = pct;
+          progressPercent.textContent = pct + '%';
+          progressDetail.textContent = label + ': ' + Math.round(fraction * 100) + '% descargado. Tu video permanece en este dispositivo.';
+        } else {
+          progressDetail.textContent = label + ': ' + (received / (1024 * 1024)).toFixed(1) + ' MB descargados.';
+        }
+      }
+      const url = URL.createObjectURL(new Blob(chunks, { type: mime }));
+      engineAssetUrls.push(url);
+      return url;
+    } catch (error) {
+      lastError = error;
+      progressDetail.textContent = 'No respondió la primera CDN; intentando una alternativa gratuita…';
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+  throw new Error('No se pudo descargar ' + label + ' desde las CDNs gratuitas. Comprueba tu conexión, desactiva bloqueadores para esta página e inténtalo de nuevo. Detalle: ' + (lastError?.message || 'descarga interrumpida'));
+}
+
 async function loadEngine() {
   if (ffmpegReady) return;
+  progressArea.classList.remove('hidden');
+  progressBar.value = 0;
+  progressPercent.textContent = '0%';
   progressLabel.textContent = 'Descargando motor de edición gratuito…';
-  progressDetail.textContent = 'Se descarga una vez desde una CDN pública. Tu video no se envía a esa CDN.';
+  progressDetail.textContent = 'Descarga del motor de edición. Puede tardar en móviles; tu video no se envía a la CDN.';
   if (!ffmpeg) ffmpeg = new FFmpeg();
   if (!progressListenerAttached) {
     ffmpeg.on('progress', ({ progress }) => {
-      const pct = Math.max(0, Math.min(99, Math.round((progress || 0) * 100)));
+      const pct = Math.max(10, Math.min(99, 10 + Math.round((progress || 0) * 90)));
       progressBar.value = pct;
       progressPercent.textContent = pct + '%';
       progressLabel.textContent = 'Procesando video…';
@@ -692,14 +748,15 @@ async function loadEngine() {
     });
     progressListenerAttached = true;
   }
-  const base = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
-  const coreURL = await toBlobURL(base + '/ffmpeg-core.js', 'text/javascript');
-  const wasmURL = await toBlobURL(base + '/ffmpeg-core.wasm', 'application/wasm');
-  // FFmpeg's class worker must be served from the same origin as GitHub Pages.
-  // The workflow downloads this pinned worker and its module dependencies into public/vendor/ffmpeg/.
+  const coreURL = await fetchEngineAsset('ffmpeg-core.js', 'text/javascript', 'Motor FFmpeg (JavaScript)', 0);
+  const wasmURL = await fetchEngineAsset('ffmpeg-core.wasm', 'application/wasm', 'Motor FFmpeg (WebAssembly)', 1);
   const classWorkerURL = new URL('./vendor/ffmpeg/worker.js', window.location.href).href;
+  progressLabel.textContent = 'Iniciando motor de edición…';
+  progressDetail.textContent = 'Los archivos están descargados. Preparando FFmpeg en el navegador.';
   await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
   ffmpegReady = true;
+  progressBar.value = 10;
+  progressPercent.textContent = '10%';
 }
 function outputDimensions() {
   if (aspectInput.value === 'landscape') return { width: 1280, height: 720 };
@@ -849,4 +906,5 @@ exportButton.addEventListener('click', async () => {
 window.addEventListener('beforeunload', () => {
   releaseUrl(sourceUrl);
   releaseUrl(outputUrl);
+  for (const url of engineAssetUrls) URL.revokeObjectURL(url);
 });
