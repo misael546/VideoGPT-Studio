@@ -61,9 +61,9 @@
 
 48. El extractor de cuadros debe funcionar localmente en el navegador, limitar la cantidad de capturas, permitir descargar cuadros y hoja de escenas, y restaurar la posición de reproducción al terminar.
 
-49. El editor de VideoGPT Studio puede mezclar localmente hasta tres pistas externas opcionales: narración, música de fondo en bucle y efectos de sonido con retardo configurable; los volúmenes se ajustan antes de exportar.
-50. Si se añaden pistas, detectar si el vídeo original contiene audio y mezclarlo cuando exista. No prometer generación automática de voz; la narración se carga como archivo de audio y todo se procesa localmente.
-51. Documentar que el audio externo se incorpora solo tras pulsar exportar, y que los formatos dependen del soporte de FFmpeg WebAssembly y del navegador.
+49. El editor de VideoGPT Studio puede mezclar localmente hasta tres pistas: narración, música de fondo en bucle y efectos de sonido. El asistente puede preparar pistas cuando el usuario las solicite.
+50. La voz masculina en español se sintetiza localmente con Kokoro si el modelo se descarga y funciona en el navegador. La música instrumental y los efectos de transición se sintetizan localmente; no usar APIs de pago ni subir el video del usuario. Si falla la generación de voz, informar del fallo y no afirmar que la pista quedó lista.
+51. Al exportar, mezclar las pistas solicitadas y el audio original cuando exista; bajar el volumen original para priorizar la voz y mantener la música de fondo discreta. Validar el MP4 final y recordar que el rendimiento depende del navegador, FFmpeg WebAssembly y la memoria del dispositivo.
 
 52. El flujo guiado debe preguntar qué resultado quiere el usuario después de cargar un video y antes de mostrar la zona de edición.
 53. Los presets guiados solo pueden aplicar operaciones existentes y probadas localmente; no afirmar que generan automáticamente guion, narración, escenas nuevas o análisis semántico.
