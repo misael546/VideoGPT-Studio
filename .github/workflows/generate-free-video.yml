@@ -26,7 +26,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg espeak-ng fonts-dejavu-core
           python -m pip install --upgrade pip
-          python -m pip install Pillow
+          python -m pip install Pillow edge-tts
       - name: Generate illustrated video without paid APIs
         run: python scripts/generate-free-isekai.py
       - name: Verify video
