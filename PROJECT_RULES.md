@@ -19,3 +19,7 @@
 17. La clave de Google AI se guarda solo como secreto `GEMINI_API_KEY`; nunca en Git ni en logs.
 18. Validar el MP4 final antes de hacer commit; si generación o montaje falla, no publicar archivo incompleto.
 19. GitHub es almacenamiento temporal de prueba para MP4 pequeños, no almacenamiento multimedia optimizado para uso público continuo.
+20. El presupuesto actual del proyecto es estrictamente $0: no activar facturación ni llamar APIs que puedan generar cargos.
+21. Priorizar el workflow `Generate free illustrated video`, que crea ilustraciones, movimiento, subtítulos y narración sin claves ni APIs de pago.
+22. El workflow de Veo es opcional y no debe ejecutarse para este usuario mientras no autorice expresamente un cambio de presupuesto.
+23. No prometer generación ilimitada ni afirmar que el resultado gratuito tiene calidad equivalente a video generativo avanzado.
