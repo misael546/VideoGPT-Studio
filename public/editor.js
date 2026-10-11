@@ -37,6 +37,19 @@ const downloadContactSheetButton = $('#downloadContactSheet');
 const frameStatus = $('#frameStatus');
 const frameGallery = $('#frameGallery');
 
+const narrationFileInput = $('#narrationFile');
+const musicFileInput = $('#musicFile');
+const effectsFileInput = $('#effectsFile');
+const narrationVolumeInput = $('#narrationVolume');
+const musicVolumeInput = $('#musicVolume');
+const effectsVolumeInput = $('#effectsVolume');
+const effectsOffsetInput = $('#effectsOffset');
+const narrationVolumeValue = $('#narrationVolumeValue');
+const musicVolumeValue = $('#musicVolumeValue');
+const effectsVolumeValue = $('#effectsVolumeValue');
+const audioStatus = $('#audioStatus');
+
+
 
 let selectedFile = null;
 let sourceUrl = null;
@@ -46,6 +59,7 @@ let ffmpeg = null;
 let ffmpegReady = false;
 let busy = false;
 let progressListenerAttached = false;
+let ffmpegLogMessages = [];
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return '—';
@@ -460,6 +474,24 @@ dropzone.addEventListener('drop', event => {
   const file = event.dataTransfer?.files?.[0];
   if (file) setFile(file);
 });
+for (const control of [narrationVolumeInput, musicVolumeInput, effectsVolumeInput]) {
+  control.addEventListener('input', () => {
+    const value = control.value + '%';
+    if (control === narrationVolumeInput) narrationVolumeValue.textContent = value;
+    if (control === musicVolumeInput) musicVolumeValue.textContent = value;
+    if (control === effectsVolumeInput) effectsVolumeValue.textContent = value;
+  });
+}
+for (const input of [narrationFileInput, musicFileInput, effectsFileInput]) {
+  input.addEventListener('change', () => {
+    const parts = [];
+    if (narrationFileInput.files?.[0]) parts.push('voz: ' + narrationFileInput.files[0].name);
+    if (musicFileInput.files?.[0]) parts.push('música: ' + musicFileInput.files[0].name);
+    if (effectsFileInput.files?.[0]) parts.push('efectos: ' + effectsFileInput.files[0].name);
+    audioStatus.textContent = parts.length ? 'Pistas listas para mezclar: ' + parts.join(' · ') + '. Se incluirán al exportar.' : 'Las pistas son opcionales. Si no seleccionas audio adicional, se conserva el sonido original del vídeo.';
+  });
+}
+
 for (const control of [trimStart, trimEnd, speedInput, aspectInput, volumeInput, fadeInput]) {
   control.addEventListener('input', () => {
     if (control === volumeInput) volumeValue.textContent = volumeInput.value + '%';
@@ -480,6 +512,7 @@ async function loadEngine() {
       progressLabel.textContent = 'Procesando video…';
     });
     ffmpeg.on('log', ({ message }) => {
+      if (message) ffmpegLogMessages.push(message);
       if (message && /error|invalid|failed/i.test(message)) progressDetail.textContent = message.slice(0, 240);
     });
     progressListenerAttached = true;
@@ -495,6 +528,10 @@ function outputDimensions() {
   if (aspectInput.value === 'portrait') return { width: 720, height: 1280 };
   if (aspectInput.value === 'square') return { width: 720, height: 720 };
   return null;
+}
+function audioExtension(name) {
+  const extension = (name.split('.').pop() || 'mp3').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac', 'opus'].includes(extension) ? extension : 'mp3';
 }
 function safeName(name) {
   return name.replace(/\.[^.]+$/, '').normalize('NFKD').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'video';
@@ -529,7 +566,30 @@ exportButton.addEventListener('click', async () => {
     const outputName = 'videogpt-output.mp4';
     await ffmpeg.writeFile(inputName, new Uint8Array(await selectedFile.arrayBuffer()));
     const resultDuration = (end - start) / speed;
-    const args = ['-hide_banner', '-y', '-ss', start.toFixed(3), '-i', inputName, '-t', resultDuration.toFixed(3)];
+    const narrationFile = narrationFileInput.files?.[0] || null;
+    const musicFile = musicFileInput.files?.[0] || null;
+    const effectsFile = effectsFileInput.files?.[0] || null;
+    const extraTracks = [
+      narrationFile ? { kind: 'voice', file: narrationFile, name: 'narration-track.' + audioExtension(narrationFile.name) } : null,
+      musicFile ? { kind: 'music', file: musicFile, name: 'music-track.' + audioExtension(musicFile.name) } : null,
+      effectsFile ? { kind: 'effects', file: effectsFile, name: 'effects-track.' + audioExtension(effectsFile.name) } : null
+    ].filter(Boolean);
+    for (const track of extraTracks) await ffmpeg.writeFile(track.name, new Uint8Array(await track.file.arrayBuffer()));
+    let hasOriginalAudio = false;
+    if (extraTracks.length) {
+      ffmpegLogMessages = [];
+      try { await ffmpeg.exec(['-hide_banner', '-i', inputName]); } catch {}
+      hasOriginalAudio = ffmpegLogMessages.some(message => /Stream #0:\d+(?:\([^)]*\))?: Audio:/i.test(message));
+    }
+    const args = ['-hide_banner', '-y', '-ss', start.toFixed(3), '-i', inputName];
+    const trackIndices = {};
+    for (const track of extraTracks) {
+      if (track.kind === 'music') args.push('-stream_loop', '-1');
+      args.push('-i', track.name);
+      trackIndices[track.kind] = trackIndices[track.kind] === undefined ? args.filter((value, index) => value === '-i').length - 1 : trackIndices[track.kind];
+    }
+    args.push('-t', resultDuration.toFixed(3));
+
     const dimensions = outputDimensions();
     const filters = [];
     if (dimensions) filters.push('scale=' + dimensions.width + ':' + dimensions.height + ':force_original_aspect_ratio=decrease', 'pad=' + dimensions.width + ':' + dimensions.height + ':(ow-iw)/2:(oh-ih)/2:color=black');
@@ -539,13 +599,45 @@ exportButton.addEventListener('click', async () => {
       if (resultDuration > 1) filters.push('fade=t=out:st=' + (resultDuration - 0.5).toFixed(3) + ':d=0.5');
     }
     if (filters.length) args.push('-vf', filters.join(','));
-    if (volume !== 1 || speed !== 1) {
-      const audioFilters = [];
-      if (speed !== 1) audioFilters.push('atempo=' + speed);
-      if (volume !== 1) audioFilters.push('volume=' + volume.toFixed(2));
-      args.push('-af', audioFilters.join(','));
+    if (extraTracks.length) {
+      const audioGraphs = [];
+      const mixLabels = [];
+      let audioInputIndex = 1;
+      if (hasOriginalAudio) {
+        const originalFilters = [];
+        if (speed !== 1) originalFilters.push('atempo=' + speed);
+        if (volume !== 1) originalFilters.push('volume=' + volume.toFixed(2));
+        originalFilters.push('apad', 'atrim=duration=' + resultDuration.toFixed(3), 'asetpts=PTS-STARTPTS');
+        audioGraphs.push('[0:a]' + originalFilters.join(',') + '[orig]');
+        mixLabels.push('[orig]');
+      }
+      for (const track of extraTracks) {
+        const label = track.kind === 'voice' ? 'voice' : track.kind === 'music' ? 'music' : 'sfx';
+        const filtersForTrack = [];
+        if (track.kind === 'voice') filtersForTrack.push('volume=' + (Number(narrationVolumeInput.value) / 100).toFixed(2));
+        if (track.kind === 'music') filtersForTrack.push('volume=' + (Number(musicVolumeInput.value) / 100).toFixed(2));
+        if (track.kind === 'effects') {
+          const delayMs = Math.max(0, Math.min(600000, Math.round((Number(effectsOffsetInput.value) || 0) * 1000)));
+          if (delayMs > 0) filtersForTrack.push('adelay=' + delayMs + '|' + delayMs);
+          filtersForTrack.push('volume=' + (Number(effectsVolumeInput.value) / 100).toFixed(2));
+        }
+        filtersForTrack.push('apad', 'atrim=duration=' + resultDuration.toFixed(3), 'asetpts=PTS-STARTPTS');
+        audioGraphs.push('[' + audioInputIndex + ':a]' + filtersForTrack.join(',') + '[' + label + ']');
+        mixLabels.push('[' + label + ']');
+        audioInputIndex++;
+      }
+      audioGraphs.push(mixLabels.join('') + 'amix=inputs=' + mixLabels.length + ':duration=longest:dropout_transition=0,alimiter=limit=0.95[aout]');
+      args.push('-filter_complex', audioGraphs.join(';'), '-map', '0:v:0', '-map', '[aout]');
+    } else {
+      if (volume !== 1 || speed !== 1) {
+        const audioFilters = [];
+        if (speed !== 1) audioFilters.push('atempo=' + speed);
+        if (volume !== 1) audioFilters.push('volume=' + volume.toFixed(2));
+        args.push('-af', audioFilters.join(','));
+      }
+      args.push('-map', '0:v:0', '-map', '0:a?');
     }
-    args.push('-map', '0:v:0', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outputName);
+    args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', outputName);
     progressLabel.textContent = 'Procesando video…';
     progressDetail.textContent = 'La duración, resolución y potencia del dispositivo afectan el tiempo de exportación.';
     const exitCode = await ffmpeg.exec(args);
@@ -565,7 +657,7 @@ exportButton.addEventListener('click', async () => {
     progressLabel.textContent = 'Exportación completada';
     progressDetail.textContent = 'Reproduce el resultado para comprobarlo antes de descargarlo.';
     resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    try { await ffmpeg.deleteFile(inputName); await ffmpeg.deleteFile(outputName); } catch {}
+    try { await ffmpeg.deleteFile(inputName); await ffmpeg.deleteFile(outputName); for (const track of extraTracks) await ffmpeg.deleteFile(track.name); } catch {}
   } catch (error) {
     showError((error && error.message) ? error.message : 'No se pudo procesar el video. Prueba con un archivo más pequeño o un navegador actualizado.');
     progressLabel.textContent = 'No se pudo terminar la exportación';
