@@ -49,20 +49,23 @@ GitHub Actions puede ejecutar tareas de desarrollo o generar demostraciones pred
 
 ## Contrato inicial de plan
 
-Ejemplo ilustrativo, no ejecutable por sí solo:
+El editor actual ya usa un plan JSON v1 con los campos `version`, `title`, `trim`, `speed`, `aspect`, `volume` y `fade`. La primera implementación debe reforzar ese contrato existente, no introducir un formato incompatible.
+
+Ejemplo ilustrativo, sujeto a validación contra el video cargado:
 
 ~~~json
 {
-  "schema": "videogpt-edit-plan/v1",
-  "operations": [
-    { "type": "trim", "startSeconds": 2, "endSeconds": 18 },
-    { "type": "volume", "value": 0.9 },
-    { "type": "fade", "inSeconds": 0.5, "outSeconds": 0.8 }
-  ]
+  "version": 1,
+  "title": "Reel dinámico",
+  "trim": { "start": 2, "end": 18 },
+  "speed": 1.25,
+  "aspect": "portrait",
+  "volume": 80,
+  "fade": true
 }
 ~~~
 
-El validador debe comprobar rangos, tipos, límites y compatibilidad con la duración real. El esquema no permite campos como command, shell, script ni expresiones FFmpeg libres. El ejemplo requiere validación y no implica que cada operación esté ya conectada al exportador.
+Los únicos valores aceptados deben ser los que el editor ya soporte. Rechazar campos desconocidos, rangos inválidos y valores no finitos antes de cambiar controles. Nunca aceptar comandos, scripts, rutas ni expresiones FFmpeg libres. En una fase posterior se podrá versionar un esquema nuevo mediante migración explícita y pruebas.
 
 ## Coste y límites honestos
 
