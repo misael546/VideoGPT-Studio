@@ -1,5 +1,6 @@
 import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
 import { toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
+import { validateEditPlan } from './edit-plan.js';
 
 const $ = (selector) => document.querySelector(selector);
 const fileInput = $('#videoFile');
@@ -221,81 +222,61 @@ prepareGuidedEditButton.addEventListener('click', () => {
 });
 function applyChatGPTPlan(planOverride) {
   clearError();
-  let plan = planOverride;
-  if (!plan) {
+  let rawPlan = planOverride;
+  if (!rawPlan) {
     try {
-      plan = JSON.parse(editPlanJson.value);
+      rawPlan = JSON.parse(editPlanJson.value);
     } catch {
       showError('El plan no es JSON válido. Pídele a ChatGPT que entregue únicamente un objeto JSON y pégalo completo.');
       return;
     }
   }
-  if (!plan || typeof plan !== 'object' || Array.isArray(plan) || plan.version !== 1) {
-    showError('Plan no compatible. Debe ser un objeto JSON con "version": 1.');
+  if (!selectedFile || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+    showError('Carga primero un video y espera a que se lea su duración antes de aplicar el plan.');
     return;
   }
+
+  // Validate the entire plan before changing any controls, so invalid plans
+  // cannot leave a partially applied edit behind.
+  const validation = validateEditPlan(rawPlan, durationSeconds);
+  if (!validation.valid) {
+    showError(validation.error);
+    return;
+  }
+  const plan = validation.plan;
   const applied = [];
+
   if (plan.trim !== undefined) {
-    if (!plan.trim || typeof plan.trim !== 'object' || Array.isArray(plan.trim)) {
-      showError('El campo "trim" debe contener "start" y, opcionalmente, "end", en segundos.');
-      return;
-    }
-    const start = Number(plan.trim.start ?? 0);
-    const end = plan.trim.end === null || plan.trim.end === undefined || plan.trim.end === '' ? durationSeconds : Number(plan.trim.end);
-    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start || (durationSeconds && end > durationSeconds)) {
-      showError('El recorte del plan es inválido. Comprueba los segundos y que no excedan la duración del video cargado.');
-      return;
-    }
-    trimStart.value = String(start);
-    trimEnd.value = String(end);
-    applied.push('recorte ' + start + '–' + end + ' s');
+    trimStart.value = String(plan.trim.start);
+    trimEnd.value = String(plan.trim.end);
+    applied.push('recorte ' + plan.trim.start + '–' + plan.trim.end + ' s');
   }
   if (plan.speed !== undefined) {
-    const speed = Number(plan.speed);
-    if (![0.5, 0.75, 1, 1.25, 1.5, 2].includes(speed)) {
-      showError('La velocidad debe ser una de estas opciones: 0.5, 0.75, 1, 1.25, 1.5 o 2.');
-      return;
-    }
-    speedInput.value = String(speed);
-    applied.push('velocidad ' + speed + '×');
+    speedInput.value = String(plan.speed);
+    applied.push('velocidad ' + plan.speed + '×');
   }
   if (plan.aspect !== undefined) {
-    const allowedAspects = ['original', 'landscape', 'portrait', 'square'];
-    if (!allowedAspects.includes(plan.aspect)) {
-      showError('El formato debe ser original, landscape, portrait o square.');
-      return;
-    }
     aspectInput.value = plan.aspect;
     applied.push('formato ' + plan.aspect);
   }
   if (plan.volume !== undefined) {
-    const volume = Number(plan.volume);
-    if (!Number.isFinite(volume) || volume < 0 || volume > 200) {
-      showError('El volumen debe ser un número entre 0 y 200.');
-      return;
-    }
-    volumeInput.value = String(Math.round(volume / 10) * 10);
+    volumeInput.value = String(Math.round(plan.volume / 10) * 10);
     volumeValue.textContent = volumeInput.value + '%';
     applied.push('volumen ' + volumeInput.value + '%');
   }
   if (plan.fade !== undefined) {
-    if (typeof plan.fade !== 'boolean') {
-      showError('El campo "fade" debe ser true o false.');
-      return;
-    }
     fadeInput.checked = plan.fade;
     applied.push(plan.fade ? 'fundidos suaves' : 'sin fundidos');
   }
-  if (!applied.length) {
-    showError('El plan no incluye cambios compatibles. Incluye al menos uno de estos campos: trim, speed, aspect, volume o fade.');
-    return;
-  }
+
   refreshSummary();
-  if (exportButton.disabled && selectedFile && durationSeconds) {
-    showError('El plan se leyó, pero el recorte no es válido para este archivo. Revisa los segundos.');
+  if (exportButton.disabled) {
+    showError('El plan se validó, pero los controles resultantes no son válidos para este archivo. Revisa los segundos.');
     return;
   }
-  editSummary.textContent = 'Plan de ChatGPT aplicado: ' + applied.join(' · ') + '. ' + (plan.title ? 'Proyecto: ' + String(plan.title).slice(0, 120) + '. ' : '') + 'Revisa los controles y pulsa “Procesar y exportar MP4”.';
+  editSummary.textContent = 'Plan aplicado: ' + applied.join(' · ') + '. ' +
+    (plan.title ? 'Proyecto: ' + plan.title + '. ' : '') +
+    'Revisa los controles y pulsa “Procesar y exportar MP4”.';
   progressArea.classList.add('hidden');
 }
 applyPlanButton.addEventListener('click', () => applyChatGPTPlan());
