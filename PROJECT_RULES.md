@@ -68,3 +68,5 @@
 52. El flujo guiado debe preguntar qué resultado quiere el usuario después de cargar un video y antes de mostrar la zona de edición.
 53. Los presets guiados solo pueden aplicar operaciones existentes y probadas localmente; no afirmar que generan automáticamente guion, narración, escenas nuevas o análisis semántico.
 54. Después de preparar el preset, mostrar el plan y permitir revisarlo antes de exportar. El archivo original no debe sobrescribirse y el procesamiento sigue siendo local sin servicios de pago.
+55. En GitHub Pages, el worker de @ffmpeg/ffmpeg debe servirse desde el mismo origen del sitio; no crear Worker directamente desde jsDelivr.
+56. El workflow de publicación debe descargar versiones fijadas de worker.js y sus dependencias, comprobar que existen y validar sintaxis antes de publicar. El motor core/WASM puede descargarse de la CDN fijada, sin subir videos del usuario.
