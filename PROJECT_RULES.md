@@ -23,3 +23,8 @@
 21. Priorizar el workflow `Generate free illustrated video`, que crea ilustraciones, movimiento, subtítulos y narración sin claves ni APIs de pago.
 22. El workflow de Veo es opcional y no debe ejecutarse para este usuario mientras no autorice expresamente un cambio de presupuesto.
 23. No prometer generación ilimitada ni afirmar que el resultado gratuito tiene calidad equivalente a video generativo avanzado.
+
+24. La página principal debe mantener separadas las secciones Crear con IA y Galería de videos.
+25. Los videos se agregan como entradas independientes en `public/videos/gallery.json`; nunca sobrescribir un video anterior sin intención explícita.
+26. El generador gratuito debe construir animación con una secuencia de fotogramas, usar voz masculina grave en español si está disponible y añadir efectos sonoros sintetizados sin APIs pagadas.
+27. Si la voz neuronal gratuita falla, usar el respaldo local y documentar que la calidad puede ser más robótica; no usar APIs que cobren ni habilitar facturación.
