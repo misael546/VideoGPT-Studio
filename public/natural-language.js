@@ -24,7 +24,7 @@ export function interpretVideoInstructions(input, durationSeconds = 0) {
   let recognized = 0;
 
   const range = matchOne(text, [
-    new RegExp('(?:de|desde|del segundo)\\s*(?:el\\s+segundo\\s*)?' + number + '\\s*(?:a|hasta|al)\\s*(?:el\\s+segundo\\s*)?' + number + '(?:\\s*' + timeWord + ')?'),
+    new RegExp('(?:de|desde|del segundo)\\s*(?:el(?:\\s+segundo)?\\s*)?' + number + '\\s*(?:a|hasta|al)\\s*(?:el\\s+segundo\\s*)?' + number + '(?:\\s*' + timeWord + ')?'),
     new RegExp('entre\\s*' + number + '\\s*y\\s*' + number + '\\s*' + timeWord)
   ]);
   const start = matchOne(text, [
