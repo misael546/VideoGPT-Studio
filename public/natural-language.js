@@ -23,10 +23,7 @@ export function interpretVideoInstructions(input, durationSeconds = 0) {
   const questions = [];
   let recognized = 0;
 
-  const range = matchOne(text, [
-    new RegExp('(?:de|desde|del segundo)\\s*(?:el(?:\\s+segundo)?\\s*)?' + number + '\\s*(?:a|hasta|al)\\s*(?:el\\s+segundo\\s*)?' + number + '(?:\\s*' + timeWord + ')?'),
-    new RegExp('entre\\s*' + number + '\\s*y\\s*' + number + '\\s*' + timeWord)
-  ]);
+  const range = text.match(/(?:\\bde\\b|\\bdesde\\b|\\bdel segundo\\b)\\s*(?:el(?:\\s+segundo)?\\s*)?(\\d+(?:\\.\\d+)?)\\s*(?:a|hasta|al)\\s*(?:el(?:\\s+segundo)?\\s*)?(\\d+(?:\\.\\d+)?)/) || text.match(/entre\\s*(\\d+(?:\\.\\d+)?)\\s*y\\s*(\\d+(?:\\.\\d+)?)\\s*`(?:segundos?|seg|s)\\b/);
   const start = matchOne(text, [
     new RegExp('(?:quita|elimina|corta|recorta|salta|omite)\\s+(?:los\\s+)?primeros?\\s*' + number + '\\s*' + timeWord),
     new RegExp('(?:empieza|inicia|comienza|arranca|parte)\\s+(?:en|desde|a partir de)\\s*' + number + '\\s*' + timeWord),
