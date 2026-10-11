@@ -71,6 +71,7 @@ let ffmpegLogMessages = [];
 let engineAssetUrls = [];
 let autoEnhanceVideo = false;
 let autoStoryMode = false;
+let autoStorySceneTimes = [];
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return '—';
@@ -247,6 +248,7 @@ generateFromAssistant.addEventListener('click', async () => {
   const wantsPolish = Boolean(result?.requestedFeatures?.imagePolish) || /\b(profesional|pulir|pule|pula|mejorar las imagenes|mejora las imagenes|nitidez|calidad visual)\b/i.test(combined.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
   autoEnhanceVideo = wantsPolish || wantsStory;
   autoStoryMode = wantsStory;
+  autoStorySceneTimes = [];
   if (wantsStory) {
     // Story requests are handled for the user: portrait output, gentle transitions,
     // conservative image enhancement, then export without sending them to tool panels.
@@ -274,6 +276,10 @@ generateFromAssistant.addEventListener('click', async () => {
   addAssistantMessage(responseText, 'assistant');
   clearError();
   editingWorkspace.classList.remove('hidden');
+  if (wantsStory && window.videoGPTAdvancedTools?.analyzeScenesAutomatically) {
+    addAssistantMessage('Estoy revisando automáticamente los cambios de escena para elegir mejor los fragmentos…', 'assistant');
+    autoStorySceneTimes = await window.videoGPTAdvancedTools.analyzeScenesAutomatically();
+  }
   exportButton.click();
   if (!busy) {
     addAssistantMessage('No pude iniciar el motor de edición. Revisa el error que aparece y vuelve a intentarlo.', 'assistant');
@@ -922,13 +928,27 @@ exportButton.addEventListener('click', async () => {
       const clipCount = Math.min(6, Math.max(2, Math.floor(sourceDuration / 3)));
       const clipDuration = Math.min(2.5, sourceDuration / clipCount);
       const latestStart = Math.max(start, end - clipDuration);
-      const clipStarts = Array.from({ length: clipCount }, (_, index) =>
-        clipCount === 1 ? start : start + (latestStart - start) * index / (clipCount - 1)
-      );
+      const sceneCandidates = autoStorySceneTimes
+        .filter(time => Number.isFinite(time) && time >= start && time <= latestStart)
+        .sort((a, b) => a - b);
+      let clipStarts;
+      if (sceneCandidates.length >= 2) {
+        const selectedCount = Math.min(clipCount, sceneCandidates.length);
+        clipStarts = Array.from({ length: selectedCount }, (_, index) => {
+          const candidateIndex = Math.round(index * (sceneCandidates.length - 1) / Math.max(1, selectedCount - 1));
+          return sceneCandidates[candidateIndex];
+        });
+      } else {
+        clipStarts = Array.from({ length: clipCount }, (_, index) =>
+          clipCount === 1 ? start : start + (latestStart - start) * index / (clipCount - 1)
+        );
+      }
+      const actualClipCount = clipStarts.length;
+      resultDuration = actualClipCount * clipDuration;
       resultDuration = clipCount * clipDuration;
       const graph = [];
       const videoSources = clipStarts.map((_, index) => '[vsrc' + index + ']').join('');
-      graph.push('[0:v]split=' + clipCount + videoSources);
+      graph.push('[0:v]split=' + actualClipCount + videoSources);
       const videoOutputs = [];
       clipStarts.forEach((clipStart, index) => {
         const label = '[v' + index + ']';
@@ -940,7 +960,7 @@ exportButton.addEventListener('click', async () => {
           'fade=t=in:st=0:d=0.2,fade=t=out:st=' + fadeOutStart + ':d=0.2' + label);
         videoOutputs.push(label);
       });
-      graph.push(videoOutputs.join('') + 'concat=n=' + clipCount + ':v=1:a=0[vout]');
+      graph.push(videoOutputs.join('') + 'concat=n=' + actualClipCount + ':v=1:a=0[vout]');
       args.length = 0;
       args.push('-hide_banner', '-y', '-i', inputName);
       if (hasOriginalAudio) {
@@ -953,11 +973,11 @@ exportButton.addEventListener('click', async () => {
             ':duration=' + clipDuration.toFixed(3) + ',asetpts=PTS-STARTPTS' + label);
           audioOutputs.push(label);
         });
-        graph.push(audioOutputs.join('') + 'concat=n=' + clipCount + ':v=0:a=1[aout]');
+        graph.push(audioOutputs.join('') + 'concat=n=' + actualClipCount + ':v=0:a=1[aout]');
       }
       args.push('-filter_complex', graph.join(';'), '-map', '[vout]');
       if (hasOriginalAudio) args.push('-map', '[aout]');
-      progressDetail.textContent = 'Montando automáticamente ' + clipCount + ' fragmentos verticales de tu video.';
+      progressDetail.textContent = 'Montando automáticamente ' + actualClipCount + ' fragmentos verticales' + (sceneCandidates.length >= 2 ? ' elegidos por cambios de escena.' : ' distribuidos por el video.');
     }
     args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', outputName);
     progressLabel.textContent = 'Procesando video…';
@@ -972,7 +992,7 @@ exportButton.addEventListener('click', async () => {
     resultPreview.src = outputUrl;
     downloadLink.href = outputUrl;
     downloadLink.download = safeName(selectedFile.name) + '-editado.mp4';
-    resultInfo.textContent = 'MP4 validado en el navegador · ' + (blob.size / (1024 * 1024)).toFixed(1) + ' MB · ' + ((end - start) / speed).toFixed(1) + ' segundos. Se guardará en tu dispositivo al descargarlo.';
+    resultInfo.textContent = 'MP4 validado en el navegador · ' + (blob.size / (1024 * 1024)).toFixed(1) + ' MB · ' + (autoStoryMode ? resultDuration : (end - start) / speed).toFixed(1) + ' segundos. Se guardará en tu dispositivo al descargarlo.';
     resultPanel.classList.remove('hidden');
     progressBar.value = 100;
     progressPercent.textContent = '100%';
