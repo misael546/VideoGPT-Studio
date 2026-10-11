@@ -797,10 +797,16 @@ async function loadEngine() {
   }
   const coreURL = await fetchEngineAsset('ffmpeg-core.js', 'text/javascript', 'Motor FFmpeg (JavaScript)', 0);
   const wasmURL = await fetchEngineAsset('ffmpeg-core.wasm', 'application/wasm', 'Motor FFmpeg (WebAssembly)', 1);
-  const classWorkerURL = new URL('./vendor/ffmpeg/worker.js', window.location.href).href;
+  const workerURL = await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js', 'text/javascript');
+  engineAssetUrls.push(workerURL);
   progressLabel.textContent = 'Iniciando motor de edición…';
-  progressDetail.textContent = 'Los archivos están descargados. Preparando FFmpeg en el navegador.';
-  await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
+  progressDetail.textContent = 'Los componentes están descargados. Iniciando el trabajador de FFmpeg…';
+  try {
+    await ffmpeg.load({ coreURL, wasmURL, classWorkerURL: workerURL });
+  } catch (error) {
+    progressDetail.textContent = 'No se pudo iniciar el trabajador de FFmpeg: ' + (error?.message || 'error desconocido');
+    throw new Error('El motor de edición no pudo iniciarse en este navegador. Comprueba que no esté bloqueando trabajadores o WebAssembly y vuelve a intentarlo. Detalle: ' + (error?.message || 'sin detalles'));
+  }
   ffmpegReady = true;
   progressBar.value = 10;
   progressPercent.textContent = '10%';
