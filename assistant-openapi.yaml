@@ -1,0 +1,102 @@
+openapi: 3.1.0
+info:
+  title: VideoGPT Studio Assistant API
+  version: 1.0.0
+  description: Secure endpoints for an explicitly configured assistant to request a real video and poll until a valid output URL is returned. Requests may consume provider credits.
+servers:
+  - url: https://video-gpt-studio.vercel.app
+components:
+  securitySchemes:
+    AssistantBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: token
+  schemas:
+    VideoRequest:
+      type: object
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        ratio:
+          type: string
+          enum: ["16:9", "9:16"]
+          default: "16:9"
+        duration:
+          type: integer
+          minimum: 4
+          maximum: 12
+          default: 5
+    VideoTask:
+      type: object
+      properties:
+        taskId:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
+    VideoStatus:
+      type: object
+      properties:
+        taskId:
+          type: string
+        status:
+          type: string
+          enum: [PROCESSING, SUCCEEDED, FAILED, CANCELED]
+        progress:
+          type: [number, "null"]
+        outputUrl:
+          type: [string, "null"]
+        failure:
+          type: [string, "null"]
+security:
+  - AssistantBearer: []
+paths:
+  /api/assistant/videos:
+    post:
+      operationId: createVideo
+      summary: Start a real video generation
+      description: Only call after the user explicitly asks to create a video and has been told generation may use provider credits. Returns a task ID, not an immediate video.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VideoRequest'
+      responses:
+        '202':
+          description: Provider accepted the task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoTask'
+        '400':
+          description: Invalid request
+        '401':
+          description: Missing or invalid assistant token
+        '502':
+          description: Provider could not start generation
+  /api/assistant/videos/{id}:
+    get:
+      operationId: getVideoStatus
+      summary: Check a video task and retrieve its URL when complete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current status. outputUrl is only returned for a confirmed successful task with an HTTP(S) URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoStatus'
+        '401':
+          description: Missing or invalid assistant token
+        '502':
+          description: Provider status lookup failed
