@@ -25,6 +25,7 @@ jobs:
           node --check public/app.js
           node --check public/editor.js
           node --check public/edit-plan.js
+          node --check public/natural-language.js
           test -s public/editor.html
           test -s public/editor.css
       - name: Test edit plan validator
