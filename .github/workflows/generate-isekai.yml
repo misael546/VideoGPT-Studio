@@ -1,0 +1,50 @@
+name: Generate isekai test video
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_paid_generation:
+        description: "Confirmo que la generación puede consumir créditos de Google AI"
+        required: true
+        type: choice
+        options:
+          - "no"
+          - "sí"
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: ${{ inputs.confirm_paid_generation == 'sí' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Install Google GenAI SDK
+        run: npm install --no-save @google/genai
+      - name: Generate and assemble scenes
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          VEO_MODEL: veo-3.1-fast-generate-preview
+        run: node scripts/generate-isekai.mjs
+      - name: Verify final video
+        run: |
+          test -s public/videos/isekai-test.mp4
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 public/videos/isekai-test.mp4
+      - name: Commit video to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/videos/isekai-test.mp4
+          git commit -m "Add generated isekai test video"
+          git push origin "HEAD:${{ github.ref_name }}"
