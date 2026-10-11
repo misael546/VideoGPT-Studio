@@ -419,6 +419,8 @@ window.videoGPTAdvancedTools = {
     if (options.narration) {
       try {
         narrationVoice.value = 'pm_alex';
+        const narrationInput = $('#narrationFile');
+        if (narrationInput) narrationInput.value = '';
         narrationText.value = makeNarrationScript(options.instruction);
         await generateNarration();
         if ($('#narrationFile')?.files?.length) requested.push('voz masculina en español');
