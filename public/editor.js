@@ -805,7 +805,10 @@ async function loadEngine() {
     // Cargamos el módulo remoto, lo convertimos a Blob local y damos esa URL al Worker.
     const workerResponse = await fetch('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js', { cache: 'force-cache' });
     if (!workerResponse.ok) throw new Error('No se pudo descargar el trabajador de FFmpeg (HTTP ' + workerResponse.status + ').');
-    const workerSource = await workerResponse.text();
+    let workerSource = await workerResponse.text();
+    // El worker es un módulo y su import relativo dejaría de resolverse al crear una URL Blob.
+    // Convertimos esa dependencia en una URL absoluta de la misma versión de FFmpeg.
+    workerSource = workerSource.replace(/(['\"])\.\/const\.js\1/g, '\"https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/const.js\"');
     const workerBlobURL = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
     engineAssetUrls.push(workerBlobURL);
     await ffmpeg.load({ coreURL, wasmURL, classWorkerURL: workerBlobURL });
