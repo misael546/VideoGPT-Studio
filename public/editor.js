@@ -1,6 +1,6 @@
 import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
 import { validateEditPlan } from './edit-plan.js';
-import { planVideoInstruction } from './assistant-planner.js';
+import { planVideoInstruction } from './assistant-planner.js?v=20261011-8';
 
 const $ = (selector) => document.querySelector(selector);
 const fileInput = $('#videoFile');
