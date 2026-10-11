@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0b12">
+  <meta name="description" content="Edita videos directamente en tu navegador con herramientas gratuitas.">
+  <title>Editor de video — VideoGPT Studio</title>
+  <link rel="stylesheet" href="./editor.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Volver a VideoGPT Studio"><span class="brand-mark">▶</span><span>video<strong>GPT</strong> <small>STUDIO</small></span></a>
+    <nav><a href="./">Galería</a><a class="active" href="./editor.html">Editar video</a></nav>
+  </header>
+  <main class="container">
+    <section class="intro">
+      <p class="eyebrow">EDITOR LOCAL · SIN API DE PAGO</p>
+      <h1>Edita tu video.<br><span>Conserva el control.</span></h1>
+      <p>Selecciona un archivo, ajusta los cambios y exporta un MP4. El video se procesa en este navegador; no se sube a VideoGPT Studio ni a un servidor.</p>
+    </section>
+    <section class="editor-panel" aria-labelledby="sourceTitle">
+      <div class="section-head"><div><p class="eyebrow">PASO 1</p><h2 id="sourceTitle">Sube tu video</h2></div><span class="pill">Procesamiento local</span></div>
+      <label class="dropzone" id="dropzone" for="videoFile">
+        <span class="upload-icon">↑</span><strong>Selecciona o arrastra un video aquí</strong>
+        <span>MP4, MOV o WebM · máximo recomendado: 120 MB</span>
+        <input id="videoFile" type="file" accept="video/mp4,video/quicktime,video/webm,video/*">
+      </label>
+      <p class="privacy-note">Privacidad: el archivo permanece en la memoria de tu dispositivo. El editor descarga FFmpeg desde una CDN pública para poder funcionar.</p>
+      <div id="sourceInfo" class="source-info hidden"></div>
+      <video id="sourcePreview" class="preview hidden" controls playsinline></video>
+    </section>
+    <section class="editor-panel" aria-labelledby="editTitle">
+      <div class="section-head"><div><p class="eyebrow">PASO 2</p><h2 id="editTitle">Ajusta la edición</h2></div></div>
+      <div class="controls-grid">
+        <label>Inicio del recorte (segundos)<input id="trimStart" type="number" min="0" step="0.1" value="0"></label>
+        <label>Final del recorte (segundos)<input id="trimEnd" type="number" min="0" step="0.1" placeholder="Duración completa"></label>
+        <label>Velocidad<select id="speed"><option value="0.5">0.5× — lento</option><option value="0.75">0.75×</option><option value="1" selected>1× — normal</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2× — rápido</option></select></label>
+        <label>Formato de salida<select id="aspect"><option value="original">Mantener tamaño original</option><option value="landscape">Horizontal 16:9 (1280×720)</option><option value="portrait">Vertical 9:16 (720×1280)</option><option value="square">Cuadrado 1:1 (720×720)</option></select></label>
+        <label class="range-label">Volumen del audio <span id="volumeValue">100%</span><input id="volume" type="range" min="0" max="200" step="10" value="100"></label>
+        <label class="check-label"><input id="fade" type="checkbox"> Aplicar entrada y salida suaves de 0.5 s</label>
+      </div>
+      <div class="summary" id="editSummary">Selecciona un video para ver su duración y preparar la edición.</div>
+      <button id="exportButton" class="primary" disabled>Procesar y exportar MP4</button>
+      <div id="progressArea" class="progress-area hidden" aria-live="polite">
+        <div class="progress-head"><strong id="progressLabel">Preparando motor de edición…</strong><span id="progressPercent">0%</span></div>
+        <progress id="progressBar" max="100" value="0"></progress>
+        <p id="progressDetail">La primera ejecución descarga el motor gratuito; puede tardar según tu conexión.</p>
+      </div>
+      <div id="errorBox" class="error hidden" role="alert"></div>
+    </section>
+    <section id="resultPanel" class="editor-panel hidden" aria-labelledby="resultTitle">
+      <div class="section-head"><div><p class="eyebrow">PASO 3</p><h2 id="resultTitle">Tu video editado</h2></div><span class="pill success">Exportado</span></div>
+      <video id="resultPreview" class="preview" controls playsinline></video>
+      <p id="resultInfo" class="privacy-note"></p>
+      <a id="downloadLink" class="primary download" download="videogpt-editado.mp4">Descargar MP4</a>
+    </section>
+    <footer><a href="./">← Volver a la galería</a><span>VideoGPT Studio · herramientas gratuitas</span></footer>
+  </main>
+  <script type="module" src="./editor.js"></script>
+</body>
+</html>
