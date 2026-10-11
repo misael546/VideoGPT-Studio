@@ -579,7 +579,7 @@ exportButton.addEventListener('click', async () => {
     if (extraTracks.length) {
       ffmpegLogMessages = [];
       try { await ffmpeg.exec(['-hide_banner', '-i', inputName]); } catch {}
-      hasOriginalAudio = ffmpegLogMessages.some(message => /Stream #0:\d+(?:\([^)]*\))?: Audio:/i.test(message));
+      hasOriginalAudio = ffmpegLogMessages.some(message => /Stream #0:.*Audio:/i.test(message));
     }
     const args = ['-hide_banner', '-y', '-ss', start.toFixed(3), '-i', inputName];
     const trackIndices = {};
