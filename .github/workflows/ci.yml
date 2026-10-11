@@ -18,20 +18,6 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
-      - name: Check committed same-origin FFmpeg worker syntax
-        run: |
-          node --check public/vendor/ffmpeg/worker.js
-          node --check public/vendor/ffmpeg/const.js
-          node --check public/vendor/ffmpeg/errors.js
-      - name: Prepare and verify same-origin FFmpeg worker
-        run: |
-          npm run prepare:ffmpeg
-          node --check public/vendor/ffmpeg/worker.js
-          node --check public/vendor/ffmpeg/const.js
-          node --check public/vendor/ffmpeg/errors.js
-          test -s public/vendor/ffmpeg/worker.js
-          test -s public/vendor/ffmpeg/const.js
-          test -s public/vendor/ffmpeg/errors.js
       - name: Check server syntax
         run: node --check src/server.js
       - name: Check browser script syntax

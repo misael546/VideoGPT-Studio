@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const editor = read('../public/editor.js');
@@ -23,6 +25,18 @@ test('the local worker resolves its dependencies locally and uses the pinned pro
   assert.match(worker, /from ["']\.\/errors\.js["']/);
   assert.match(constants, /CORE_VERSION = ["']0\.12\.6["']/);
   assert.match(errors, /ERROR_IMPORT_FAILURE/);
+});
+
+test('the committed worker assets pass Node syntax checks', () => {
+  for (const relativePath of [
+    '../public/vendor/ffmpeg/worker.js',
+    '../public/vendor/ffmpeg/const.js',
+    '../public/vendor/ffmpeg/errors.js'
+  ]) {
+    const filePath = fileURLToPath(new URL(relativePath, import.meta.url));
+    const result = spawnSync(process.execPath, ['--check', filePath], { encoding: 'utf8' });
+    assert.equal(result.status, 0, relativePath + ': ' + (result.stderr || result.stdout));
+  }
 });
 
 test('the preparation script pins the worker package version and required files', () => {
