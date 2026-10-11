@@ -60,7 +60,7 @@ export function planVideoInstruction(input, durationSeconds = 0) {
     };
   }
 
-  if (quality && base.status === 'ok') {
+  if (quality && (base.status === 'ok' || base.status === 'partial')) {
     return {
       ...base,
       plan: { ...quality.plan, ...base.plan },
