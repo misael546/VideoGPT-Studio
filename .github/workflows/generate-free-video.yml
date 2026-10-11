@@ -31,7 +31,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg espeak-ng fonts-dejavu-core
           python -m pip install --upgrade pip
-          python -m pip install Pillow edge-tts
+          python -m pip install Pillow edge-tts cairosvg
       - name: Generate illustrated video without paid APIs
         run: python scripts/generate-free-isekai.py
       - name: Verify video
@@ -42,12 +42,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/videos/isekai-test.mp4
+          git add public/videos/isekai-mejorado.mp4 public/videos/gallery.json
           if git diff --cached --quiet; then
             echo "The generated MP4 is unchanged; nothing to commit."
             exit 0
           fi
-          git commit -m "Update free illustrated isekai video"
+          git commit -m "Add extended illustrated isekai video"
           # Integrate any documentation/code commits that landed while rendering.
           git fetch origin "${{ github.ref_name }}"
           git rebase "origin/${{ github.ref_name }}"
