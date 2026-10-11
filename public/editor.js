@@ -27,6 +27,9 @@ const resultPanel = $('#resultPanel');
 const resultPreview = $('#resultPreview');
 const resultInfo = $('#resultInfo');
 const downloadLink = $('#downloadLink');
+const editPlanJson = $('#editPlanJson');
+const applyPlanButton = $('#applyPlan');
+const loadPlanExampleButton = $('#loadPlanExample');
 
 let selectedFile = null;
 let sourceUrl = null;
@@ -118,6 +121,101 @@ function applyNaturalInstructions() {
   editSummary.textContent = 'Cambios aplicados: ' + applied.join(' · ') + '. Revisa los controles antes de exportar.';
 }
 applyInstructions.addEventListener('click', applyNaturalInstructions);
+function applyChatGPTPlan(planOverride) {
+  clearError();
+  let plan = planOverride;
+  if (!plan) {
+    try {
+      plan = JSON.parse(editPlanJson.value);
+    } catch {
+      showError('El plan no es JSON válido. Pídele a ChatGPT que entregue únicamente un objeto JSON y pégalo completo.');
+      return;
+    }
+  }
+  if (!plan || typeof plan !== 'object' || Array.isArray(plan) || plan.version !== 1) {
+    showError('Plan no compatible. Debe ser un objeto JSON con "version": 1.');
+    return;
+  }
+  const applied = [];
+  if (plan.trim !== undefined) {
+    if (!plan.trim || typeof plan.trim !== 'object' || Array.isArray(plan.trim)) {
+      showError('El campo "trim" debe contener "start" y, opcionalmente, "end", en segundos.');
+      return;
+    }
+    const start = Number(plan.trim.start ?? 0);
+    const end = plan.trim.end === null || plan.trim.end === undefined || plan.trim.end === '' ? durationSeconds : Number(plan.trim.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start || (durationSeconds && end > durationSeconds)) {
+      showError('El recorte del plan es inválido. Comprueba los segundos y que no excedan la duración del video cargado.');
+      return;
+    }
+    trimStart.value = String(start);
+    trimEnd.value = String(end);
+    applied.push('recorte ' + start + '–' + end + ' s');
+  }
+  if (plan.speed !== undefined) {
+    const speed = Number(plan.speed);
+    if (![0.5, 0.75, 1, 1.25, 1.5, 2].includes(speed)) {
+      showError('La velocidad debe ser una de estas opciones: 0.5, 0.75, 1, 1.25, 1.5 o 2.');
+      return;
+    }
+    speedInput.value = String(speed);
+    applied.push('velocidad ' + speed + '×');
+  }
+  if (plan.aspect !== undefined) {
+    const allowedAspects = ['original', 'landscape', 'portrait', 'square'];
+    if (!allowedAspects.includes(plan.aspect)) {
+      showError('El formato debe ser original, landscape, portrait o square.');
+      return;
+    }
+    aspectInput.value = plan.aspect;
+    applied.push('formato ' + plan.aspect);
+  }
+  if (plan.volume !== undefined) {
+    const volume = Number(plan.volume);
+    if (!Number.isFinite(volume) || volume < 0 || volume > 200) {
+      showError('El volumen debe ser un número entre 0 y 200.');
+      return;
+    }
+    volumeInput.value = String(Math.round(volume / 10) * 10);
+    volumeValue.textContent = volumeInput.value + '%';
+    applied.push('volumen ' + volumeInput.value + '%');
+  }
+  if (plan.fade !== undefined) {
+    if (typeof plan.fade !== 'boolean') {
+      showError('El campo "fade" debe ser true o false.');
+      return;
+    }
+    fadeInput.checked = plan.fade;
+    applied.push(plan.fade ? 'fundidos suaves' : 'sin fundidos');
+  }
+  if (!applied.length) {
+    showError('El plan no incluye cambios compatibles. Incluye al menos uno de estos campos: trim, speed, aspect, volume o fade.');
+    return;
+  }
+  refreshSummary();
+  if (exportButton.disabled && selectedFile && durationSeconds) {
+    showError('El plan se leyó, pero el recorte no es válido para este archivo. Revisa los segundos.');
+    return;
+  }
+  editSummary.textContent = 'Plan de ChatGPT aplicado: ' + applied.join(' · ') + '. ' + (plan.title ? 'Proyecto: ' + String(plan.title).slice(0, 120) + '. ' : '') + 'Revisa los controles y pulsa “Procesar y exportar MP4”.';
+  progressArea.classList.add('hidden');
+}
+applyPlanButton.addEventListener('click', () => applyChatGPTPlan());
+loadPlanExampleButton.addEventListener('click', () => {
+  const example = {
+    version: 1,
+    title: 'Ejemplo: reel dinámico',
+    trim: { start: 2, end: durationSeconds > 8 ? Math.min(22, Math.floor(durationSeconds)) : null },
+    speed: 1.25,
+    aspect: 'portrait',
+    volume: 80,
+    fade: true
+  };
+  editPlanJson.value = JSON.stringify(example, null, 2);
+  if (durationSeconds > 0) applyChatGPTPlan(example);
+  else editSummary.textContent = 'Ejemplo cargado. Sube un video y vuelve a aplicar el plan para validar sus tiempos.';
+});
+
 
 function refreshSummary() {
   if (!selectedFile || !durationSeconds) {
