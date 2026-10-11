@@ -71,7 +71,7 @@ test('recognizes story edit, scene/frame analysis, dialogue/text and male narrat
   assert.equal(result.requestedFeatures.story, true);
   assert.equal(result.requestedFeatures.dialogue, true);
   assert.equal(result.requestedFeatures.narration, true);
-  assert.match(result.question, /no puede reconocer automáticamente/i);
+  assert.match(result.question, /Detectar cambios de escena/i);
   assert.match(result.question, /voz masculina/i);
 });
 
