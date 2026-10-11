@@ -40,6 +40,12 @@
         <label class="range-label">Volumen del audio <span id="volumeValue">100%</span><input id="volume" type="range" min="0" max="200" step="10" value="100"></label>
         <label class="check-label"><input id="fade" type="checkbox"> Aplicar entrada y salida suaves de 0.5 s</label>
       </div>
+      <div class="instruction-box">
+        <label for="editInstructions">O describe los cambios que quieres</label>
+        <textarea id="editInstructions" rows="3" placeholder="Ej.: quita los primeros 5 segundos, acelera a 1.5x, ponlo vertical y baja el volumen al 50%"></textarea>
+        <button id="applyInstructions" class="secondary" type="button">Aplicar instrucciones compatibles</button>
+        <p>Reconoce instrucciones sencillas en español y las traduce a los controles de arriba; no usa una IA externa ni interpreta cualquier petición.</p>
+      </div>
       <div class="summary" id="editSummary">Selecciona un video para ver su duración y preparar la edición.</div>
       <button id="exportButton" class="primary" disabled>Procesar y exportar MP4</button>
       <div id="progressArea" class="progress-area hidden" aria-live="polite">
