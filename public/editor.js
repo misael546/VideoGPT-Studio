@@ -97,8 +97,22 @@ function applyNaturalInstructions() {
     return result;
   }
   if (result.status === 'partial') {
+    const partialPlan = result.plan || {};
+    const applied = [];
+    if (partialPlan.trim && partialPlan.trim.end !== null) {
+      trimStart.value = String(partialPlan.trim.start);
+      trimEnd.value = String(partialPlan.trim.end);
+      applied.push('recorte ' + partialPlan.trim.start + '–' + partialPlan.trim.end + ' s');
+    }
+    if (partialPlan.speed !== undefined) { speedInput.value = String(partialPlan.speed); applied.push('velocidad ' + partialPlan.speed + '×'); }
+    if (partialPlan.aspect !== undefined) { aspectInput.value = partialPlan.aspect; applied.push('formato ' + partialPlan.aspect); }
+    if (partialPlan.volume !== undefined) { volumeInput.value = String(partialPlan.volume); volumeValue.textContent = partialPlan.volume + '%'; applied.push('volumen ' + partialPlan.volume + '%'); }
+    if (partialPlan.fade !== undefined) { fadeInput.checked = partialPlan.fade; applied.push(partialPlan.fade ? 'fundidos suaves' : 'sin fundidos'); }
+    if (applied.length) refreshSummary();
     showError(result.question);
-    editSummary.textContent = 'Entendí: ' + result.understood.join(' · ') + '.';
+    editSummary.textContent = applied.length
+      ? 'Apliqué los cambios compatibles: ' + applied.join(' · ') + '. Las funciones avanzadas aún no se ejecutan.'
+      : 'Entendí la intención, pero no hay cambios compatibles que aplicar automáticamente.';
     return result;
   }
   const plan = result.plan;
