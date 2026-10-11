@@ -58,6 +58,32 @@
       <label class="assistant-input-label" for="assistantPrompt">Tu instrucción</label>
       <textarea id="assistantPrompt" rows="3" placeholder="Ej.: quita el inicio, hazlo vertical para TikTok y deja el audio al 70 %."></textarea>
       <p class="assistant-hint">Puedes describir el objetivo completo. El asistente separa los cambios que entiende de las funciones que todavía requieren integración; el video permanece en este navegador.</p>
+
+      <section class="advanced-media-panel" aria-label="Análisis inteligente del video">
+        <p class="eyebrow">HERRAMIENTAS AVANZADAS · PROCESAMIENTO LOCAL</p>
+        <h3>Analizar escenas, diálogos y narración</h3>
+        <p class="privacy-note">El análisis y los modelos se ejecutan en el navegador. La primera descarga de modelos puede ser grande y dependerá de la memoria del teléfono.</p>
+        <div class="advanced-action-row">
+          <button id="analyzeScenes" class="secondary" type="button" disabled>Detectar cambios de escena</button>
+          <button id="transcribeVideo" class="secondary" type="button" disabled>Transcribir diálogos</button>
+        </div>
+        <p id="sceneAnalysisStatus" class="advanced-status" aria-live="polite">Carga un video para analizarlo.</p>
+        <div id="detectedScenes" class="detected-scenes"></div>
+        <label class="advanced-label" for="transcriptText">Transcripción detectada</label>
+        <textarea id="transcriptText" rows="4" placeholder="Aquí aparecerán las palabras reconocidas del audio…"></textarea>
+        <button id="useTranscript" class="secondary" type="button" disabled>Usar transcripción como guion</button>
+        <p id="transcriptStatus" class="advanced-status" aria-live="polite">El modelo Whisper Tiny se descargará al iniciar la transcripción.</p>
+        <div class="voice-generator">
+          <label class="advanced-label" for="narrationText">Guion para la narración</label>
+          <textarea id="narrationText" rows="4" placeholder="Escribe una narración o usa el texto transcrito y edítalo para contar la historia…"></textarea>
+          <label class="advanced-label" for="narrationVoice">Voz masculina</label>
+          <select id="narrationVoice"><option value="em_alex">Español · voz masculina Alex</option><option value="am_adam">Inglés · voz masculina Adam</option></select>
+          <button id="generateNarration" class="primary" type="button" disabled>Generar narración y añadirla al video</button>
+          <p id="voiceStatus" class="advanced-status" aria-live="polite">La narración generada se añadirá a la pista de voz para la exportación.</p>
+          <div id="generatedVoicePreview"></div>
+        </div>
+      </section>
+
       <button id="generateFromAssistant" class="primary generate-simple" type="button">✦ Generar video</button>
     </section>
 
@@ -129,5 +155,6 @@
     <footer><a href="./">← Volver a la galería</a><span>VideoGPT Studio · procesamiento local</span></footer>
   </main>
   <script type="module" src="./editor.js"></script>
+  <script type="module" src="./advanced-tools.js"></script>
 </body>
 </html>
