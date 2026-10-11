@@ -76,8 +76,8 @@ export function validateEditPlan(plan, durationSeconds = 0) {
 
   if (plan.volume !== undefined) {
     if (typeof plan.volume !== 'number' || !Number.isFinite(plan.volume) ||
-        plan.volume < 0 || plan.volume > 200) {
-      return fail('volume debe ser un número entre 0 y 200.');
+        plan.volume < 0 || plan.volume > 200 || plan.volume % 10 !== 0) {
+      return fail('volume debe ser un múltiplo de 10 entre 0 y 200, como espera el control del editor.');
     }
     normalized.volume = plan.volume;
     operationCount++;
