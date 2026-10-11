@@ -67,24 +67,26 @@ async function refreshVideoTask(taskId) {
       resultLink.href = data.outputUrl;
       resultLink.classList.remove('hidden');
       status.textContent = 'Video generado';
-      addBubble('assistant', 'El video se generó correctamente. Abre el enlace para verlo o guardarlo; los enlaces del proveedor pueden caducar, así que descarga tu copia.');
+      generationNote.textContent = 'Video listo. Descárgalo si quieres conservarlo; el enlace del proveedor puede caducar.';
+      addBubble('assistant', 'Agnes AI confirmó que el video está listo. Puedes reproducirlo o abrir el enlace para guardarlo.');
       return;
     }
     if (['FAILED', 'CANCELED'].includes(data.status)) throw new Error(data.failure || `La generación terminó con estado ${data.status}.`);
     status.textContent = 'Generando…';
-    generationNote.textContent = `Estado del proveedor: ${data.status}. La generación sigue en proceso.`;
+    const progress = Number.isFinite(data.progress) ? ` (${data.progress}%)` : '';
+    generationNote.textContent = `Estado de Agnes AI: ${data.status}${progress}. La tarea sigue en proceso.`;
   }
-  throw new Error('La generación está tardando más de lo esperado. Puedes volver a intentarlo más tarde.');
+  throw new Error('La generación está tardando más de lo esperado. Puedes consultar de nuevo más tarde.');
 }
 generateBtn.addEventListener('click', async () => {
   if (!currentPrompt || activeTask) return;
-  const confirmed = window.confirm('La generación de video se enviará a Runway y puede consumir créditos de pago. ¿Quieres continuar?');
+  const confirmed = window.confirm('Se enviará tu descripción a Agnes AI para generar un video. El acceso gratuito puede tener límites de uso. ¿Quieres continuar?');
   if (!confirmed) return;
   activeTask = true;
   generateBtn.disabled = true;
   generateBtn.textContent = 'Iniciando generación…';
   status.textContent = 'En cola';
-  generationNote.textContent = 'Enviando la solicitud al proveedor…';
+  generationNote.textContent = 'Enviando la solicitud a Agnes AI…';
   try {
     const response = await fetch('/api/video/generate', {
       method: 'POST',
@@ -97,7 +99,7 @@ generateBtn.addEventListener('click', async () => {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'No se pudo iniciar la generación.');
-    addBubble('assistant', `Tarea de video creada (${data.taskId}). Runway puede tardar varios minutos en completarla.`);
+    addBubble('assistant', `Tarea de video creada (${data.taskId}). Agnes AI puede tardar varios minutos en completarla.`);
     generateBtn.textContent = 'Generando video…';
     await refreshVideoTask(data.taskId);
   } catch (error) {
@@ -138,8 +140,8 @@ form.addEventListener('submit', async event => {
     generateBtn.disabled = !generationAvailable;
     generateBtn.textContent = generationAvailable ? 'Generar video' : 'Configurar proveedor para generar';
     generationNote.textContent = generationAvailable
-      ? 'Runway está configurado. Al pulsar Generar video, se enviará la solicitud y podrían consumirse créditos.'
-      : 'La conexión con Runway y su clave privada aún deben configurarse en el servidor.';
+      ? 'Agnes AI está conectado. La generación real puede estar sujeta a límites gratuitos de la cuenta.'
+      : 'Configura AGNES_API_KEY en las variables de entorno del servidor.';
   } catch (error) {
     loading.remove();
     addBubble('error', error.message || 'Error de conexión. Inténtalo de nuevo.');
@@ -152,6 +154,6 @@ fetch('/api/health')
   .then(response => response.json())
   .then(data => {
     generationAvailable = Boolean(data.videoConfigured);
-    if (generationAvailable) generationNote.textContent = 'Proveedor de video conectado en el servidor.';
+    if (generationAvailable) generationNote.textContent = 'Agnes AI está configurado en el servidor.';
   })
   .catch(() => {});
