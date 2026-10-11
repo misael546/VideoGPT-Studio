@@ -29,3 +29,13 @@ test('does not pretend a male voice request is complete; exposes available advan
   assert.equal(result.requestedFeatures.narration, true);
   assert.match(result.question, /añadir narración/i);
 });
+
+test('combines story format and automatic image polish without asking the user to operate tools', () => {
+  const result = planVideoInstruction('Quiero que cortes fotograma por fotograma el video y pulas las imágenes y que las unas en un vídeo estilo historia', 48);
+  assert.equal(result.status, 'partial');
+  assert.equal(result.plan.aspect, 'portrait');
+  assert.equal(result.plan.fade, true);
+  assert.equal(result.plan.volume, 90);
+  assert.equal(result.requestedFeatures.story, true);
+  assert.equal(result.requestedFeatures.imagePolish, true);
+});
