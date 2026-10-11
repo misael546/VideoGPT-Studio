@@ -4,147 +4,79 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b0b12">
-  <meta name="description" content="Edita videos directamente en tu navegador con herramientas gratuitas.">
-  <title>Editor de video — VideoGPT Studio</title>
+  <meta name="description" content="Sube tu video para preparar una edición con VideoGPT Studio.">
+  <title>Subir video — VideoGPT Studio</title>
   <link rel="stylesheet" href="./editor.css">
+  <style>
+    .upload-only { max-width: 760px; margin: 4rem auto; }
+    .upload-only h1 { margin-bottom: .75rem; }
+    .upload-only .intro-copy { color: var(--muted, #a8a8b8); line-height: 1.65; }
+    .dropzone { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.85rem; min-height:230px; margin-top:2rem; padding:2rem; text-align:center; border:2px dashed var(--border, #44445a); border-radius:20px; cursor:pointer; }
+    .dropzone:hover, .dropzone:focus-within { border-color:var(--accent, #9b87ff); }
+    .upload-icon { font-size:2.5rem; }
+    .dropzone input { max-width:100%; }
+    .file-info { margin-top:1rem; padding:1rem; border-radius:12px; background:rgba(255,255,255,.06); overflow-wrap:anywhere; }
+    .preview { display:block; width:100%; max-height:55vh; margin-top:1rem; background:#000; border-radius:14px; }
+    .privacy-note { line-height:1.6; }
+    .hidden { display:none !important; }
+  </style>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="./" aria-label="Volver a VideoGPT Studio"><span class="brand-mark">▶</span><span>video<strong>GPT</strong> <small>STUDIO</small></span></a>
-    <nav><a href="./">Galería</a><a class="active" href="./editor.html">Editar video</a></nav>
+    <nav><a href="./">Galería</a><a class="active" href="./editor.html">Subir video</a></nav>
   </header>
-  <main class="container">
+  <main class="container upload-only">
     <section class="intro">
-      <p class="eyebrow">EDITOR LOCAL · SIN API DE PAGO</p>
-      <h1>Edita tu video.<br><span>Conserva el control.</span></h1>
-      <p>Selecciona un archivo, ajusta los cambios y exporta un MP4. El video se procesa en este navegador; no se sube a VideoGPT Studio ni a un servidor.</p>
+      <p class="eyebrow">VIDEOGPT STUDIO</p>
+      <h1>Sube tu video.</h1>
+      <p class="intro-copy">Selecciona el video que quieres editar. Después dime qué quieres hacer con él y prepararemos los siguientes pasos.</p>
     </section>
-    <section class="editor-panel" aria-labelledby="sourceTitle">
-      <div class="section-head"><div><p class="eyebrow">PASO 1</p><h2 id="sourceTitle">Sube tu video</h2></div><span class="pill">Procesamiento local</span></div>
+    <section class="editor-panel" aria-label="Subir video">
       <label class="dropzone" id="dropzone" for="videoFile">
-        <span class="upload-icon">↑</span><strong>Selecciona o arrastra un video aquí</strong>
-        <span>MP4, MOV o WebM · máximo recomendado: 120 MB</span>
+        <span class="upload-icon" aria-hidden="true">↑</span>
+        <strong>Selecciona o arrastra tu video aquí</strong>
+        <span>MP4, MOV o WebM</span>
         <input id="videoFile" type="file" accept="video/mp4,video/quicktime,video/webm,video/*">
       </label>
-      <p class="privacy-note">Privacidad: el archivo permanece en la memoria de tu dispositivo. El editor descarga FFmpeg desde una CDN pública para poder funcionar.</p>
-      <div id="sourceInfo" class="source-info hidden"></div>
-      <video id="sourcePreview" class="preview hidden" controls playsinline></video>
-      <section id="guidedGoalPanel" class="guided-panel hidden" aria-labelledby="guidedGoalTitle">
-        <p class="eyebrow">PASO 2 · CUÉNTAME TU OBJETIVO</p>
-        <h2 id="guidedGoalTitle">¿Qué quieres hacer con este video?</h2>
-        <p class="guided-intro">Primero elegimos el resultado. Después preparo una propuesta de edición y la aplico a las herramientas locales disponibles.</p>
-        <div class="goal-grid" role="group" aria-label="Tipo de edición">
-          <button type="button" class="goal-card" data-goal="improve"><strong>Mejorar el video</strong><span>Conservar el estilo y aplicar ajustes suaves.</span></button>
-          <button type="button" class="goal-card" data-goal="shorts"><strong>TikTok / Shorts / Reels</strong><span>Prepararlo en formato vertical y con ritmo más rápido.</span></button>
-          <button type="button" class="goal-card" data-goal="youtube"><strong>Video para YouTube</strong><span>Formato horizontal y ajustes equilibrados.</span></button>
-          <button type="button" class="goal-card" data-goal="recap"><strong>Resumen de anime o manhwa</strong><span>Formato vertical y ritmo dinámico; la narración debe añadirse por separado.</span></button>
-          <button type="button" class="goal-card" data-goal="custom"><strong>Otra cosa</strong><span>Describe el resultado que tienes en mente.</span></button>
-        </div>
-        <label class="goal-custom-label" for="goalCustomText">Detalles adicionales (opcional)
-          <textarea id="goalCustomText" rows="3" placeholder="Ej.: elimina silencios, conserva las escenas importantes y hazlo más dinámico."></textarea>
-        </label>
-        <p id="guidedGoalStatus" class="guided-status" aria-live="polite">El video todavía no se procesa. Elegiremos primero el objetivo.</p>
-        <button id="prepareGuidedEdit" class="primary" type="button" disabled>Preparar mi edición</button>
-        <p class="privacy-note">Sin APIs de pago: el montaje compatible se realiza en tu navegador. Esta versión no genera automáticamente guion, voz o escenas nuevas ni está conectada directamente a este chat.</p>
-      </section>
-
-      <div class="frame-tools">
-        <div class="frame-tools-head">
-          <div><p class="eyebrow">HERRAMIENTA DE ESCENAS</p><h3>Extraer cuadros del video</h3></div>
-        </div>
-        <p class="privacy-note">Genera una hoja de escenas dentro de tu dispositivo. Las imágenes no se suben a ningún servidor.</p>
-        <div class="frame-actions">
-          <label>Capturar cada
-            <select id="frameInterval">
-              <option value="2">2 segundos</option>
-              <option value="5" selected>5 segundos</option>
-              <option value="10">10 segundos</option>
-            </select>
-          </label>
-          <button id="captureFrames" class="secondary" type="button" disabled>Capturar cuadros</button>
-          <button id="downloadContactSheet" class="secondary" type="button" disabled>Descargar hoja de escenas</button>
-        </div>
-        <p id="frameStatus" class="frame-status" aria-live="polite">Carga un video para extraer cuadros.</p>
-        <div id="frameGallery" class="frame-gallery"></div>
-      </div>
+      <div id="fileInfo" class="file-info hidden" aria-live="polite"></div>
+      <video id="videoPreview" class="preview hidden" controls playsinline></video>
+      <p class="privacy-note">El video que selecciones aquí permanece en este navegador; no se envía a este chat ni se sube a un servidor. Para que pueda trabajar directamente con el contenido, adjunta también el archivo en esta conversación de ChatGPT y después dime qué edición quieres.</p>
     </section>
-    <section id="editingWorkspace" class="editor-panel hidden" aria-labelledby="editTitle">
-      <div class="section-head"><div><p class="eyebrow">PASO 3</p><h2 id="editTitle">Revisa el plan preparado</h2></div></div>
-      <div class="controls-grid">
-        <label>Inicio del recorte (segundos)<input id="trimStart" type="number" min="0" step="0.1" value="0"></label>
-        <label>Final del recorte (segundos)<input id="trimEnd" type="number" min="0" step="0.1" placeholder="Duración completa"></label>
-        <label>Velocidad<select id="speed"><option value="0.5">0.5× — lento</option><option value="0.75">0.75×</option><option value="1" selected>1× — normal</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2× — rápido</option></select></label>
-        <label>Formato de salida<select id="aspect"><option value="original">Mantener tamaño original</option><option value="landscape">Horizontal 16:9 (1280×720)</option><option value="portrait">Vertical 9:16 (720×1280)</option><option value="square">Cuadrado 1:1 (720×720)</option></select></label>
-        <label class="range-label">Volumen del audio <span id="volumeValue">100%</span><input id="volume" type="range" min="0" max="200" step="10" value="100"></label>
-        <label class="check-label"><input id="fade" type="checkbox"> Aplicar entrada y salida suaves de 0.5 s</label>
-      </div>
-      <div class="audio-mixer">
-        <div class="audio-mixer-heading"><p class="eyebrow">MEZCLADOR DE AUDIO</p><h3>Narración, música y efectos</h3></div>
-        <p class="privacy-note">Carga pistas de audio desde tu teléfono. Se mezclan localmente con el vídeo; nada se sube a un servidor. Para la voz masculina, selecciona un archivo de narración en español.</p>
-        <div class="audio-track">
-          <label class="audio-file-label">Narración / voz masculina
-            <input id="narrationFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg">
-          </label>
-          <label class="audio-range">Volumen de narración <span id="narrationVolumeValue">100%</span>
-            <input id="narrationVolume" type="range" min="0" max="200" step="5" value="100">
-          </label>
-        </div>
-        <div class="audio-track">
-          <label class="audio-file-label">Música de fondo
-            <input id="musicFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg">
-          </label>
-          <label class="audio-range">Volumen de música <span id="musicVolumeValue">18%</span>
-            <input id="musicVolume" type="range" min="0" max="100" step="1" value="18">
-          </label>
-        </div>
-        <div class="audio-track">
-          <label class="audio-file-label">Efectos de sonido
-            <input id="effectsFile" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg">
-          </label>
-          <div class="audio-effect-controls">
-            <label class="audio-range">Volumen de efectos <span id="effectsVolumeValue">65%</span>
-              <input id="effectsVolume" type="range" min="0" max="200" step="5" value="65">
-            </label>
-            <label class="audio-offset">Iniciar efectos en (segundos)
-              <input id="effectsOffset" type="number" min="0" step="0.1" value="0">
-            </label>
-          </div>
-        </div>
-        <p id="audioStatus" class="frame-status" aria-live="polite">Las pistas son opcionales. Si no seleccionas audio adicional, se conserva el sonido original del vídeo.</p>
-      </div>
-      <div class="instruction-box">
-        <label for="editInstructions">O describe los cambios que quieres</label>
-        <textarea id="editInstructions" rows="3" placeholder="Ej.: quita los primeros 5 segundos, acelera a 1.5x, ponlo vertical y baja el volumen al 50%"></textarea>
-        <button id="applyInstructions" class="secondary" type="button">Aplicar instrucciones compatibles</button>
-        <p>Permite ajustar manualmente solo operaciones compatibles. Si una petición requiere generar voz, escribir un guion o seleccionar escenas con comprensión semántica, esta versión todavía no puede hacerlo automáticamente.</p>
-      </div>
-      <div class="instruction-box plan-box">
-        <label for="editPlanJson">Plan de edición preparado por ChatGPT (JSON)</label>
-        <p>Pídeme el plan para tu video. Pega aquí el JSON que te entregue y aplícalo: el editor ejecutará solo operaciones compatibles y mostrará los cambios detectados.</p>
-        <textarea id="editPlanJson" rows="8" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder='{"version":1,"trim":{"start":3,"end":24},"speed":1.25,"aspect":"portrait","volume":70,"fade":true}'></textarea>
-        <div class="plan-actions">
-          <button id="applyPlan" class="secondary" type="button">Aplicar plan de ChatGPT</button>
-          <button id="loadPlanExample" class="secondary" type="button">Cargar ejemplo</button>
-        </div>
-        <p>Formato admitido: recorte en segundos, velocidad 0.5–2×, formato original/horizontal/vertical/cuadrado, volumen 0–200% y fundidos. No se conecta una IA al sitio ni se envía el video a servidores.</p>
-      </div>
-      <div class="summary" id="editSummary">Selecciona un video para ver su duración y preparar la edición.</div>
-      <button id="exportButton" class="primary" disabled>Procesar y exportar MP4</button>
-      <div id="progressArea" class="progress-area hidden" aria-live="polite">
-        <div class="progress-head"><strong id="progressLabel">Preparando motor de edición…</strong><span id="progressPercent">0%</span></div>
-        <progress id="progressBar" max="100" value="0"></progress>
-        <p id="progressDetail">La primera ejecución descarga el motor gratuito; puede tardar según tu conexión.</p>
-      </div>
-      <div id="errorBox" class="error hidden" role="alert"></div>
-    </section>
-    <section id="resultPanel" class="editor-panel hidden" aria-labelledby="resultTitle">
-      <div class="section-head"><div><p class="eyebrow">PASO 3</p><h2 id="resultTitle">Tu video editado</h2></div><span class="pill success">Exportado</span></div>
-      <video id="resultPreview" class="preview" controls playsinline></video>
-      <p id="resultInfo" class="privacy-note"></p>
-      <a id="downloadLink" class="primary download" download="videogpt-editado.mp4">Descargar MP4</a>
-    </section>
-    <footer><a href="./">← Volver a la galería</a><span>VideoGPT Studio · herramientas gratuitas</span></footer>
+    <footer><a href="./">← Volver a la galería</a><span>VideoGPT Studio</span></footer>
   </main>
-  <script type="module" src="./editor.js"></script>
+  <script>
+    const picker = document.getElementById('videoFile');
+    const info = document.getElementById('fileInfo');
+    const preview = document.getElementById('videoPreview');
+    const dropzone = document.getElementById('dropzone');
+    let previewUrl = '';
+    function showFile(file) {
+      if (!file) return;
+      if (!file.type.startsWith('video/')) {
+        info.textContent = 'Selecciona un archivo de video válido.';
+        info.classList.remove('hidden');
+        preview.classList.add('hidden');
+        return;
+      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(file);
+      info.textContent = file.name + ' · ' + (file.size / (1024 * 1024)).toFixed(1) + ' MB · seleccionado';
+      info.classList.remove('hidden');
+      preview.src = previewUrl;
+      preview.classList.remove('hidden');
+    }
+    picker.addEventListener('change', () => showFile(picker.files && picker.files[0]));
+    dropzone.addEventListener('dragover', event => { event.preventDefault(); });
+    dropzone.addEventListener('drop', event => {
+      event.preventDefault();
+      const file = event.dataTransfer && event.dataTransfer.files[0];
+      if (file) {
+        try { picker.files = event.dataTransfer.files; } catch (_) {}
+        showFile(file);
+      }
+    });
+    window.addEventListener('pagehide', () => { if (previewUrl) URL.revokeObjectURL(previewUrl); });
+  </script>
 </body>
 </html>
