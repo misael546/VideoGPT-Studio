@@ -13,3 +13,6 @@
 11. Nunca exponer las claves de OpenAI o Runway al frontend.
 12. Antes de publicar, probar que el servidor inicia, la página carga, la API responde y los errores se muestran claramente.
 13. La generación de video debe usar un proveedor autorizado; documentar costos, modelos, límites y términos vigentes.
+
+14. Las rutas para asistentes externos deben requerir un token de servidor en `VIDEOGPT_ASSISTANT_TOKEN`; nunca exponerlo en frontend ni en Git. No afirmar que la integración está conectada a este chat hasta verificarla en el entorno real.
+15. Las rutas de asistente solo pueden informar que el video terminó cuando el proveedor confirme éxito y devuelva una URL HTTP(S) válida. Ante cola llena, no reintentar automáticamente en bucle.

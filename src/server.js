@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { timingSafeEqual } from 'node:crypto';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -172,6 +173,110 @@ app.get('/api/video/tasks/:id', async (req, res) => {
     });
   } catch (error) {
     res.status(502).json({ error: error.message || 'No se pudo consultar el estado del video.' });
+  }
+});
+
+
+function assistantAuthorized(req) {
+  const configured = process.env.VIDEOGPT_ASSISTANT_TOKEN;
+  const supplied = req.get('authorization')?.replace(/^Bearer\\s+/i, '');
+  if (!configured || !supplied) return false;
+  const expectedBuffer = Buffer.from(configured);
+  const suppliedBuffer = Buffer.from(supplied);
+  return expectedBuffer.length === suppliedBuffer.length && timingSafeEqual(expectedBuffer, suppliedBuffer);
+}
+
+function assistantAuth(req, res, next) {
+  if (!process.env.VIDEOGPT_ASSISTANT_TOKEN) {
+    return res.status(503).json({ error: 'La integración de asistente no está configurada en el servidor.' });
+  }
+  if (!assistantAuthorized(req)) {
+    return res.status(401).json({ error: 'No autorizado.' });
+  }
+  next();
+}
+
+function validOutputUrl(value) {
+  if (typeof value !== 'string') return null;
+  try {
+    const parsed = new URL(value);
+    return ['https:', 'http:'].includes(parsed.protocol) ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+// Protected endpoints intended for an explicitly configured assistant integration.
+// Keep the token in hosting environment variables; never send it to browser code.
+app.post('/api/assistant/videos', assistantAuth, async (req, res) => {
+  const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
+  const ratio = req.body?.ratio === '9:16' ? '9:16' : (req.body?.ratio === '16:9' || !req.body?.ratio ? '16:9' : null);
+  const duration = Number(req.body?.duration ?? 5);
+  if (!prompt) return res.status(400).json({ error: 'Falta la descripción del video.' });
+  if (prompt.length > 5000) return res.status(413).json({ error: 'La descripción supera el límite de 5.000 caracteres.' });
+  if (!ratio) return res.status(400).json({ error: 'Formato admitido: 16:9 o 9:16.' });
+  if (!Number.isInteger(duration) || duration < 4 || duration > 12) {
+    return res.status(400).json({ error: 'La duración admitida es de 4 a 12 segundos.' });
+  }
+  if (!process.env.AGNES_API_KEY) return res.status(503).json({ error: 'El proveedor de video no está configurado.' });
+
+  try {
+    const response = await fetch(`${AGNES_BASE}/v1/videos`, {
+      method: 'POST',
+      headers: agnesHeaders(),
+      body: JSON.stringify({
+        model: VIDEO_MODEL,
+        prompt,
+        mode: 'text',
+        seconds: String(duration),
+        size: '720P',
+        aspect_ratio: ratio,
+        n: 1
+      })
+    });
+    const data = await readProviderResponse(response);
+    const taskId = data?.video_id || data?.id || data?.task_id;
+    if (typeof taskId !== 'string' || !taskId) {
+      return res.status(502).json({ error: 'Agnes AI no devolvió un identificador válido.' });
+    }
+    return res.status(202).json({
+      taskId,
+      status: data.status || 'queued',
+      message: 'La solicitud fue aceptada; consulta el estado para obtener el enlace cuando termine.'
+    });
+  } catch (error) {
+    return res.status(502).json({ error: error.message || 'Agnes AI no pudo iniciar la generación.' });
+  }
+});
+
+app.get('/api/assistant/videos/:id', assistantAuth, async (req, res) => {
+  const videoId = req.params.id;
+  if (!/^[a-zA-Z0-9_-]{3,160}$/.test(videoId)) {
+    return res.status(400).json({ error: 'Identificador de tarea no válido.' });
+  }
+  if (!process.env.AGNES_API_KEY) return res.status(503).json({ error: 'El proveedor de video no está configurado.' });
+
+  try {
+    const url = new URL(`${AGNES_BASE}/agnesapi`);
+    url.searchParams.set('video_id', videoId);
+    url.searchParams.set('model_name', VIDEO_MODEL);
+    const response = await fetch(url, { headers: agnesHeaders() });
+    const data = await readProviderResponse(response);
+    const providerStatus = String(data.status || 'queued').toLowerCase();
+    const outputUrl = validOutputUrl(data.url) || validOutputUrl(data.output_url);
+    let status = 'PROCESSING';
+    if (['completed', 'succeeded', 'success'].includes(providerStatus)) status = outputUrl ? 'SUCCEEDED' : 'PROCESSING';
+    if (['failed', 'error'].includes(providerStatus)) status = 'FAILED';
+    if (['canceled', 'cancelled'].includes(providerStatus)) status = 'CANCELED';
+    return res.json({
+      taskId: videoId,
+      status,
+      progress: Number.isFinite(Number(data.progress)) ? Number(data.progress) : null,
+      outputUrl: status === 'SUCCEEDED' ? outputUrl : null,
+      failure: status === 'FAILED' ? (data.error?.message || data.error || 'Agnes AI indicó que la generación falló.') : null
+    });
+  } catch (error) {
+    return res.status(502).json({ error: error.message || 'No se pudo consultar el estado del video.' });
   }
 });
 
