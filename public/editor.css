@@ -67,3 +67,22 @@
 #editingWorkspace>#progressArea:not(.hidden),#editingWorkspace>#errorBox:not(.hidden),#editingWorkspace>#resultPanel:not(.hidden){display:block!important}
 #editingWorkspace>#resultPanel:not(.hidden){padding:clamp(15px,4vw,22px);margin:18px 0;border:1px solid #403750;border-radius:15px;background:#14121d}
 @media(max-width:560px){.assistant-panel{padding:16px}.assistant-panel textarea{font-size:16px;min-height:110px}.generate-simple{min-height:53px}}
+
+
+/* Herramientas avanzadas: detección visual, transcripción y narración generada */
+.advanced-media-panel{display:grid;gap:10px;padding:16px;border:1px solid #514568;border-radius:13px;background:#12101c}
+.advanced-media-panel h3{margin:0;font:600 17px 'Space Grotesk',sans-serif}
+.advanced-action-row{display:flex;flex-wrap:wrap;gap:9px}
+.advanced-action-row button{flex:1 1 180px}
+.advanced-status{margin:0;color:#c4badf;font-size:11px;line-height:1.55;overflow-wrap:anywhere}
+.advanced-label{display:grid;gap:6px;color:#c9c2db;font-size:11px;font-weight:700}
+.advanced-media-panel textarea,.advanced-media-panel select{box-sizing:border-box;width:100%;min-height:42px;padding:10px;border:1px solid #39354d;border-radius:9px;background:#1b1927;color:#f1edff;font:12px/1.5 'DM Sans',sans-serif}
+.advanced-media-panel textarea{resize:vertical}
+.detected-scenes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.detected-scene{display:grid;gap:5px;min-width:0;padding:7px;border:1px solid #39354d;border-radius:9px;background:#191623}
+.detected-scene img{width:100%;aspect-ratio:16/10;object-fit:contain;background:#07070b;border-radius:5px}
+.detected-scene strong{font-size:11px}.detected-scene span{font-size:10px;color:#aaa4bf}
+.detected-scene div{display:flex;gap:5px}.detected-scene button{flex:1;min-width:0;padding:6px 3px;border:1px solid #514568;border-radius:6px;background:#211d2e;color:#d8ccff;font-size:9px}
+.voice-generator{display:grid;gap:10px;margin-top:5px;padding-top:14px;border-top:1px solid #302d42}
+.generated-voice-preview audio{width:100%;margin-top:8px}
+@media(max-width:460px){.advanced-media-panel{padding:12px}.detected-scenes{grid-template-columns:repeat(2,minmax(0,1fr))}.advanced-action-row button{flex-basis:100%}}
