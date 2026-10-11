@@ -606,7 +606,10 @@ async function loadEngine() {
   const base = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
   const coreURL = await toBlobURL(base + '/ffmpeg-core.js', 'text/javascript');
   const wasmURL = await toBlobURL(base + '/ffmpeg-core.wasm', 'application/wasm');
-  await ffmpeg.load({ coreURL, wasmURL });
+  // FFmpeg's class worker must be served from the same origin as GitHub Pages.
+  // The workflow downloads this pinned worker and its module dependencies into public/vendor/ffmpeg/.
+  const classWorkerURL = new URL('./vendor/ffmpeg/worker.js', window.location.href).href;
+  await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
   ffmpegReady = true;
 }
 function outputDimensions() {
