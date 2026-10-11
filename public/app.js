@@ -26,9 +26,12 @@ function showSection(section) {
   document.querySelector('#navGallery').classList.toggle('active', section === 'gallery');
 }
 function beginProject(prompt = '') {
-  showSection(prompt ? 'create' : 'welcome');
+  showSection('welcome');
   if (prompt) input.value = prompt;
   input.focus();
+}
+function openChatGPTForEditing() {
+  window.open('https://chatgpt.com/', '_blank', 'noopener,noreferrer');
 }
 function resetVideo() {
   resultVideo.pause();
@@ -48,6 +51,10 @@ document.querySelector('#navGallery').addEventListener('click', () => {
 for (const id of ['sidebarStart', 'topCreate', 'heroCreate', 'galleryCreate']) {
   document.querySelector('#' + id).addEventListener('click', () => beginProject());
 }
+document.querySelector('#sidebarStart').addEventListener('click', openChatGPTForEditing);
+document.querySelector('#heroCreate').addEventListener('click', openChatGPTForEditing);
+document.querySelector('#topCreate').addEventListener('click', openChatGPTForEditing);
+document.querySelector('#galleryCreate').addEventListener('click', openChatGPTForEditing);
 
 async function loadGallery() {
   try {
@@ -140,13 +147,13 @@ form.addEventListener('submit', event => {
   event.preventDefault();
   const message = input.value.trim();
   if (!message) return;
-  showSection('create');
-  currentPrompt = message;
-  title.textContent = message.length > 42 ? message.slice(0, 42) + '…' : message;
   conversation.replaceChildren();
-  addBubble('user', message);
-  addBubble('assistant', makePlan(message));
-  status.textContent = 'Plan preparado';
+  addBubble('assistant', 'Esta página no tiene una IA conectada y no puede recibir tu archivo en este chat. Abre ChatGPT, adjunta tu video y pega estas instrucciones: ' + message);
+  addBubble('assistant', 'Cuando compartas el video directamente en ChatGPT, podré evaluar qué cambios se pueden ejecutar con las herramientas disponibles y preparar un archivo de salida si el entorno lo permite.');
+  showSection('create');
+  title.textContent = 'Preparar edición en ChatGPT';
+  status.textContent = 'Pendiente de archivo';
+  currentPrompt = message;
   resetVideo();
   input.value = '';
 });
