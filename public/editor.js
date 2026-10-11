@@ -841,7 +841,7 @@ exportButton.addEventListener('click', async () => {
     const inputName = 'source-input.' + ((selectedFile.name.split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '') || 'mp4');
     const outputName = 'videogpt-output.mp4';
     await ffmpeg.writeFile(inputName, new Uint8Array(await selectedFile.arrayBuffer()));
-    const resultDuration = (end - start) / speed;
+    let resultDuration = (end - start) / speed;
     const narrationFile = narrationFileInput.files?.[0] || null;
     const musicFile = musicFileInput.files?.[0] || null;
     const effectsFile = effectsFileInput.files?.[0] || null;
@@ -852,7 +852,7 @@ exportButton.addEventListener('click', async () => {
     ].filter(Boolean);
     for (const track of extraTracks) await ffmpeg.writeFile(track.name, new Uint8Array(await track.file.arrayBuffer()));
     let hasOriginalAudio = false;
-    if (extraTracks.length) {
+    if (extraTracks.length || autoStoryMode) {
       ffmpegLogMessages = [];
       try { await ffmpeg.exec(['-hide_banner', '-i', inputName]); } catch {}
       hasOriginalAudio = ffmpegLogMessages.some(message => /Stream #0:.*Audio:/i.test(message));
@@ -914,6 +914,50 @@ exportButton.addEventListener('click', async () => {
         args.push('-af', audioFilters.join(','));
       }
       args.push('-map', '0:v:0', '-map', '0:a?');
+    }
+    if (autoStoryMode) {
+      // Automatically build a short story-style highlight montage from evenly
+      // distributed moments. This is a visual sampling heuristic, not semantic AI.
+      const sourceDuration = Math.max(0.1, end - start);
+      const clipCount = Math.min(6, Math.max(2, Math.floor(sourceDuration / 3)));
+      const clipDuration = Math.min(2.5, sourceDuration / clipCount);
+      const latestStart = Math.max(start, end - clipDuration);
+      const clipStarts = Array.from({ length: clipCount }, (_, index) =>
+        clipCount === 1 ? start : start + (latestStart - start) * index / (clipCount - 1)
+      );
+      resultDuration = clipCount * clipDuration;
+      const graph = [];
+      const videoSources = clipStarts.map((_, index) => '[vsrc' + index + ']').join('');
+      graph.push('[0:v]split=' + clipCount + videoSources);
+      const videoOutputs = [];
+      clipStarts.forEach((clipStart, index) => {
+        const label = '[v' + index + ']';
+        const fadeOutStart = Math.max(0, clipDuration - 0.2).toFixed(3);
+        graph.push('[vsrc' + index + ']trim=start=' + clipStart.toFixed(3) +
+          ':duration=' + clipDuration.toFixed(3) +
+          ',setpts=PTS-STARTPTS,scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,' +
+          'eq=contrast=1.06:saturation=1.10:brightness=0.01,unsharp=5:5:0.35:3:3:0.0,' +
+          'fade=t=in:st=0:d=0.2,fade=t=out:st=' + fadeOutStart + ':d=0.2' + label);
+        videoOutputs.push(label);
+      });
+      graph.push(videoOutputs.join('') + 'concat=n=' + clipCount + ':v=1:a=0[vout]');
+      args.length = 0;
+      args.push('-hide_banner', '-y', '-i', inputName);
+      if (hasOriginalAudio) {
+        const audioSources = clipStarts.map((_, index) => '[asrc' + index + ']').join('');
+        graph.push('[0:a]asplit=' + clipCount + audioSources);
+        const audioOutputs = [];
+        clipStarts.forEach((clipStart, index) => {
+          const label = '[a' + index + ']';
+          graph.push('[asrc' + index + ']atrim=start=' + clipStart.toFixed(3) +
+            ':duration=' + clipDuration.toFixed(3) + ',asetpts=PTS-STARTPTS' + label);
+          audioOutputs.push(label);
+        });
+        graph.push(audioOutputs.join('') + 'concat=n=' + clipCount + ':v=0:a=1[aout]');
+      }
+      args.push('-filter_complex', graph.join(';'), '-map', '[vout]');
+      if (hasOriginalAudio) args.push('-map', '[aout]');
+      progressDetail.textContent = 'Montando automáticamente ' + clipCount + ' fragmentos verticales de tu video.';
     }
     args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', outputName);
     progressLabel.textContent = 'Procesando video…';
