@@ -235,6 +235,93 @@
       ],
       "status": "catalogado_pendiente_de_importacion",
       "note": "Más de 100 modelos 3D en formatos OBJ, FBX y glTF. No se usa directamente en el generador 2D actual; reservar para un futuro flujo 3D o renders propios."
+    },
+    {
+      "id": "farol-antiguo-original",
+      "type": "image_overlay",
+      "path": "recursos/imagenes/objetos/farol-antiguo.svg",
+      "author": "VideoGPT Studio",
+      "license": "CC0 1.0 (proyecto)",
+      "provenance": "Recurso vectorial original creado para esta biblioteca",
+      "tags": [
+        "objeto",
+        "farol",
+        "luz",
+        "interior",
+        "fantasia"
+      ],
+      "scenes": [
+        "old"
+      ],
+      "x": 1010,
+      "y": 360,
+      "width": 95,
+      "height": 145
+    },
+    {
+      "id": "viajero-original",
+      "type": "image_overlay",
+      "path": "recursos/imagenes/personajes/viajero.svg",
+      "author": "VideoGPT Studio",
+      "license": "CC0 1.0 (proyecto)",
+      "provenance": "Recurso vectorial original creado para esta biblioteca",
+      "tags": [
+        "personaje",
+        "aventurero",
+        "fantasia",
+        "aldea"
+      ],
+      "scenes": [
+        "village"
+      ],
+      "x": 570,
+      "y": 435,
+      "width": 100,
+      "height": 160
+    },
+    {
+      "id": "runas-antiguas-original",
+      "type": "image_overlay",
+      "path": "recursos/imagenes/escenarios/runas-antiguas.svg",
+      "author": "VideoGPT Studio",
+      "license": "CC0 1.0 (proyecto)",
+      "provenance": "Recurso vectorial original creado para esta biblioteca",
+      "tags": [
+        "runas",
+        "magia",
+        "bosque",
+        "luz"
+      ],
+      "scenes": [
+        "forest"
+      ],
+      "x": 500,
+      "y": 190,
+      "width": 220,
+      "height": 220
+    },
+    {
+      "id": "chispas-magicas-original",
+      "type": "image_overlay",
+      "path": "recursos/imagenes/objetos/chispas-magicas.svg",
+      "author": "VideoGPT Studio",
+      "license": "CC0 1.0 (proyecto)",
+      "provenance": "Recurso vectorial original creado para esta biblioteca",
+      "tags": [
+        "magia",
+        "particulas",
+        "transicion",
+        "fantasia"
+      ],
+      "scenes": [
+        "soul",
+        "baby",
+        "portal"
+      ],
+      "x": 520,
+      "y": 250,
+      "width": 240,
+      "height": 240
     }
   ]
 }
