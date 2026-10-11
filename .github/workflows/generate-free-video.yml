@@ -2,6 +2,10 @@ name: Generate free illustrated video
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "scripts/generate-free-isekai.py"
+      - ".github/workflows/generate-free-video.yml"
 
 permissions:
   contents: write
