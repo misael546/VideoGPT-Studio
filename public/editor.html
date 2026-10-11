@@ -46,6 +46,16 @@
         <button id="applyInstructions" class="secondary" type="button">Aplicar instrucciones compatibles</button>
         <p>Reconoce instrucciones sencillas en español y las traduce a los controles de arriba; no usa una IA externa ni interpreta cualquier petición.</p>
       </div>
+      <div class="instruction-box plan-box">
+        <label for="editPlanJson">Plan de edición preparado por ChatGPT (JSON)</label>
+        <p>Pídeme el plan para tu video. Pega aquí el JSON que te entregue y aplícalo: el editor ejecutará solo operaciones compatibles y mostrará los cambios detectados.</p>
+        <textarea id="editPlanJson" rows="8" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder='{"version":1,"trim":{"start":3,"end":24},"speed":1.25,"aspect":"portrait","volume":70,"fade":true}'></textarea>
+        <div class="plan-actions">
+          <button id="applyPlan" class="secondary" type="button">Aplicar plan de ChatGPT</button>
+          <button id="loadPlanExample" class="secondary" type="button">Cargar ejemplo</button>
+        </div>
+        <p>Formato admitido: recorte en segundos, velocidad 0.5–2×, formato original/horizontal/vertical/cuadrado, volumen 0–200% y fundidos. No se conecta una IA al sitio ni se envía el video a servidores.</p>
+      </div>
       <div class="summary" id="editSummary">Selecciona un video para ver su duración y preparar la edición.</div>
       <button id="exportButton" class="primary" disabled>Procesar y exportar MP4</button>
       <div id="progressArea" class="progress-area hidden" aria-live="polite">
