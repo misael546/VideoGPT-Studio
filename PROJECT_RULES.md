@@ -38,3 +38,7 @@
 32. El generador gratuito debe leer `recursos/catalogo.json` de forma tolerante a errores. Las entradas visuales de tipo `image_overlay` pueden componerse solo si la ruta existe dentro del repositorio y coincide con la escena; los recursos ausentes se omiten sin romper la generación.
 33. La biblioteca no equivale a entrenar un modelo. No prometer entrenamiento automático ni compatibilidad de audio/fondos hasta implementar y probar esas funciones.
 34. Añadir únicamente recursos propios o con licencia compatible; optimizar archivos y no incluir videos finales en `recursos/`.
+
+35. La biblioteca de recursos debe revisarse semanalmente: buscar mejoras visuales, detectar duplicados/rutas rotas, validar procedencia y licencia, y añadir recursos originales solo cuando aporten valor.
+36. La revisión periódica puede comparar referencias públicas de composición, iluminación, detalle y movimiento, pero no debe copiar material protegido ni asumir que una imagen encontrada en internet es reutilizable sin verificar su licencia.
+37. La automatización semanal debe respetar el presupuesto $0, no habilitar servicios pagados y no afirmar que se generó arte con IA si la herramienta no estuvo disponible.
