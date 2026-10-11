@@ -1,89 +1,55 @@
 # VideoGPT Studio
 
-Web estática independiente para preparar ideas y reproducir videos.
+Proyecto independiente para subir videos, conservarlos en una galería local y preparar una edición dirigida por ChatGPT, sin integrar otra IA como asistente principal.
 
-## Arquitectura actual
+## Sitio y estado real
 
-- **Sitio web:** GitHub Pages publica el contenido de `public/`.
-- **Generación gratuita:** GitHub Actions ejecuta `Generate free illustrated video`.
-- **Almacenamiento de prueba:** los MP4 pequeños se guardan en `public/videos/` y se registran en `public/videos/gallery.json`.
-- **Sin dependencia de Vercel ni de claves API pagadas.**
+- Sitio estático publicado con GitHub Pages: https://misael546.github.io/VideoGPT-Studio/
+- Página para seleccionar un video: https://misael546.github.io/VideoGPT-Studio/editor.html
+- La selección y la galería local usan el almacenamiento del navegador (IndexedDB); el archivo no se sube a un servidor.
+- El video no se adjunta automáticamente a la conversación de ChatGPT. Para pedir una edición ahora, adjunta el archivo directamente en tu chat y describe el resultado.
+- La conexión directa entre esta conversación y la página **no está implementada ni verificada**. No anunciarla como disponible hasta probar carga segura, autorización, procesamiento y recuperación del archivo final.
+- El presupuesto es estrictamente $0. No activar facturación ni invocar APIs que puedan cobrar.
 
-Sitio esperado: https://misael546.github.io/VideoGPT-Studio/
+## Flujo objetivo
 
-## Crear el corto gratuito
+1. El usuario selecciona un video y lo conserva en su galería del navegador.
+2. El usuario adjunta el original directamente a ChatGPT y describe la edición.
+3. ChatGPT prepara las instrucciones de edición y decide qué operaciones hacen falta.
+4. Un procesador gratuito y determinista (por ejemplo, FFmpeg) ejecuta únicamente operaciones compatibles y validadas; no se integra otra IA para sustituir a ChatGPT.
+5. Se valida el archivo exportado y se presenta para descargarlo o guardarlo en la galería.
+6. El original nunca se sobrescribe.
 
-1. Abre la pestaña [Actions](https://github.com/misael546/VideoGPT-Studio/actions/workflows/generate-free-video.yml).
-2. Pulsa **Run workflow** y confirma.
-3. Espera a que termine correctamente.
-4. El workflow valida el MP4 y lo guarda en el repositorio. El cambio en `public/` inicia la publicación del sitio en GitHub Pages.
+Los pasos 3–5 no deben presentarse como automatizados desde la página hasta que exista una integración segura y se pruebe de extremo a extremo. Mientras no exista, el editor local y el intercambio de instrucciones son alternativas parciales, no una conexión directa.
 
-El generador actual crea un corto ilustrado predefinido con fotogramas, narración en español y efectos sonoros sintetizados. No es un modelo de video generativo y todavía no convierte cada prompt de la página en un video personalizado. GitHub Actions está sujeto a límites de uso; no se promete generación ilimitada.
+## Generador gratuito de cortos ilustrados
 
-## Biblioteca de recursos reutilizables
+El workflow [Generate free illustrated video](https://github.com/misael546/VideoGPT-Studio/actions/workflows/generate-free-video.yml) crea un corto ilustrado predefinido mediante fotogramas, narración y efectos sonoros sintetizados. No es un modelo generativo de video y no adapta automáticamente cada prompt del sitio a un video personalizado. GitHub Actions tiene límites de uso; no se promete generación ilimitada.
 
-La carpeta `recursos/` organiza imágenes de personajes, escenarios y objetos, efectos y ambientes sonoros, música y plantillas. Su catálogo está en `recursos/catalogo.json`.
+Para ejecutarlo, abre el workflow, pulsa **Run workflow**, espera a que termine y comprueba que el MP4 sea válido antes de publicarlo.
 
-El generador gratuito ya lee el catálogo y aplica recursos registrados con el tipo `image_overlay` cuando el archivo existe y la escena coincide. Los overlays deben ser imágenes PNG con transparencia siempre que sea posible. Ejemplo de entrada:
+## Biblioteca de recursos
 
-```json
-{
-  "id": "farol-antiguo",
-  "type": "image_overlay",
-  "path": "recursos/imagenes/objetos/farol.png",
-  "tags": ["fantasia", "objeto", "luz"],
-  "scenes": ["old"],
-  "x": 860,
-  "y": 330,
-  "width": 90
-}
-```
+La carpeta `recursos/` organiza imágenes, sonidos, música, plantillas y su catálogo `recursos/catalogo.json`. Solo se incorporan recursos propios o con licencia compatible. Una biblioteca reutilizable no equivale a entrenar un modelo de IA.
 
-Las coordenadas `x` y `y` y el ancho son píxeles sobre el lienzo de 1280×720. `scenes` acepta los nombres de escena que usa el generador (`old`, `soul`, `baby`, `kingdom`) o `all`. El alto se calcula proporcionalmente si no se especifica. El catálogo puede permanecer vacío: la generación sigue funcionando con sus ilustraciones base. Actualmente, los archivos de audio, música y fondos están organizados pero todavía no se mezclan automáticamente.
+La revisión semanal puede detectar rutas rotas, duplicados, procedencia y licencias, y añadir recursos originales útiles. Debe respetar el presupuesto $0 y no afirmar que hubo generación de imágenes si la herramienta no estuvo disponible.
 
-La biblioteca mejora la producción mediante reutilización y composición de recursos; no entrena automáticamente un modelo de inteligencia artificial. Usa solamente archivos propios o con licencia compatible, optimiza su tamaño y no guardes videos terminados dentro de `recursos/`.
+## Desarrollo local
 
-## Galería
-
-Cada video debe tener un nombre único dentro de `public/videos/`. Añade una entrada independiente a `public/videos/gallery.json` con `title`, `description` y `src`. No reemplaces videos anteriores sin intención explícita. Valida el MP4 antes de publicarlo.
-
-La galería es un catálogo estático; no es una función de subida desde el navegador. GitHub es almacenamiento de prueba para MP4 pequeños, no un servicio multimedia optimizado para tráfico público alto.
-
-## Publicación inicial de GitHub Pages
-
-En GitHub, abre **Settings → Pages** y selecciona **GitHub Actions** como fuente de publicación si aún no está configurado. Después, ejecuta el workflow [Publish VideoGPT Studio on GitHub Pages](https://github.com/misael546/VideoGPT-Studio/actions/workflows/pages.yml) o haz un cambio en `public/`.
-
-## Ejecutar localmente
-
-Requisitos: Node.js 20+, Python 3.12+, Pillow, FFmpeg y eSpeak NG para generar el corto localmente.
+Requisitos: Node.js 20+. Para levantar el servidor:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Para ejecutar el generador local:
+El servidor Express contiene rutas heredadas para proveedores externos. No son necesarias para la web estática de GitHub Pages y **no deben usarse** en este proyecto mientras el presupuesto sea $0. Nunca agregues claves, tokens ni credenciales al repositorio.
 
-```bash
-python -m pip install Pillow edge-tts
-python scripts/generate-free-isekai.py
-```
+## Seguridad y pruebas
 
-## Presupuesto y seguridad
-
-El presupuesto del proyecto es estrictamente $0. No activar facturación ni llamar APIs que puedan generar cargos. El flujo experimental de Veo y los endpoints antiguos de proveedores no forman parte del camino activo de la web.
-
-## Mantenimiento periódico de la biblioteca
-
-La tarea programada **Mejorar biblioteca VideoGPT** revisa semanalmente el repositorio, la biblioteca, el catálogo, las rutas, la procedencia de los recursos y posibles mejoras visuales. Si una herramienta de generación de imágenes no está disponible, debe usar solo alternativas originales/procedurales verificables o informar que no hubo cambios útiles. No entrena un modelo automáticamente ni habilita APIs pagadas. Los materiales externos solo se reutilizan tras verificar su licencia y atribución.
-
-
-## Editor de video local (nuevo)
-
-Abre [Editar video](https://misael546.github.io/VideoGPT-Studio/editor.html) desde el sitio. Esta herramienta permite seleccionar un video local, recortar el inicio/final, cambiar la velocidad, ajustar el volumen, añadir fundidos cortos y adaptar la salida a horizontal, vertical o cuadrado; luego exporta un MP4 H.264/AAC usando FFmpeg WebAssembly en el navegador.
-
-- El video original no se sube a un servidor; el procesamiento se ejecuta en el navegador del usuario.
-- La primera vez necesita internet para cargar las librerías de FFmpeg desde jsDelivr.
-- Recomendación: archivos de hasta 120 MB y videos de salida de hasta 10 minutos. Teléfonos con poca memoria pueden necesitar videos más pequeños.
-- La exportación debe reproducirse y revisarse antes de compartirla. El sitio no afirma que el editor esté conectado automáticamente a ChatGPT; las ediciones se eligen mediante los controles disponibles.
-- No se necesita API key ni facturación. Si el navegador no puede cargar FFmpeg o falta memoria, probar con un archivo menor o un navegador actualizado.
+- No subir archivos del usuario sin consentimiento explícito y una explicación clara.
+- No exponer claves privadas al frontend.
+- No afirmar que una integración de ChatGPT funciona sin probar autenticación, carga, edición, resultado y descarga.
+- Validar entradas y el video final; mostrar errores reales en vez de fingir que la edición terminó.
+- No depender de enlaces temporales como almacenamiento permanente.
+- Probar la interfaz en móvil y escritorio.
