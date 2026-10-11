@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Catálogo de recursos reutilizables y paquetes externos. Los paquetes externos son referencias para importación; no se consideran archivos locales ni utilizables por el generador hasta descargarlos, revisarlos y probarlos.",
+  "description": "Biblioteca de recursos reutilizables y paquetes externos. Los SVG originales image_overlay se convierten a PNG durante el render con CairoSVG; los paquetes externos siguen pendientes hasta importar archivos.",
   "resources": [
     {
       "id": "kenney-retro-textures-fantasy",
