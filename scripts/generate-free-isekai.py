@@ -55,16 +55,17 @@ W, H = 1280, 720
 OUT = "public/videos"
 WORK = ".free-video-work"
 FPS = 25
-SCENE_SECONDS = 6
+SCENE_SECONDS = 8
+# Eight distinct chapters create a longer story rather than stretching or repeating the old four scenes.
 LINES = [
-    ("Una vida larga llegó tranquilamente a su final, bajo la última luz del atardecer.",
-     "old"),
-    ("Entre estrellas y destellos dorados, su alma cruzó el umbral hacia otro mundo.",
-     "soul"),
-    ("Volvió a abrir los ojos como un bebé de cabello plateado, en una tierra desconocida.",
-     "baby"),
-    ("A lo lejos, un castillo anunciaba el comienzo de una nueva aventura.",
-     "kingdom"),
+    ("Al final de una vida larga, un anciano contempló en silencio la última luz de su hogar.", "old"),
+    ("Cuando cerró los ojos, una corriente de estrellas lo llevó más allá del cielo conocido.", "soul"),
+    ("Despertó convertido en un bebé de cabello plateado, protegido por una familia desconocida.", "baby"),
+    ("Años después, salió de su aldea y vio un reino que parecía sacado de una leyenda.", "kingdom"),
+    ("En el bosque antiguo, aprendió a escuchar la magia escondida entre las raíces.", "forest"),
+    ("En una aldea al pie de las montañas, encontró aliados y la primera pista de su destino.", "village"),
+    ("Un dragón despertó entre las ruinas; su sombra cubrió el valle y encendió el cielo.", "dragon"),
+    ("Sin huir, reunió su valor y cruzó el portal, decidido a escribir su propia historia.", "portal"),
 ]
 os.makedirs(OUT, exist_ok=True)
 os.makedirs(WORK, exist_ok=True)
@@ -138,6 +139,57 @@ def make_scene(kind, path):
         d.ellipse((535,370,560,395), fill=(64,73,109)); d.ellipse((630,370,655,395), fill=(64,73,109))
         d.arc((565,385,625,425), 10, 160, fill=(126,67,73), width=4)
         title="UNA SEGUNDA VIDA"
+    elif kind == "forest":
+        im=gradient((15,45,63),(80,132,105)); d=ImageDraw.Draw(im)
+        for x,h in [(60,470),(210,390),(390,500),(880,420),(1060,510),(1210,430)]:
+            d.rectangle((x-22,300,x+22,690),fill=(57,54,55))
+            for j in range(4):
+                yy=260-j*55
+                d.polygon([(x-110+j*8,yy+90),(x,yy-70),(x+115-j*8,yy+90)],fill=(25+j*5,76+j*5,69+j*3))
+        d.ellipse((500,150,780,430),fill=(178,224,165),outline=(232,255,196),width=7)
+        d.ellipse((550,200,730,380),fill=(229,255,207))
+        d.polygon([(0,590),(260,510),(450,620),(700,500),(930,615),(1280,520),(1280,720),(0,720)],fill=(28,76,61))
+        for x,y in [(440,520),(820,560),(355,610),(930,625)]:
+            d.ellipse((x-5,y-5,x+5,y+5),fill=(238,255,176))
+        title="EL BOSQUE ANTIGUO"
+    elif kind == "village":
+        im=gradient((93,154,202),(255,205,141)); d=ImageDraw.Draw(im)
+        d.ellipse((965,90,1105,230),fill=(255,237,177))
+        d.polygon([(0,430),(180,240),(390,435),(610,205),(840,440),(1050,250),(1280,430),(1280,720),(0,720)],fill=(115,137,148))
+        d.rectangle((0,535,W,H),fill=(75,118,79))
+        for x,y,scale in [(160,365,1),(440,410,.8),(820,365,1.05),(1050,425,.75)]:
+            ww=int(170*scale); hh=int(150*scale)
+            d.rectangle((x,y,x+ww,y+hh),fill=(214,177,130),outline=(99,73,70),width=5)
+            d.polygon([(x-15,y+8),(x+ww//2,y-hh//2),(x+ww+15,y+8)],fill=(131,74,77))
+            d.rectangle((x+ww//2-18,y+hh-58,x+ww//2+18,y+hh),fill=(86,61,60))
+            d.rectangle((x+20,y+35,x+52,y+70),fill=(255,226,154))
+        d.polygon([(550,720),(610,610),(660,580),(720,610),(790,720)],fill=(181,155,115))
+        title="UN LUGAR AL QUE PERTENECER"
+    elif kind == "dragon":
+        im=gradient((27,30,61),(166,68,70)); d=ImageDraw.Draw(im); starfield(d,95,(255,207,156))
+        d.ellipse((900,85,1040,225),fill=(255,169,119))
+        d.polygon([(0,520),(200,280),(380,510),(580,260),(800,530),(1010,300),(1280,520),(1280,720),(0,720)],fill=(62,57,78))
+        d.polygon([(690,355),(505,210),(350,170),(450,330),(280,300),(480,430),(585,455)],fill=(39,35,53))
+        d.polygon([(720,360),(900,190),(1090,155),(1010,315),(1170,280),(940,435),(800,455)],fill=(39,35,53))
+        d.ellipse((580,330,820,500),fill=(35,32,48))
+        d.polygon([(735,390),(850,300),(925,320),(870,390),(940,420),(825,435)],fill=(35,32,48))
+        d.polygon([(600,435),(475,530),(360,525),(505,465)],fill=(35,32,48))
+        d.ellipse((855,350,875,370),fill=(255,207,97)); d.ellipse((885,350,905,370),fill=(255,207,97))
+        d.polygon([(0,610),(260,560),(440,625),(690,570),(970,625),(1280,555),(1280,720),(0,720)],fill=(48,49,62))
+        for x,y in [(250,580),(310,615),(1000,575),(1080,610)]:
+            d.line((x,y,x+12,y-28),fill=(255,114,78),width=5)
+        title="EL GUARDIÁN DE LAS RUINAS"
+    elif kind == "portal":
+        im=gradient((14,22,58),(75,49,112)); d=ImageDraw.Draw(im); starfield(d,240)
+        for r in range(210,50,-20):
+            d.ellipse((640-r,365-r,640+r,365+r),outline=(102+r//3,165+r//4,255),width=4)
+        d.ellipse((570,245,710,490),fill=(180,151,255),outline=(231,224,255),width=8)
+        d.ellipse((592,265,688,468),fill=(60,94,154))
+        d.polygon([(0,600),(240,530),(430,610),(650,550),(850,615),(1100,525),(1280,600),(1280,720),(0,720)],fill=(29,35,65))
+        d.polygon([(540,720),(590,520),(640,485),(690,520),(750,720)],fill=(115,96,118))
+        for x,y in [(450,300),(820,250),(820,450),(460,470),(720,180)]:
+            d.ellipse((x-5,y-5,x+5,y+5),fill=(255,230,172))
+        title="EL DESTINO LO ELIGE ÉL"
     else:
         im=gradient((90,153,210),(255,202,139)); d=ImageDraw.Draw(im)
         d.ellipse((925,95,1085,255), fill=(255,237,174))
@@ -344,7 +396,7 @@ def make_sound_effects(path, duration):
 def main():
     clips=[]
     frame_rate = 8
-    frames_per_scene = FPS * SCENE_SECONDS // (FPS // frame_rate)
+    frames_per_scene = frame_rate * SCENE_SECONDS
     # Every scene is rendered as a stack of individual images, then assembled as moving footage.
     for i,(line,kind) in enumerate(LINES):
         base=f"{WORK}/scene-{i}.jpg"
@@ -377,7 +429,7 @@ def main():
     duration=len(LINES)*SCENE_SECONDS
     effects=f"{WORK}/effects.wav"
     make_sound_effects(effects,duration)
-    final=f"{OUT}/isekai-test.mp4"
+    final=f"{OUT}/isekai-mejorado.mp4"
     # Voice remains clear; effects add wind, swishes and magical chimes without external audio assets.
     run(["ffmpeg","-y","-i",silent,"-i",voice,"-i",effects,
          "-filter_complex",
@@ -385,8 +437,33 @@ def main():
          "[2:a]volume=0.72[fx];[voice][fx]amix=inputs=2:duration=longest:dropout_transition=1[a]",
          "-map","0:v:0","-map","[a]","-t",str(duration),
          "-c:v","copy","-c:a","aac","-b:a","160k","-movflags","+faststart",final])
-    run(["ffprobe","-v","error","-show_entries","format=duration,size","-of","default=noprint_wrappers=1",final])
-    print(f"Video gratuito validado: {final}")
+    # Validate duration, size and playable video/audio streams before updating the gallery.
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration,size:stream=codec_type",
+         "-of", "json", final], check=True, capture_output=True, text=True)
+    metadata = json.loads(probe.stdout)
+    actual_duration = float(metadata.get("format", {}).get("duration", 0))
+    actual_size = int(metadata.get("format", {}).get("size", 0))
+    stream_types = {stream.get("codec_type") for stream in metadata.get("streams", [])}
+    if actual_duration < 55 or actual_size <= 100_000 or not {"video", "audio"}.issubset(stream_types):
+        raise RuntimeError(f"El MP4 no pasó validación: duration={actual_duration}, size={actual_size}, streams={stream_types}")
+    gallery_path = ROOT / "public" / "videos" / "gallery.json"
+    try:
+        gallery = json.loads(gallery_path.read_text(encoding="utf-8"))
+        if not isinstance(gallery, list):
+            gallery = []
+    except (OSError, json.JSONDecodeError):
+        gallery = []
+    relative_src = "videos/isekai-mejorado.mp4"
+    gallery = [entry for entry in gallery if not (isinstance(entry, dict) and entry.get("src") == relative_src)]
+    gallery.append({
+        "title": "El comienzo de una segunda vida — versión extendida",
+        "description": "Corto ilustrado extendido de fantasía: ocho escenas animadas, narración en español y efectos sonoros originales.",
+        "src": relative_src,
+        "category": "Fantasía"
+    })
+    gallery_path.write_text(json.dumps(gallery, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    print(f"Video gratuito validado: {final} ({actual_duration:.1f}s, {actual_size} bytes)")
 
 
 if __name__ == "__main__":
