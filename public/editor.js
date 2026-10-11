@@ -244,6 +244,9 @@ generateFromAssistant.addEventListener('click', async () => {
   editInstructions.value = combined;
   const result = applyNaturalInstructions();
   const wantsStory = Boolean(result?.requestedFeatures?.story);
+  const wantsMusic = Boolean(result?.requestedFeatures?.backgroundMusic) || /\b(musica de fondo|pon musica|agrega musica|anade musica|musica ambiental|banda sonora|soundtrack)\b/.test(combined.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es'));
+  const wantsEffects = Boolean(result?.requestedFeatures?.soundEffects) || /\b(efectos de sonido|efectos sonoros|efectos|whoosh|sonidos de transicion)\b/.test(combined.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es'));
+  const wantsNarration = Boolean(result?.requestedFeatures?.narration) || /\b(voz masculina|voz de hombre|voz en off|narracion|narrador|narra)\b/.test(combined.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es'));
   const normalizedCombined = combined.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
   const explicitlyNoRetouch = /\b(no|sin|nada de|no quiero)\s+(?:retoques?|retocar|mejoras? visuales?|mejorar las imagenes)\b/.test(normalizedCombined);
   const wantsPolish = !explicitlyNoRetouch && (Boolean(result?.requestedFeatures?.imagePolish) || /\b(profesional|pulir|pule|pula|mejorar las imagenes|mejora las imagenes|nitidez|calidad visual)\b/i.test(normalizedCombined));
@@ -260,7 +263,7 @@ generateFromAssistant.addEventListener('click', async () => {
     trimStart.value = '0';
     trimEnd.value = String(durationSeconds);
   }
-  if (!result || result.status === 'clarify' || (result.status === 'partial' && !result.plan && !result.partialPlan && !result.requestedFeatures?.story)) {
+  if (!result || result.status === 'clarify' || (result.status === 'partial' && !result.plan && !result.partialPlan && !result.requestedFeatures?.story && !result.requestedFeatures?.narration && !result.requestedFeatures?.backgroundMusic && !result.requestedFeatures?.soundEffects && !result.requestedFeatures?.dialogue && !result.requestedFeatures?.visualAnalysis)) {
     assistantNeedsClarification = true;
     const message = result?.question || errorBox.textContent || '¿Puedes explicar esa parte con otras palabras?';
     addAssistantMessage(message, 'assistant');
@@ -282,6 +285,20 @@ generateFromAssistant.addEventListener('click', async () => {
   if (wantsStory && window.videoGPTAdvancedTools?.analyzeScenesAutomatically) {
     addAssistantMessage('Estoy revisando automáticamente los cambios de escena para elegir mejor los fragmentos…', 'assistant');
     autoStorySceneTimes = await window.videoGPTAdvancedTools.analyzeScenesAutomatically();
+  }
+  if ((wantsMusic || wantsEffects || wantsNarration) && window.videoGPTAdvancedTools?.configureAutomaticAudio) {
+    addAssistantMessage('Estoy preparando las pistas de audio solicitadas en este dispositivo…', 'assistant');
+    const clipCount = Math.min(10, Math.max(4, Math.round(durationSeconds / 5.5)));
+    const storyDuration = wantsStory ? clipCount * Math.min(3.2, durationSeconds / clipCount) : durationSeconds;
+    const audioResult = await window.videoGPTAdvancedTools.configureAutomaticAudio({
+      music: wantsMusic,
+      effects: wantsEffects,
+      narration: wantsNarration,
+      instruction: combined,
+      duration: storyDuration
+    });
+    if (audioResult?.requested?.length) addAssistantMessage('Pistas preparadas: ' + audioResult.requested.join(', ') + '.', 'assistant');
+    if (audioResult?.failures?.length) addAssistantMessage('No se pudieron preparar algunas pistas: ' + audioResult.failures.join('; ') + '. El video se exportará con las pistas que sí estén listas.', 'assistant');
   }
   exportButton.click();
   if (!busy) {
