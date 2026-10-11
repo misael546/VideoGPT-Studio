@@ -1,5 +1,4 @@
 import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
-import { toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
 import { validateEditPlan } from './edit-plan.js';
 import { planVideoInstruction } from './assistant-planner.js';
 
@@ -797,8 +796,7 @@ async function loadEngine() {
   }
   const coreURL = await fetchEngineAsset('ffmpeg-core.js', 'text/javascript', 'Motor FFmpeg (JavaScript)', 0);
   const wasmURL = await fetchEngineAsset('ffmpeg-core.wasm', 'application/wasm', 'Motor FFmpeg (WebAssembly)', 1);
-  const workerURL = await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js', 'text/javascript');
-  engineAssetUrls.push(workerURL);
+  const workerURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js';
   progressLabel.textContent = 'Iniciando motor de edición…';
   progressDetail.textContent = 'Los componentes están descargados. Iniciando el trabajador de FFmpeg…';
   try {
