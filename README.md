@@ -1,19 +1,20 @@
 # VideoGPT Studio
 
-Proyecto independiente para crear y editar proyectos de video mediante instrucciones en lenguaje natural.
+Proyecto independiente para preparar ideas, planes y generación de clips de video con IA.
 
 ## Estado inicial
 - Interfaz web adaptable a móvil y escritorio.
-- Chat de instrucciones con vista previa de proyecto.
-- API Node.js para integrar un proveedor de IA y un servicio de generación/edición de video.
-- No incluye claves secretas ni finge generar un video final: sin configurar un proveedor, la API explica qué falta.
+- Chat de instrucciones y espacio de trabajo.
+- Integración inicial con OpenAI Responses API para preparar el plan.
+- Integración con Runway API para iniciar generación de video desde texto y consultar el resultado.
+- No afirma que un video está terminado hasta recibir un resultado real del proveedor.
 
 ## Requisitos
 - Node.js 20+
-- Una clave de API del proveedor de IA que elijas.
-- Un proveedor/modelo de video compatible si quieres generar clips reales.
+- Clave de API de OpenAI para el asistente de planificación.
+- Cuenta de Runway Dev y créditos disponibles para generación de video.
 
-## Ejecutar
+## Ejecutar localmente
 ```bash
 npm install
 cp .env.example .env
@@ -21,18 +22,22 @@ npm run dev
 ```
 Abre `http://localhost:3000`.
 
-## Configuración
-Rellena `.env` en el servidor. Nunca pongas claves privadas en archivos del navegador ni las subas a GitHub.
+## Variables de entorno
+Configúralas solo en el servidor/hosting. Nunca pongas claves privadas en el navegador ni las subas a GitHub.
 
-- `OPENAI_API_KEY`: opcional, para habilitar interpretación de instrucciones mediante OpenAI.
-- `OPENAI_MODEL`: modelo disponible en tu cuenta, por ejemplo `gpt-4.1-mini`.
-- `VIDEO_PROVIDER_URL`: endpoint del proveedor de video, si se integra.
-- `VIDEO_PROVIDER_API_KEY`: clave del proveedor de video.
+- `OPENAI_API_KEY`: clave privada de OpenAI.
+- `OPENAI_MODEL`: modelo de texto disponible en tu cuenta.
+- `RUNWAYML_API_SECRET`: clave privada de Runway Dev.
+- `RUNWAY_MODEL`: modelo de video; por defecto `gen4.5`.
+- `PORT`: puerto del servidor, por defecto 3000.
 
-La disponibilidad de generación de video depende del proveedor y del acceso contratado. La primera versión deja preparado el flujo y la interfaz; no afirma que un video esté generado hasta que un proveedor real devuelva un resultado.
+## Generación de video
+El usuario debe pulsar explícitamente Generar video y confirmar que entiende que puede consumir créditos. La API crea una tarea asíncrona y consulta su estado. El enlace de salida lo entrega el proveedor y puede caducar; descarga los resultados que quieras conservar.
 
-## Estructura
-- `public/`: interfaz web.
-- `src/server.js`: servidor y API.
-- `.env.example`: variables de entorno de ejemplo.
-- `PROJECT_RULES.md`: reglas para futuras actualizaciones.
+La generación depende de los permisos, modelos, saldo, límites y condiciones de la cuenta Runway. Verifica sus precios antes de probar.
+
+## Publicación
+La aplicación Express puede desplegarse en Vercel conectando este repositorio. Configura las variables de entorno en los ajustes del proyecto de hosting. No habilites generación pública sin añadir autenticación, límites de uso y protección contra abuso.
+
+## Reglas
+Lee `PROJECT_RULES.md` antes de cada actualización.
