@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Catálogo de recursos reutilizables y paquetes externos verificados para VideoGPT Studio. Las rutas locales son relativas a la raíz del repositorio.",
+  "description": "Catálogo de recursos reutilizables y paquetes externos. Los paquetes externos son referencias para importación; no se consideran archivos locales ni utilizables por el generador hasta descargarlos, revisarlos y probarlos.",
   "resources": [
     {
       "id": "kenney-retro-textures-fantasy",
@@ -158,6 +158,83 @@
       ],
       "status": "por_verificar",
       "note": "Referencia por revisar directamente antes de descargar; confirmar licencia y contenido en la página del recurso."
+    },
+    {
+      "id": "kenney-1-bit-pack",
+      "type": "external_pack",
+      "category": "images",
+      "title": "1-Bit Pack",
+      "author": "Kenney",
+      "source": "https://kenney-assets.itch.io/1-bit-pack",
+      "license": "CC0 1.0",
+      "attribution": "Kenney (no obligatoria; recomendada)",
+      "tags": [
+        "pixel-art",
+        "sprites",
+        "personajes",
+        "objetos",
+        "tiles",
+        "RPG"
+      ],
+      "compatible_scenes": [
+        "old",
+        "soul",
+        "baby",
+        "kingdom"
+      ],
+      "status": "catalogado_pendiente_de_importacion",
+      "note": "Paquete de más de 1.000 sprites. Estilo monocromático; usar selectivamente para bocetos o escenas con estética 1-bit, no mezclar sin adaptar color."
+    },
+    {
+      "id": "kenney-block-pack",
+      "type": "external_pack",
+      "category": "images",
+      "title": "Block Pack",
+      "author": "Kenney",
+      "source": "https://kenney-assets.itch.io/block-pack",
+      "license": "CC0 1.0",
+      "attribution": "Kenney (no obligatoria; recomendada)",
+      "tags": [
+        "RPG",
+        "aventura",
+        "tiles",
+        "terreno",
+        "edificios",
+        "objetos",
+        "personajes"
+      ],
+      "compatible_scenes": [
+        "old",
+        "soul",
+        "kingdom"
+      ],
+      "status": "catalogado_pendiente_de_importacion",
+      "note": "Más de 100 sprites y archivos vectoriales; revisar estilo y formatos antes de importar."
+    },
+    {
+      "id": "kenney-retro-medieval-kit",
+      "type": "external_pack",
+      "category": "3d_models",
+      "title": "Retro Medieval Kit",
+      "author": "Kenney",
+      "source": "https://kenney-assets.itch.io/retro-medieval-kit",
+      "license": "CC0 1.0",
+      "attribution": "Kenney (no obligatoria; recomendada)",
+      "tags": [
+        "3D",
+        "retro",
+        "medieval",
+        "edificios",
+        "utileria",
+        "fantasia"
+      ],
+      "compatible_scenes": [
+        "old",
+        "soul",
+        "kingdom"
+      ],
+      "status": "catalogado_pendiente_de_importacion",
+      "note": "Más de 100 modelos 3D en formatos OBJ, FBX y glTF. No se usa directamente en el generador 2D actual; reservar para un futuro flujo 3D o renders propios."
     }
   ]
 }
