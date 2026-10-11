@@ -276,7 +276,7 @@ def make_animation_frame(base_path, out_path, kind, frame, total):
     d = ImageDraw.Draw(im, "RGBA")
     t = frame / max(1, total - 1)
     import math, random
-    rng = random.Random(frame * 37 + {"old": 1, "soul": 2, "baby": 3, "kingdom": 4}[kind])
+    rng = random.Random(frame * 37 + sum((i + 1) * ord(char) for i, char in enumerate(kind)))
     # Each frame gets changing particles, light and small motion cues rather than a static slide.
     if kind == "old":
         glow = int(100 + 65 * (0.5 + 0.5 * math.sin(frame * 0.35)))
