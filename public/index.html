@@ -17,16 +17,16 @@
         <span class="brand-mark"><span>▶</span></span>
         <span class="brand-name">video<span>GPT</span><small>STUDIO</small></span>
       </a>
-      <button class="new-project" id="newProject"><span>＋</span> Crear un video</button>
+      <button class="new-project" id="newProject"><span>✂</span> Pedir edición</button>
       <div class="side-label">TU ESTUDIO</div>
-      <button class="nav-item nav-button" id="navCreate"><span class="nav-icon">✦</span><span>Crear con IA</span></button>
+      <button class="nav-item nav-button" id="navCreate"><span class="nav-icon">✂</span><span>Trabajar conmigo</span></button>
       <a class="nav-item nav-button editor-nav-link" href="./editor.html"><span class="nav-icon">✂</span><span>Editar video</span><span class="nav-arrow">↗</span></a>
       <button class="nav-item nav-button active" id="navGallery"><span class="nav-icon">▦</span><span>Galería</span><span class="nav-arrow">↗</span></button>
       <div class="sidebar-card">
         <div class="sidebar-card-icon">✧</div>
-        <strong>Tu próxima historia</strong>
-        <p>Empieza con una idea. Dale forma en tu estudio.</p>
-        <button id="sidebarStart">Empezar ahora <span>→</span></button>
+        <strong>Yo hago la edición</strong>
+        <p>Adjunta tu video en ChatGPT y dime qué cambios quieres.</p>
+        <button id="sidebarStart">Ver cómo funciona <span>→</span></button>
       </div>
       <div class="sidebar-bottom"><span class="status-dot"></span><div><strong>VideoGPT Studio</strong><p>Estudio creativo gratuito</p></div></div>
     </aside>
@@ -41,8 +41,8 @@
           <div class="hero-copy">
             <div class="eyebrow"><span class="eyebrow-line"></span> TU BIBLIOTECA CREATIVA</div>
             <h1>Las ideas se vuelven<br><span>historias.</span></h1>
-            <p class="intro gallery-intro">Explora tus videos, vuelve a reproducir tus favoritos y prepara tu próxima creación.</p>
-            <button class="hero-cta" id="heroCreate">Crear un video <span>↗</span></button>
+            <p class="intro gallery-intro">Explora tus videos. Para que yo edite uno por ti, compártelo directamente en el chat de ChatGPT y dime cómo quieres que quede.</p>
+            <button class="hero-cta" id="heroCreate">Editar conmigo en ChatGPT <span>↗</span></button>
           </div>
           <div class="hero-art" aria-hidden="true">
             <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
@@ -61,11 +61,10 @@
       </section>
 
       <section class="welcome hidden" id="welcome">
-        <div class="create-banner"><span class="eyebrow">✦ ESTUDIO CREATIVO</span><div class="create-spark">✳</div><h1>¿Qué historia<br><span>vamos a crear?</span></h1><p>Cuéntame tu idea y prepararemos una estructura con escenas, movimiento y audio.</p></div>
+        <div class="create-banner"><span class="eyebrow">✦ ESTUDIO CREATIVO</span><div class="create-spark">✳</div><h1>Yo hago el trabajo.<br><span>Tú decides el resultado.</span></h1><p>Esta página no contiene una IA propia. Para que yo trabaje sobre tu video, adjunta el archivo directamente en esta conversación de ChatGPT y describe los cambios que quieres.</p></div>
         <div class="suggestions">
-          <button class="suggestion" data-prompt="Crea el concepto para un tráiler cinematográfico de zombis en una ciudad abandonada, con lluvia y tensión."><span class="suggestion-icon">▣</span><b>Tráiler cinematográfico</b><small>Una idea convertida en escenas</small><i>↗</i></button>
-          <button class="suggestion" data-prompt="Ayúdame a editar un video de viaje de 60 segundos con ritmo dinámico, transiciones suaves y títulos."><span class="suggestion-icon">✂</span><b>Editar un video</b><small>Ritmo, cortes y transiciones</small><i>↗</i></button>
-          <button class="suggestion" data-prompt="Diseña un video promocional vertical de 15 segundos para una pequeña tienda, con texto y escenas sugeridas."><span class="suggestion-icon">▤</span><b>Video para redes</b><small>Formato vertical y gancho inicial</small><i>↗</i></button>
+          <a class="suggestion" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer"><span class="suggestion-icon">↑</span><b>Adjunta el video en ChatGPT</b><small>Usa el botón + del chat para compartir el archivo</small><i>↗</i></a>
+          <a class="suggestion" href="./editor.html"><span class="suggestion-icon">✂</span><b>Editor manual opcional</b><small>Si prefieres recortar y ajustar tú mismo</small><i>↗</i></a>
         </div>
       </section>
 
@@ -79,7 +78,7 @@
 
       <div class="composer-wrap hidden" id="composerWrap">
         <form class="composer" id="chatForm"><textarea id="message" rows="2" placeholder="Describe el video que imaginas..." required maxlength="8000"></textarea><div class="composer-footer"><span>Describe la idea, el estilo, el formato o los cambios que quieres.</span><button id="sendBtn" type="submit" aria-label="Preparar idea">↑</button></div></form>
-        <div class="disclaimer">Tu descripción prepara un plan en esta página. La generación gratuita actual produce un corto de prueba predefinido.</div>
+        <div class="disclaimer">Este sitio no envía tus archivos a ChatGPT. Adjunta el video en la conversación para que yo pueda analizarlo y trabajar sobre él.</div>
       </div>
     </main>
   </div>
