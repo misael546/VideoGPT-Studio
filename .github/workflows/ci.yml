@@ -24,8 +24,11 @@ jobs:
         run: |
           node --check public/app.js
           node --check public/editor.js
+          node --check public/edit-plan.js
           test -s public/editor.html
           test -s public/editor.css
+      - name: Test edit plan validator
+        run: npm test
       - name: Smoke test API
         run: |
           node src/server.js > /tmp/videogpt.log 2>&1 &
