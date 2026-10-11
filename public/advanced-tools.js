@@ -269,6 +269,75 @@ async function getTTS() {
   })();
   return ttsPromise;
 }
+function makeNarrationScript(instruction) {
+  const raw = String(instruction || '').trim();
+  const explicit = raw.match(/(?:di(?:ga)?|diciendo|lee|leer|narra(?:cion)?(?:\s+que\s+diga)?|voz\s+que\s+diga)\s*[:,-]?\s*[“"']([^”"']{8,800})[”"']/i);
+  if (explicit) return explicit[1].trim();
+  const lower = raw.toLocaleLowerCase('es');
+  if (/\b(viaje|viajes|vacaciones|paisaje|playa|montana|ciudad)\b/.test(lower)) return 'Acompáñanos en este recorrido. Cada lugar guarda un momento especial y cada escena nos invita a descubrir algo nuevo. Disfruta el viaje y sus mejores momentos.';
+  if (/\b(juego|gaming|partida|jugando|videojuego)\b/.test(lower)) return 'La acción comienza ahora. Cada movimiento cuenta y los mejores momentos están por venir. Quédate hasta el final para ver cómo se desarrolla la partida.';
+  if (/\b(producto|negocio|marca|anuncio|promocion|venta)\b/.test(lower)) return 'Descubre los detalles, conoce lo que lo hace especial y disfruta esta presentación. Una propuesta pensada para destacar desde el primer momento.';
+  return 'Estos son los momentos más destacados de este video. Cada escena aporta un detalle distinto. Disfruta el recorrido y quédate hasta el final.';
+}
+function assignGeneratedAudio(input, name, blob) {
+  if (!input) throw new Error('No se encontró la pista de audio ' + name + '.');
+  const file = new File([blob], name, { type: 'audio/wav', lastModified: Date.now() });
+  const transfer = new DataTransfer();
+  transfer.items.add(file);
+  input.files = transfer.files;
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  return file;
+}
+function makeBackgroundMusic(durationSeconds) {
+  const sampleRate = 22050;
+  const duration = Math.max(8, Math.min(180, Number(durationSeconds) || 30));
+  const count = Math.floor(sampleRate * duration);
+  const samples = new Float32Array(count);
+  const chords = [
+    [130.81, 164.81, 196.00], [110.00, 130.81, 164.81],
+    [87.31, 110.00, 130.81], [98.00, 123.47, 146.83]
+  ];
+  const melody = [261.63, 293.66, 329.63, 392.00, 329.63, 293.66, 220.00, 261.63];
+  for (let i = 0; i < count; i++) {
+    const t = i / sampleRate;
+    const chord = chords[Math.floor(t / 4) % chords.length];
+    const pulse = 0.72 + 0.28 * Math.sin(2 * Math.PI * 0.18 * t);
+    let value = 0;
+    for (let k = 0; k < chord.length; k++) {
+      value += Math.sin(2 * Math.PI * chord[k] * t + k * 0.25) * (k === 0 ? 0.10 : 0.065);
+      value += Math.sin(2 * Math.PI * chord[k] * 2 * t) * 0.012;
+    }
+    const beat = t % 1.5;
+    const noteIndex = Math.floor(t / 0.75) % melody.length;
+    const noteAge = t % 0.75;
+    const pluck = Math.exp(-noteAge * 4.2) * Math.sin(2 * Math.PI * melody[noteIndex] * t) * 0.075;
+    const fadeIn = Math.min(1, t / 1.2);
+    const fadeOut = Math.min(1, (duration - t) / 1.4);
+    samples[i] = Math.max(-0.7, Math.min(0.7, (value * pulse + pluck) * fadeIn * fadeOut));
+  }
+  return floatToWav(samples, sampleRate);
+}
+function makeTransitionEffects(durationSeconds) {
+  const sampleRate = 22050;
+  const duration = Math.max(5, Math.min(180, Number(durationSeconds) || 30));
+  const count = Math.floor(sampleRate * duration);
+  const samples = new Float32Array(count);
+  const hitTimes = [];
+  for (let t = 3.2; t < duration - 0.25; t += 3.2) hitTimes.push(t);
+  for (const hit of hitTimes) {
+    const start = Math.floor(hit * sampleRate);
+    const length = Math.min(Math.floor(sampleRate * 0.48), count - start);
+    for (let j = 0; j < length; j++) {
+      const age = j / sampleRate;
+      const sweep = Math.sin(2 * Math.PI * (180 + 850 * age) * age);
+      const thump = Math.sin(2 * Math.PI * 72 * age) * Math.exp(-age * 14);
+      const noise = (Math.sin(j * 12.9898 + start) * 0.5 + Math.sin(j * 78.233) * 0.25);
+      const envelope = Math.sin(Math.PI * j / Math.max(1, length)) * Math.exp(-age * 2.8);
+      samples[start + j] = Math.max(-0.8, Math.min(0.8, samples[start + j] + (sweep * 0.12 + thump * 0.25 + noise * 0.09) * envelope));
+    }
+  }
+  return floatToWav(samples, sampleRate);
+}
 async function generateNarration() {
   const text = narrationText.value.trim();
   if (!text || ttsBusy) {
@@ -343,6 +412,39 @@ resetForFile();
 // Public, programmatic hooks let the conversational assistant run these tools itself.
 // The advanced panel can stay hidden; users do not need to operate it manually.
 window.videoGPTAdvancedTools = {
+  async configureAutomaticAudio(options = {}) {
+    const requested = [];
+    const failures = [];
+    const duration = Math.max(8, Math.min(180, Number(options.duration) || Number(sourceVideo?.duration) || 30));
+    if (options.narration) {
+      try {
+        narrationVoice.value = 'pm_alex';
+        narrationText.value = makeNarrationScript(options.instruction);
+        await generateNarration();
+        if ($('#narrationFile')?.files?.length) requested.push('voz masculina en español');
+        else failures.push('no se pudo generar la voz masculina');
+      } catch (error) { failures.push('voz: ' + (error?.message || 'error desconocido')); }
+    }
+    if (options.music) {
+      try {
+        assignGeneratedAudio($('#musicFile'), 'musica-ambiental-generada.wav', makeBackgroundMusic(duration));
+        const slider = $('#musicVolume');
+        if (slider) { slider.value = '25'; slider.dispatchEvent(new Event('input', { bubbles: true })); }
+        requested.push('música instrumental de fondo');
+      } catch (error) { failures.push('música: ' + (error?.message || 'error desconocido')); }
+    }
+    if (options.effects) {
+      try {
+        assignGeneratedAudio($('#effectsFile'), 'efectos-transicion-generados.wav', makeTransitionEffects(duration));
+        const slider = $('#effectsVolume');
+        if (slider) { slider.value = '65'; slider.dispatchEvent(new Event('input', { bubbles: true })); }
+        const offset = $('#effectsOffset');
+        if (offset) offset.value = '0';
+        requested.push('efectos de transición');
+      } catch (error) { failures.push('efectos: ' + (error?.message || 'error desconocido')); }
+    }
+    return { requested, failures };
+  },
   async analyzeScenesAutomatically() {
     await analyzeScenes();
     return lastSceneAnalysisSucceeded ? detectedScenes.map(scene => scene.time) : [];
