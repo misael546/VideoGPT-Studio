@@ -998,6 +998,11 @@ exportButton.addEventListener('click', async () => {
       graph.push(videoOutputs.join('') + 'concat=n=' + actualClipCount + ':v=1:a=0,fade=t=in:st=0:d=0.35,fade=t=out:st=' + Math.max(0, resultDuration - 0.45).toFixed(3) + ':d=0.45[vout]');
       args.length = 0;
       args.push('-hide_banner', '-y', '-i', inputName);
+      for (const track of extraTracks) {
+        if (track.kind === 'music') args.push('-stream_loop', '-1');
+        args.push('-i', track.name);
+      }
+      let originalStoryAudio = false;
       if (hasOriginalAudio) {
         const audioSources = clipStarts.map((_, index) => '[asrc' + index + ']').join('');
         graph.push('[0:a]asplit=' + actualClipCount + audioSources);
@@ -1008,10 +1013,33 @@ exportButton.addEventListener('click', async () => {
             ':duration=' + clipDuration.toFixed(3) + ',asetpts=PTS-STARTPTS' + label);
           audioOutputs.push(label);
         });
-        graph.push(audioOutputs.join('') + 'concat=n=' + actualClipCount + ':v=0:a=1[aout]');
+        graph.push(audioOutputs.join('') + 'concat=n=' + actualClipCount + ':v=0:a=1[origstory]');
+        originalStoryAudio = true;
+      }
+      const storyMixLabels = [];
+      if (originalStoryAudio) storyMixLabels.push('[origstory]');
+      extraTracks.forEach((track, index) => {
+        const inputIndex = index + 1;
+        const label = track.kind === 'voice' ? 'storyvoice' : track.kind === 'music' ? 'storymusic' : 'storyfx';
+        const trackFilters = [];
+        if (track.kind === 'voice') trackFilters.push('volume=' + (Number(narrationVolumeInput.value) / 100).toFixed(2));
+        if (track.kind === 'music') trackFilters.push('volume=' + (Number(musicVolumeInput.value) / 100).toFixed(2));
+        if (track.kind === 'effects') {
+          const delayMs = Math.max(0, Math.min(600000, Math.round((Number(effectsOffsetInput.value) || 0) * 1000)));
+          if (delayMs > 0) trackFilters.push('adelay=' + delayMs + '|' + delayMs);
+          trackFilters.push('volume=' + (Number(effectsVolumeInput.value) / 100).toFixed(2));
+        }
+        trackFilters.push('apad', 'atrim=duration=' + resultDuration.toFixed(3), 'asetpts=PTS-STARTPTS');
+        graph.push('[' + inputIndex + ':a]' + trackFilters.join(',') + '[' + label + ']');
+        storyMixLabels.push('[' + label + ']');
+      });
+      if (storyMixLabels.length > 1) {
+        graph.push(storyMixLabels.join('') + 'amix=inputs=' + storyMixLabels.length + ':duration=first:dropout_transition=0,alimiter=limit=0.95[aout]');
+      } else if (storyMixLabels.length === 1) {
+        graph.push(storyMixLabels[0] + 'anull[aout]');
       }
       args.push('-filter_complex', graph.join(';'), '-map', '[vout]');
-      if (hasOriginalAudio) args.push('-map', '[aout]');
+      if (storyMixLabels.length) args.push('-map', '[aout]');
       progressDetail.textContent = 'Montando automáticamente ' + actualClipCount + ' fragmentos verticales' + (sceneCandidates.length >= 2 ? ' elegidos por cambios de escena.' : ' distribuidos por el video.');
     }
     // Slightly higher export quality; source files remain untouched.
