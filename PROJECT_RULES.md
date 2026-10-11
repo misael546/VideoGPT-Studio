@@ -53,3 +53,8 @@
 42. La página de VideoGPT Studio no debe presentarse como si contuviera una IA propia conectada a este chat.
 43. Para solicitar una edición asistida por ChatGPT, indicar que el usuario debe adjuntar el video directamente en su conversación de ChatGPT; un sitio estático de GitHub Pages no puede entregar automáticamente archivos a la conversación actual.
 44. No inventar una conexión entre la web y ChatGPT ni afirmar que se recibió un archivo subido a la web. El editor local puede mantenerse como alternativa manual opcional.
+
+
+45. El editor debe admitir planes de edición JSON versionados preparados externamente por ChatGPT y validarlos antes de modificar controles o exportar.
+46. El plan JSON v1 solo puede ejecutar operaciones implementadas y validadas por el editor: trim en segundos, speed en opciones admitidas, aspect, volume y fade. No ejecutar código arbitrario ni expresiones FFmpeg proporcionadas por usuarios.
+47. Explicar que el puente actual es mediante copiar/pegar el plan entre ChatGPT y el editor; no afirmar conexión directa de la web con esta conversación.
