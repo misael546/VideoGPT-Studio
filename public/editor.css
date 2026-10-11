@@ -5,3 +5,18 @@
 
 /* Plan de edición preparado por ChatGPT */
 .plan-box{margin-top:18px}.plan-box>p{line-height:1.65}.plan-box textarea{width:100%;box-sizing:border-box;resize:vertical;border:1px solid var(--border,#343044);border-radius:10px;background:var(--panel,#111019);color:var(--text,#f4f1ff);padding:12px;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;outline:none}.plan-box textarea:focus{border-color:var(--purple,#9d80ff)}.plan-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}.plan-actions button{flex:1 1 180px}
+
+/* Extracción local de cuadros para analizar escenas */
+.frame-tools{margin-top:18px;padding:15px;border:1px solid var(--line);border-radius:12px;background:#100f18}
+.frame-tools-head h3{margin:0;font:600 16px 'Space Grotesk',sans-serif}
+.frame-tools-head .eyebrow{margin-bottom:4px}
+.frame-actions{display:flex;align-items:end;flex-wrap:wrap;gap:9px;margin-top:12px}
+.frame-actions label{display:grid;gap:5px;color:#b8b3cb;font-size:11px}
+.frame-actions select{min-height:37px;padding:8px;border:1px solid #39354d;border-radius:8px;background:#1b1927;color:#f1edff}
+.frame-status{margin:12px 0;color:#bdb5d4;font-size:11px}
+.frame-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.frame-card{min-width:0;border:1px solid #39354d;border-radius:8px;overflow:hidden;background:#181622}
+.frame-card img{display:block;width:100%;aspect-ratio:9/16;object-fit:contain;background:#07070b}
+.frame-card p{margin:0;padding:6px;font-size:10px;color:#c7bfdd;text-align:center}
+.frame-card button{width:100%;padding:7px;border:0;border-top:1px solid #39354d;background:#211d2e;color:#d8ccff;font-size:10px;cursor:pointer}
+@media(max-width:440px){.frame-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.frame-actions>*{flex:1 1 100%}.frame-actions button{justify-self:stretch}}
