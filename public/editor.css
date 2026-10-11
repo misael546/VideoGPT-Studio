@@ -86,3 +86,8 @@
 .voice-generator{display:grid;gap:10px;margin-top:5px;padding-top:14px;border-top:1px solid #302d42}
 .generated-voice-preview audio{width:100%;margin-top:8px}
 @media(max-width:460px){.advanced-media-panel{padding:12px}.detected-scenes{grid-template-columns:repeat(2,minmax(0,1fr))}.advanced-action-row button{flex-basis:100%}}
+
+
+/* Simple assistant-first experience: keep advanced controls out of the user's way. */
+.advanced-media-panel{display:none!important}
+.assistant-hint{max-width:58ch}

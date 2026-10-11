@@ -69,6 +69,8 @@ let busy = false;
 let progressListenerAttached = false;
 let ffmpegLogMessages = [];
 let engineAssetUrls = [];
+let autoEnhanceVideo = false;
+let autoStoryMode = false;
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return '—';
@@ -241,18 +243,19 @@ generateFromAssistant.addEventListener('click', async () => {
   assistantPreviousPrompt = combined;
   editInstructions.value = combined;
   const result = applyNaturalInstructions();
-  if (result?.status === 'partial' && result.requestedFeatures?.story) {
-    assistantNeedsClarification = false;
-    assistantPreviousPrompt = '';
-    clearError();
-    const sceneButton = $('#analyzeScenes');
-    if (sceneButton && !sceneButton.disabled) {
-      addAssistantMessage('Entendí: quieres revisar los fotogramas, elegir cortes y preparar un montaje tipo historia. Estoy iniciando el análisis de cambios de escena. Esta versión todavía no mejora automáticamente cada imagen ni une las escenas en un montaje completo; te mostraré los puntos de corte disponibles sin afirmar que ya hice esos pasos.', 'assistant');
-      sceneButton.click();
-    } else {
-      addAssistantMessage('Entendí que quieres revisar fotogramas y montar una historia. Primero carga el video para habilitar el análisis de escenas. El retoque automático de imágenes y el montaje narrativo completo aún no están implementados.', 'assistant');
-    }
-    return;
+  const wantsStory = Boolean(result?.requestedFeatures?.story);
+  const wantsPolish = Boolean(result?.requestedFeatures?.imagePolish) || /\b(profesional|pulir|pule|pula|mejorar las imagenes|mejora las imagenes|nitidez|calidad visual)\b/i.test(combined.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+  autoEnhanceVideo = wantsPolish || wantsStory;
+  autoStoryMode = wantsStory;
+  if (wantsStory) {
+    // Story requests are handled for the user: portrait output, gentle transitions,
+    // conservative image enhancement, then export without sending them to tool panels.
+    aspectInput.value = 'portrait';
+    fadeInput.checked = true;
+    if (volumeInput.value === '100') volumeInput.value = '90';
+    volumeValue.textContent = volumeInput.value + '%';
+    trimStart.value = '0';
+    trimEnd.value = String(durationSeconds);
   }
   if (!result || result.status === 'clarify' || (result.status === 'partial' && !result.plan && !result.partialPlan)) {
     assistantNeedsClarification = true;
@@ -263,10 +266,12 @@ generateFromAssistant.addEventListener('click', async () => {
   assistantNeedsClarification = false;
   assistantPreviousPrompt = '';
   const understoodText = (result.understood || []).join(', ') || 'los ajustes compatibles detectados';
-  const advancedNote = result.status === 'partial'
-    ? ' Las funciones avanzadas no se ejecutan automáticamente desde esta frase; puedes usar “Detectar cambios de escena”, “Transcribir diálogos” y “Generar narración” en el panel de herramientas avanzadas.'
-    : '';
-  addAssistantMessage('Entendí: ' + understoodText + '. Prepararé el video con los cambios compatibles.' + advancedNote, 'assistant');
+  const responseText = wantsStory
+    ? 'Me encargo yo: prepararé una versión vertical tipo historia, con mejora visual suave y transiciones. No necesitas entrar a herramientas manuales.'
+    : wantsPolish
+      ? 'Me encargo yo: aplicaré una mejora visual suave y exportaré el resultado.'
+      : 'Entendí: ' + understoodText + '. Aplicaré esos cambios y exportaré el video.';
+  addAssistantMessage(responseText, 'assistant');
   clearError();
   editingWorkspace.classList.remove('hidden');
   exportButton.click();
@@ -863,7 +868,9 @@ exportButton.addEventListener('click', async () => {
 
     const dimensions = outputDimensions();
     const filters = [];
-    if (dimensions) filters.push('scale=' + dimensions.width + ':' + dimensions.height + ':force_original_aspect_ratio=decrease', 'pad=' + dimensions.width + ':' + dimensions.height + ':(ow-iw)/2:(oh-ih)/2:color=black');
+    if (dimensions && autoStoryMode) filters.push('scale=' + dimensions.width + ':' + dimensions.height + ':force_original_aspect_ratio=increase', 'crop=' + dimensions.width + ':' + dimensions.height);
+    else if (dimensions) filters.push('scale=' + dimensions.width + ':' + dimensions.height + ':force_original_aspect_ratio=decrease', 'pad=' + dimensions.width + ':' + dimensions.height + ':(ow-iw)/2:(oh-ih)/2:color=black');
+    if (autoEnhanceVideo) filters.push('eq=contrast=1.06:saturation=1.10:brightness=0.01', 'unsharp=5:5:0.35:3:3:0.0');
     if (speed !== 1) filters.push('setpts=PTS/' + speed);
     if (fadeInput.checked) {
       filters.push('fade=t=in:st=0:d=0.5');
