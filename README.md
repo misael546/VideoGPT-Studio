@@ -76,3 +76,14 @@ El presupuesto del proyecto es estrictamente $0. No activar facturación ni llam
 ## Mantenimiento periódico de la biblioteca
 
 La tarea programada **Mejorar biblioteca VideoGPT** revisa semanalmente el repositorio, la biblioteca, el catálogo, las rutas, la procedencia de los recursos y posibles mejoras visuales. Si una herramienta de generación de imágenes no está disponible, debe usar solo alternativas originales/procedurales verificables o informar que no hubo cambios útiles. No entrena un modelo automáticamente ni habilita APIs pagadas. Los materiales externos solo se reutilizan tras verificar su licencia y atribución.
+
+
+## Editor de video local (nuevo)
+
+Abre [Editar video](https://misael546.github.io/VideoGPT-Studio/editor.html) desde el sitio. Esta herramienta permite seleccionar un video local, recortar el inicio/final, cambiar la velocidad, ajustar el volumen, añadir fundidos cortos y adaptar la salida a horizontal, vertical o cuadrado; luego exporta un MP4 H.264/AAC usando FFmpeg WebAssembly en el navegador.
+
+- El video original no se sube a un servidor; el procesamiento se ejecuta en el navegador del usuario.
+- La primera vez necesita internet para cargar las librerías de FFmpeg desde jsDelivr.
+- Recomendación: archivos de hasta 120 MB y videos de salida de hasta 10 minutos. Teléfonos con poca memoria pueden necesitar videos más pequeños.
+- La exportación debe reproducirse y revisarse antes de compartirla. El sitio no afirma que el editor esté conectado automáticamente a ChatGPT; las ediciones se eligen mediante los controles disponibles.
+- No se necesita API key ni facturación. Si el navegador no puede cargar FFmpeg o falta memoria, probar con un archivo menor o un navegador actualizado.
