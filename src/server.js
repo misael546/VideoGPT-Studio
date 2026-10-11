@@ -9,6 +9,13 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const RUNWAY_BASE = 'https://api.dev.runwayml.com/v1';
 const RUNWAY_VERSION = '2024-11-06';
 
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Frame-Options', 'DENY');
+  next();
+});
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(here, '../public')));
 
@@ -89,11 +96,11 @@ app.post('/api/video/generate', async (req, res) => {
 
   if (!prompt) return res.status(400).json({ error: 'Escribe una descripción antes de generar el video.' });
   if (prompt.length > 5000) return res.status(413).json({ error: 'La descripción supera el límite de 5.000 caracteres.' });
-  if (!['1280:720', '720:1280', '1104:832', '832:1104', '960:960'].includes(ratio)) {
+  if (!['1280:720', '720:1280'].includes(ratio)) {
     return res.status(400).json({ error: 'Formato de video no admitido.' });
   }
-  if (![5, 8, 10].includes(duration)) {
-    return res.status(400).json({ error: 'La duración debe ser de 5, 8 o 10 segundos.' });
+  if (!Number.isInteger(duration) || duration < 2 || duration > 10) {
+    return res.status(400).json({ error: 'La duración debe estar entre 2 y 10 segundos.' });
   }
   if (!process.env.RUNWAYML_API_SECRET) {
     return res.status(503).json({ error: 'La generación real todavía no está activada. Configura RUNWAYML_API_SECRET en el servidor con una clave de Runway Dev.' });
