@@ -107,6 +107,53 @@ def make_scene(kind, path):
         # foreground hills
         d.polygon([(0,610),(250,540),(460,620),(700,550),(970,620),(1280,535),(1280,720),(0,720)], fill=(56,128,85))
         title="EL COMIENZO DE LA AVENTURA"
+    # Additional hand-drawn environmental layers add depth and visual richness.
+    if kind == "old":
+        # Wooden floorboards, bedside books, candlelight and window mullions.
+        for yy in range(555, H, 28):
+            d.line((0,yy,W,yy-8), fill=(104,72,68), width=2)
+        for xx in range(0,W,180):
+            d.line((xx,555,xx+35,H), fill=(86,61,63), width=2)
+        d.rectangle((170,380,300,525), fill=(67,49,61), outline=(137,91,75), width=5)
+        for yy in (405,438,471,504):
+            d.line((180,yy,288,yy), fill=(181,130,88), width=3)
+        d.rectangle((340,440,360,500), fill=(255,205,112))
+        d.polygon([(330,440),(350,412),(370,440)], fill=(255,230,157))
+        for x in (870,920,970):
+            d.line((x,250,x,535), fill=(117,76,69), width=5)
+    elif kind == "soul":
+        # Aurora ribbons and distant celestial arches.
+        for j in range(6):
+            y = 90 + j * 34
+            d.arc((-200,y,1450,y+330), 195, 345, fill=(119,193,223,95), width=5)
+        for x in range(80, W, 160):
+            d.line((x,80,x+35,115), fill=(255,225,161), width=2)
+            d.line((x+35,80,x,115), fill=(255,225,161), width=2)
+        d.ellipse((90,160,250,320), outline=(172,123,225), width=3)
+        d.ellipse((103,173,237,307), outline=(172,123,225), width=2)
+    elif kind == "baby":
+        # Curtains, wall beams, crib rails and warm nursery details.
+        d.polygon([(135,105),(290,120),(255,395),(145,395)], fill=(183,112,111))
+        d.polygon([(1090,120),(1145,105),(1135,395),(1035,395)], fill=(183,112,111))
+        for x in range(385,820,48):
+            d.line((x,430,x+10,570), fill=(155,104,72), width=5)
+        d.rectangle((840,430,1070,452), fill=(125,79,62))
+        for x in range(860,1060,38):
+            d.ellipse((x,408,x+22,432), fill=(244,159,131))
+            d.ellipse((x+6,400,x+16,414), fill=(255,222,162))
+        d.line((145,150,230,150), fill=(238,177,143), width=6)
+    else:
+        # Banners, crenellations, a winding path and layered foreground foliage.
+        d.rectangle((475,300,495,330), fill=(222,203,177))
+        d.rectangle((805,300,825,330), fill=(222,203,177))
+        d.line((650,135,650,205), fill=(76,56,79), width=5)
+        d.polygon([(653,138),(715,158),(653,180)], fill=(176,66,83))
+        d.line((465,370,465,420), fill=(91,61,78), width=4)
+        d.polygon([(468,372),(510,388),(468,404)], fill=(191,83,82))
+        d.polygon([(560,720),(610,610),(660,585),(710,610),(780,720)], fill=(151,132,100))
+        for x,y in [(75,580),(150,610),(1090,600),(1190,570),(1030,640)]:
+            d.ellipse((x-45,y-70,x+45,y+30), fill=(42,95,72))
+            d.ellipse((x-30,y-95,x+25,y-25), fill=(57,119,82))
     # Cinematic title band
     d=ImageDraw.Draw(im)
     d.rounded_rectangle((45,35, min(W-45, 45+len(title)*25), 100), radius=14, fill=(18,22,43))
