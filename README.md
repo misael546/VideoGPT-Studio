@@ -36,8 +36,13 @@ El usuario debe pulsar explícitamente Generar video y confirmar que entiende qu
 
 La generación depende de los permisos, modelos, saldo, límites y condiciones de la cuenta Runway. Verifica sus precios antes de probar.
 
-## Publicación
-La aplicación Express puede desplegarse en Vercel conectando este repositorio. Configura las variables de entorno en los ajustes del proyecto de hosting. No habilites generación pública sin añadir autenticación, límites de uso y protección contra abuso.
+## Publicación en Vercel
+1. Importa `misael546/VideoGPT-Studio` desde el panel de Vercel.
+2. Mantén el directorio raíz como `.` y configura `OPENAI_API_KEY`, `OPENAI_MODEL`, `RUNWAYML_API_SECRET` y `RUNWAY_MODEL` en Environment Variables. No escribas las claves en archivos públicos ni en el frontend.
+3. Despliega. `api/index.js` y `vercel.json` enrutan las peticiones al servidor Express; el mismo servidor sigue pudiéndose ejecutar localmente con `npm run dev`.
+4. Comprueba `/api/health` y prueba primero el chat sin iniciar una generación de pago.
+
+**Importante:** este proyecto todavía no incluye inicio de sesión, cuotas persistentes por usuario ni almacenamiento permanente de videos. No habilites la generación pública hasta añadir esas protecciones. Los enlaces del proveedor pueden caducar y no se garantiza conservación del resultado.
 
 ## Reglas
 Lee `PROJECT_RULES.md` antes de cada actualización.
