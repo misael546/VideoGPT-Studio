@@ -22,21 +22,23 @@ function detectAdvancedIntent(text) {
     dialogue: has(text, /\b(dialogos?|conversaciones?|lo que dicen|transcrib(?:e|ir|irlos)|subtitulos?|letras|texto en pantalla|palabras que aparecen)\b/),
     narration: has(text, /\b(narracion|narrador|voz masculina|voz de hombre|voz masculina|voz en off|locucion|que una voz|voz generada|hablado por)\b/),
     visualAnalysis: has(text, /\b(analiza|analizar|observa|revisa|detecta|reconoce|identifica)\b/) &&
-      has(text, /\b(video|escenas?|personajes?|acciones?|fotogramas?|dialogos?|letras|texto)\b/)
+      has(text, /\b(video|escenas?|personajes?|acciones?|fotogramas?|dialogos?|letras|texto)\b/),
+    imagePolish: has(text, /\b(pule|pula|pulas|pulir|pules|mejora|mejorar|retoca|retocar|nitidez|calidad visual)\b/)
   };
 }
 
 function advancedMessage(intents, understood) {
   const requested = [];
-  if (intents.story) requested.push('montaje narrativo y selección de escenas/fotogramas');
-  if (intents.dialogue) requested.push('transcripción de diálogos o letras');
-  if (intents.narration) requested.push('narración con voz masculina');
-  if (intents.visualAnalysis) requested.push('análisis visual');
+  if (intents.story) requested.push('revisar fotogramas y localizar posibles cambios de escena para preparar un montaje tipo historia');
+  if (intents.dialogue) requested.push('transcribir diálogos o letras');
+  if (intents.narration) requested.push('añadir narración');
+  if (intents.visualAnalysis && !intents.story) requested.push('analizar visualmente el video');
   const parts = [];
   if (requested.length) parts.push('Entendí que quieres ' + requested.join(', ') + '.');
-  if (understood.length) parts.push('También detecté cambios compatibles: ' + understood.join(', ') + '.');
-  parts.push('Las herramientas avanzadas están en el panel de esta página: “Detectar cambios de escena”, “Transcribir diálogos” y “Generar narración”. No las marcaré como hechas hasta que ejecutes cada herramienta y termine correctamente.');
-  parts.push('Si tu petición también incluye cambios básicos, puedo preparar esos ajustes compatibles sin bloquearlos por las funciones avanzadas.');
+  if (understood.length) parts.push('También entendí estos ajustes compatibles: ' + understood.join(', ') + '.');
+  if (intents.story) parts.push('Puedo analizar cambios visuales y mostrar fotogramas para que elijas puntos de corte. Esta versión todavía no retoca automáticamente la calidad de cada imagen ni une escenas seleccionadas en un montaje narrativo completo; no voy a fingir que ya lo hizo.');
+  if (intents.imagePolish) parts.push('El retoque automático de imágenes aún no está implementado.');
+  if (intents.dialogue || intents.narration) parts.push('Usa las herramientas de transcripción o narración solo si también las necesitas; no hacen falta para analizar escenas.');
   return parts.join(' ');
 }
 
@@ -122,7 +124,7 @@ export function interpretVideoInstructions(input, durationSeconds = 0) {
     questions.push('¿A qué velocidad lo quieres: 0.5x, 0.75x, 1x, 1.25x, 1.5x o 2x?');
   }
 
-  if (/\b(vertical|tiktok|reels?|shorts?|retrato|9:16|historia de instagram|story de instagram|formato de celular|pantalla del telefono)\b/.test(text)) {
+  if (/\b(vertical|tiktok|reels?|shorts?|retrato|9:16|historia de instagram|story de instagram|estilo historia|formato historia|historia para instagram|story format|formato de celular|pantalla del telefono)\b/.test(text)) {
     plan.aspect = 'portrait'; understood.push('formato vertical'); recognized++;
   } else if (/\b(cuadrado|1:1|post cuadrado)\b/.test(text)) {
     plan.aspect = 'square'; understood.push('formato cuadrado'); recognized++;

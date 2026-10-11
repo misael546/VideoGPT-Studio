@@ -27,5 +27,5 @@ test('does not pretend a male voice request is complete; exposes available advan
   assert.equal(result.status, 'partial');
   assert.equal(result.plan.aspect, 'portrait');
   assert.equal(result.requestedFeatures.narration, true);
-  assert.match(result.question, /Generar narración/i);
+  assert.match(result.question, /añadir narración/i);
 });
