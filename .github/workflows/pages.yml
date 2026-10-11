@@ -26,6 +26,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Validate browser editor before publishing
+        run: |
+          node --check public/editor.js
+          test -s public/editor.html
+          test -s public/editor.css
+          grep -q 'id="videoFile"' public/editor.html
+          grep -q 'id="exportButton"' public/editor.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
