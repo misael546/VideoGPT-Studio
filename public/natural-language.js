@@ -18,9 +18,11 @@ function matchOne(text, patterns) {
 
 function detectAdvancedIntent(text) {
   return {
-    story: has(text, /\b(historia|story|narrativ[oa]|montaje|resumen|recap|escenas?|momentos importantes|fotogramas?|cuadros clave|estilo cinematografico)\b/),
+    story: has(text, /\b(historia|story|narrativ[oa]|montaje|resumen|recap|escenas?|momentos importantes|fotogramas?|cuadros clave|estilo cinematografico)\b/) || /\b(corta|cortar|recorta|recortar|selecciona)\b.{0,24}\b(escenas?|fragmentos|momentos)\b/.test(text),
     dialogue: has(text, /\b(dialogos?|conversaciones?|lo que dicen|transcrib(?:e|ir|irlos)|subtitulos?|letras|texto en pantalla|palabras que aparecen)\b/),
-    narration: has(text, /\b(narracion|narrador|voz masculina|voz de hombre|voz masculina|voz en off|locucion|que una voz|voz generada|hablado por)\b/),
+    narration: has(text, /\b(narracion|narrador|voz masculina|voz de hombre|voz en off|locucion|que una voz|voz generada|hablado por|narra|narrame|cuenta la historia)\b/),
+    backgroundMusic: has(text, /\b(musica de fondo|pon musica|agrega musica|anade musica|añade musica|musica ambiental|banda sonora|soundtrack|musica epica|musica alegre|musica triste)\b/),
+    soundEffects: has(text, /\b(efectos de sonido|efectos sonoros|efectos|sonidos de transicion|whoosh|golpes de sonido|impactos sonoros)\b/),
     visualAnalysis: has(text, /\b(analiza|analizar|observa|revisa|detecta|reconoce|identifica)\b/) &&
       has(text, /\b(video|escenas?|personajes?|acciones?|fotogramas?|dialogos?|letras|texto)\b/),
     imagePolish: !has(text, /\b(no|sin|nada de|no quiero)\s+(?:retoques?|retocar|mejoras? visuales?|mejorar las imagenes)\b/) && has(text, /\b(pule|pula|pulas|pulir|pules|mejora|mejorar|retoca|retocar|nitidez|calidad visual)\b/)
@@ -31,14 +33,16 @@ function advancedMessage(intents, understood) {
   const requested = [];
   if (intents.story) requested.push('revisar fotogramas y localizar posibles cambios de escena para preparar un montaje tipo historia');
   if (intents.dialogue) requested.push('transcribir diálogos o letras');
-  if (intents.narration) requested.push('añadir narración');
+  if (intents.narration) requested.push('añadir una narración con voz masculina en español');
+  if (intents.backgroundMusic) requested.push('añadir música de fondo instrumental');
+  if (intents.soundEffects) requested.push('añadir efectos de sonido sincronizados con los cortes');
   if (intents.visualAnalysis && !intents.story) requested.push('analizar visualmente el video');
   const parts = [];
   if (requested.length) parts.push('Entendí que quieres ' + requested.join(', ') + '.');
   if (understood.length) parts.push('También entendí estos ajustes compatibles: ' + understood.join(', ') + '.');
   if (intents.story) parts.push('Prepararé un montaje vertical tipo historia con fragmentos del video, usando cambios visuales cuando se detecten y una selección distribuida si no hay suficientes. Esto es un montaje automático por señales visuales, no comprensión semántica de la trama.');
   if (intents.imagePolish) parts.push('Aplicaré el ajuste visual disponible en el editor.');
-  if (intents.dialogue || intents.narration) parts.push('Usa las herramientas de transcripción o narración solo si también las necesitas; no hacen falta para analizar escenas.');
+  if (intents.narration || intents.backgroundMusic || intents.soundEffects) parts.push('Prepararé las pistas de audio solicitadas automáticamente en el dispositivo. La música y los efectos se generan localmente; la voz masculina usa el modelo de voz descargado al navegador.');
   return parts.join(' ');
 }
 
