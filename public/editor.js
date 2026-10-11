@@ -1,6 +1,7 @@
 import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
 import { toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
 import { validateEditPlan } from './edit-plan.js';
+import { interpretVideoInstructions } from './natural-language.js';
 
 const $ = (selector) => document.querySelector(selector);
 const fileInput = $('#videoFile');
@@ -83,70 +84,37 @@ function clearError() {
 }
 function applyNaturalInstructions() {
   clearError();
-  const text = editInstructions.value.trim().toLowerCase();
-  if (!text) {
-    showError('Escribe los cambios que quieres aplicar.');
-    return;
+  const inputText = editInstructions.value.trim();
+  if (!inputText) {
+    showError('Escribe qué quieres cambiar del video.');
+    return { status: 'clarify', question: '¿Qué cambio quieres hacer?' };
   }
-  let applied = [];
-  const range = text.match(/(?:de|desde)\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-)\s*(\d+(?:[.,]\d+)?)/);
-  const firstSeconds = text.match(/(?:quita|elimina|corta|recorta)\s+(?:los\s+)?primeros?\s+(\d+(?:[.,]\d+)?)\s*(?:segundos?|s)\b/);
-  const startSeconds = text.match(/(?:empieza|inicia|comienza)\s+(?:en|desde)\s*(\d+(?:[.,]\d+)?)\s*(?:segundos?|s)\b/);
-  const endSeconds = text.match(/(?:termina|acaba|corta|recorta)\s+(?:en|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:segundos?|s)\b/);
-  const speedMatch = text.match(/(?:velocidad|acelera(?:lo)?|acelera el video|a)\s*(?:a\s*)?(0\.5|0\.75|1(?:\.25|\.5)?|2)\s*x?\b/);
-  const volumeMatch = text.match(/(?:volumen|audio)\s*(?:al|a|en)?\s*(\d{1,3})\s*%/);
-  if (range) {
-    trimStart.value = range[1].replace(',', '.');
-    trimEnd.value = range[2].replace(',', '.');
-    applied.push('recorte ' + trimStart.value + '–' + trimEnd.value + ' s');
-  } else {
-    if (firstSeconds || startSeconds) {
-      trimStart.value = (firstSeconds || startSeconds)[1].replace(',', '.');
-      applied.push('inicio ' + trimStart.value + ' s');
-    }
-    if (endSeconds) {
-      trimEnd.value = endSeconds[1].replace(',', '.');
-      applied.push('final ' + trimEnd.value + ' s');
-    }
+  const result = interpretVideoInstructions(inputText, durationSeconds);
+  if (result.status === 'clarify') {
+    showError(result.question);
+    editSummary.textContent = result.question;
+    return result;
   }
-  if (speedMatch) {
-    speedInput.value = speedMatch[1];
-    applied.push('velocidad ' + speedInput.value + '×');
-  } else if (/\b(lento|despacio|cámara lenta)\b/.test(text)) {
-    speedInput.value = '0.5';
-    applied.push('cámara lenta 0.5×');
+  if (result.status === 'partial') {
+    showError(result.question);
+    editSummary.textContent = 'Entendí: ' + result.understood.join(' · ') + '.';
+    return result;
   }
-  if (/\b(vertical|reel|tiktok|9:16)\b/.test(text)) {
-    aspectInput.value = 'portrait';
-    applied.push('formato vertical');
-  } else if (/\b(cuadrado|1:1)\b/.test(text)) {
-    aspectInput.value = 'square';
-    applied.push('formato cuadrado');
-  } else if (/\b(horizontal|paisaje|16:9)\b/.test(text)) {
-    aspectInput.value = 'landscape';
-    applied.push('formato horizontal');
+  const plan = result.plan;
+  const applied = [];
+  if (plan.trim) {
+    trimStart.value = String(plan.trim.start);
+    trimEnd.value = String(plan.trim.end);
+    applied.push('recorte ' + plan.trim.start + '–' + plan.trim.end + ' s');
   }
-  if (/\b(silencia|silenciar|sin sonido|sin audio|mute)\b/.test(text)) {
-    volumeInput.value = '0';
-    volumeValue.textContent = '0%';
-    applied.push('audio silenciado');
-  } else if (volumeMatch) {
-    const volume = Math.min(200, Math.max(0, Number(volumeMatch[1])));
-    volumeInput.value = String(volume);
-    volumeValue.textContent = volume + '%';
-    applied.push('volumen ' + volume + '%');
-  }
-  if (/\b(fundido|fundidos|entrada suave|salida suave)\b/.test(text)) {
-    fadeInput.checked = true;
-    applied.push('fundidos suaves');
-  }
+  if (plan.speed !== undefined) { speedInput.value = String(plan.speed); applied.push('velocidad ' + plan.speed + '×'); }
+  if (plan.aspect !== undefined) { aspectInput.value = plan.aspect; applied.push('formato ' + plan.aspect); }
+  if (plan.volume !== undefined) { volumeInput.value = String(plan.volume); volumeValue.textContent = plan.volume + '%'; applied.push('volumen ' + plan.volume + '%'); }
+  if (plan.fade !== undefined) { fadeInput.checked = plan.fade; applied.push(plan.fade ? 'fundidos suaves' : 'sin fundidos'); }
   refreshSummary();
-  if (!applied.length) {
-    showError('No reconocí cambios compatibles. Prueba con “quita los primeros 5 segundos”, “acelera a 1.5x”, “vertical”, “volumen 50%” o “silencia”.');
-    return;
-  }
+  editSummary.textContent = 'Entendí y apliqué: ' + applied.join(' · ') + '.';
   progressArea.classList.add('hidden');
-  editSummary.textContent = 'Cambios aplicados: ' + applied.join(' · ') + '. Revisa los controles antes de exportar.';
+  return result;
 }
 applyInstructions.addEventListener('click', applyNaturalInstructions);
 
@@ -220,7 +188,68 @@ prepareGuidedEditButton.addEventListener('click', () => {
   editingWorkspace.classList.remove('hidden');
   editingWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
-function applyChatGPTPlan(planOverride) {
+
+const assistantPrompt = $('#assistantPrompt');
+const assistantConversation = $('#assistantConversation');
+const generateFromAssistant = $('#generateFromAssistant');
+let assistantPreviousPrompt = '';
+let assistantNeedsClarification = false;
+
+function addAssistantMessage(message, kind) {
+  const item = document.createElement('p');
+  item.className = 'assistant-message ' + (kind === 'user' ? 'assistant-user' : 'assistant-reply');
+  item.textContent = message;
+  assistantConversation.append(item);
+  assistantConversation.scrollTop = assistantConversation.scrollHeight;
+}
+generateFromAssistant.addEventListener('click', async () => {
+  clearError();
+  if (!selectedFile || !durationSeconds) {
+    const message = 'Primero elige o carga un video y espera a que aparezca su duración.';
+    addAssistantMessage(message, 'assistant');
+    showError(message);
+    return;
+  }
+  const reply = assistantPrompt.value.trim();
+  if (!reply) {
+    const message = '¿Qué te gustaría cambiar del video? Escribe una instrucción para empezar.';
+    addAssistantMessage(message, 'assistant');
+    assistantPrompt.focus();
+    return;
+  }
+  addAssistantMessage(reply, 'user');
+  assistantPrompt.value = '';
+  const combined = assistantNeedsClarification ? assistantPreviousPrompt + ' ' + reply : reply;
+  assistantPreviousPrompt = combined;
+  editInstructions.value = combined;
+  const result = applyNaturalInstructions();
+  if (!result || result.status === 'clarify' || result.status === 'partial') {
+    assistantNeedsClarification = true;
+    const message = result?.question || errorBox.textContent || '¿Puedes explicar esa parte con otras palabras?';
+    addAssistantMessage(message, 'assistant');
+    return;
+  }
+  assistantNeedsClarification = false;
+  assistantPreviousPrompt = '';
+  addAssistantMessage('Entendí: ' + result.understood.join(', ') + '. Voy a generar el video con esos cambios.', 'assistant');
+  editingWorkspace.classList.remove('hidden');
+  exportButton.click();
+  if (!busy) {
+    addAssistantMessage('No pude iniciar el motor de edición. Revisa el error que aparece y vuelve a intentarlo.', 'assistant');
+    return;
+  }
+  generateFromAssistant.disabled = true;
+  generateFromAssistant.textContent = 'Generando…';
+  const waitForExport = () => {
+    if (busy) { window.setTimeout(waitForExport, 800); return; }
+    generateFromAssistant.disabled = false;
+    generateFromAssistant.textContent = '✦ Generar video';
+    if (!resultPanel.classList.contains('hidden')) addAssistantMessage('Tu video está listo. Reprodúcelo y descárgalo en el resultado.', 'assistant');
+    else addAssistantMessage('La exportación no terminó. Revisa el mensaje de error; tu original no se modificó.', 'assistant');
+  };
+  window.setTimeout(waitForExport, 800);
+});
+\nfunction applyChatGPTPlan(planOverride) {
   clearError();
   let rawPlan = planOverride;
   if (!rawPlan) {

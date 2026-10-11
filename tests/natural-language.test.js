@@ -29,10 +29,10 @@ test('asks when the instruction is not understood', () => {
   assert.match(result.question, /No entendí/i);
 });
 
-test('asks where to end if only a new start is given', () => {
+test('understands removing the first few seconds as a trim to the end', () => {
   const result = interpretVideoInstructions('quita los primeros 3 segundos', 30);
-  assert.equal(result.status, 'clarify');
-  assert.match(result.question, /dónde terminar/i);
+  assert.equal(result.status, 'ok');
+  assert.deepEqual(result.plan.trim, { start: 3, end: 30 });
 });
 
 test('rejects trim end beyond the source duration with a question', () => {

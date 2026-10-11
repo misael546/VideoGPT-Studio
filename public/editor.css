@@ -49,3 +49,21 @@
 .guided-status{color:#d5c9ff;font-size:12px;line-height:1.5}
 .guided-panel .primary{width:100%}
 @media(max-width:540px){.guided-panel{padding:15px}.goal-grid{grid-template-columns:1fr}.goal-card{min-height:74px}}
+
+/* Minimal conversational editor */
+.assistant-panel{display:grid;gap:12px;margin:18px 0 26px;padding:clamp(16px,4vw,24px);border:1px solid #403750;border-radius:18px;background:linear-gradient(145deg,#191624,#100f18);box-shadow:0 18px 55px #0003}
+.assistant-heading{display:flex;align-items:center;gap:12px}.assistant-heading .eyebrow{margin:0 0 5px}.assistant-heading h2{margin:0;font-size:clamp(21px,4vw,28px);line-height:1.2}
+.assistant-spark{display:grid;place-items:center;flex:0 0 43px;height:43px;border:1px solid #5b4c7d;border-radius:14px;background:#28213b;color:#d5c5ff;font-size:23px}
+.assistant-conversation{display:grid;gap:8px;max-height:210px;overflow:auto;padding:2px}
+.assistant-message{max-width:92%;margin:0;padding:10px 12px;border-radius:12px;font-size:12px;line-height:1.55;overflow-wrap:anywhere}
+.assistant-reply{justify-self:start;background:#242033;color:#e8e1ff;border:1px solid #39334d}.assistant-user{justify-self:end;background:#3b2e58;color:#fff}
+.assistant-input-label{margin-top:4px;color:#c9c2db;font-size:12px;font-weight:700}
+.assistant-panel textarea{box-sizing:border-box;width:100%;min-height:96px;padding:13px;border:1px solid #39354d;border-radius:11px;background:#111019;color:#f1edff;font:14px/1.55 'DM Sans',sans-serif;resize:vertical}
+.assistant-panel textarea:focus{outline:2px solid #9c87e0;outline-offset:1px}
+.assistant-hint{margin:0;color:#aaa4bf;font-size:11px;line-height:1.55}.generate-simple{width:100%;min-height:51px;font-size:14px}
+#guidedGoalPanel{display:none!important}
+#editingWorkspace{display:block!important;margin:0;padding:0;border:0;background:transparent}
+#editingWorkspace>.section-head,#editingWorkspace>.controls-grid,#editingWorkspace>.summary,#editingWorkspace>.instruction-box,#editingWorkspace>.plan-box,#editingWorkspace>.frame-tools,#editingWorkspace>.audio-mixer,#editingWorkspace>#exportButton{display:none!important}
+#editingWorkspace>#progressArea:not(.hidden),#editingWorkspace>#errorBox:not(.hidden),#editingWorkspace>#resultPanel:not(.hidden){display:block!important}
+#editingWorkspace>#resultPanel:not(.hidden){padding:clamp(15px,4vw,22px);margin:18px 0;border:1px solid #403750;border-radius:15px;background:#14121d}
+@media(max-width:560px){.assistant-panel{padding:16px}.assistant-panel textarea{font-size:16px;min-height:110px}.generate-simple{min-height:53px}}
