@@ -26,6 +26,7 @@ jobs:
           node --check public/editor.js
           node --check public/edit-plan.js
           node --check public/natural-language.js
+          node --check public/assistant-planner.js
           node --check public/advanced-tools.js
           test -s public/editor.html
           test -s public/editor.css

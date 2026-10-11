@@ -18,7 +18,7 @@ function matchOne(text, patterns) {
 
 function detectAdvancedIntent(text) {
   return {
-    story: has(text, /\b(historia|story|narrativ[oa]|montaje|resumen|recap|escenas?|momentos importantes|fotogramas?|cuadros clave|mas pulido|mas profesional|estilo cinematografico|ritmo dinamico|edicion dinamica)\b/),
+    story: has(text, /\b(historia|story|narrativ[oa]|montaje|resumen|recap|escenas?|momentos importantes|fotogramas?|cuadros clave|estilo cinematografico)\b/),
     dialogue: has(text, /\b(dialogos?|conversaciones?|lo que dicen|transcrib(?:e|ir|irlos)|subtitulos?|letras|texto en pantalla|palabras que aparecen)\b/),
     narration: has(text, /\b(narracion|narrador|voz masculina|voz de hombre|voz masculina|voz en off|locucion|que una voz|voz generada|hablado por)\b/),
     visualAnalysis: has(text, /\b(analiza|analizar|observa|revisa|detecta|reconoce|identifica)\b/) &&
@@ -29,14 +29,14 @@ function detectAdvancedIntent(text) {
 function advancedMessage(intents, understood) {
   const requested = [];
   if (intents.story) requested.push('montaje narrativo y selección de escenas/fotogramas');
-  if (intents.dialogue) requested.push('detección de diálogos o texto');
+  if (intents.dialogue) requested.push('transcripción de diálogos o letras');
   if (intents.narration) requested.push('narración con voz masculina');
-  if (intents.visualAnalysis) requested.push('análisis del contenido visual');
+  if (intents.visualAnalysis) requested.push('análisis visual');
   const parts = [];
   if (requested.length) parts.push('Entendí que quieres ' + requested.join(', ') + '.');
-  if (understood.length) parts.push('También entendí estos cambios compatibles: ' + understood.join(', ') + '.');
-  parts.push('Esta versión todavía no puede reconocer automáticamente el significado de las escenas, transcribir diálogos/letras ni crear una voz masculina. Sí puede recortar, cambiar formato, ajustar velocidad y volumen, y aplicar fundidos. No voy a fingir que esas funciones avanzadas ya se hicieron.');
-  parts.push('¿Quieres que prepare solo los cambios compatibles por ahora, o prefieres esperar a que integremos análisis de escenas, transcripción y voz?');
+  if (understood.length) parts.push('También detecté cambios compatibles: ' + understood.join(', ') + '.');
+  parts.push('Las herramientas avanzadas están en el panel de esta página: “Detectar cambios de escena”, “Transcribir diálogos” y “Generar narración”. No las marcaré como hechas hasta que ejecutes cada herramienta y termine correctamente.');
+  parts.push('Si tu petición también incluye cambios básicos, puedo preparar esos ajustes compatibles sin bloquearlos por las funciones avanzadas.');
   return parts.join(' ');
 }
 

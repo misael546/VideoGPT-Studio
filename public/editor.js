@@ -1,7 +1,7 @@
 import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
 import { toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
 import { validateEditPlan } from './edit-plan.js';
-import { interpretVideoInstructions } from './natural-language.js';
+import { planVideoInstruction } from './assistant-planner.js';
 
 const $ = (selector) => document.querySelector(selector);
 const fileInput = $('#videoFile');
@@ -90,7 +90,7 @@ function applyNaturalInstructions() {
     showError('Escribe qué quieres cambiar del video.');
     return { status: 'clarify', question: '¿Qué cambio quieres hacer?' };
   }
-  const result = interpretVideoInstructions(inputText, durationSeconds);
+  const result = planVideoInstruction(inputText, durationSeconds);
   if (result.status === 'clarify') {
     showError(result.question);
     editSummary.textContent = result.question;
@@ -238,7 +238,7 @@ generateFromAssistant.addEventListener('click', async () => {
   assistantPreviousPrompt = combined;
   editInstructions.value = combined;
   const result = applyNaturalInstructions();
-  if (!result || result.status === 'clarify' || result.status === 'partial') {
+  if (!result || result.status === 'clarify' || (result.status === 'partial' && !result.plan && !result.partialPlan)) {
     assistantNeedsClarification = true;
     const message = result?.question || errorBox.textContent || '¿Puedes explicar esa parte con otras palabras?';
     addAssistantMessage(message, 'assistant');
@@ -246,7 +246,12 @@ generateFromAssistant.addEventListener('click', async () => {
   }
   assistantNeedsClarification = false;
   assistantPreviousPrompt = '';
-  addAssistantMessage('Entendí: ' + result.understood.join(', ') + '. Voy a generar el video con esos cambios.', 'assistant');
+  const understoodText = (result.understood || []).join(', ') || 'los ajustes compatibles detectados';
+  const advancedNote = result.status === 'partial'
+    ? ' Las funciones avanzadas no se ejecutan automáticamente desde esta frase; puedes usar “Detectar cambios de escena”, “Transcribir diálogos” y “Generar narración” en el panel de herramientas avanzadas.'
+    : '';
+  addAssistantMessage('Entendí: ' + understoodText + '. Prepararé el video con los cambios compatibles.' + advancedNote, 'assistant');
+  clearError();
   editingWorkspace.classList.remove('hidden');
   exportButton.click();
   if (!busy) {
