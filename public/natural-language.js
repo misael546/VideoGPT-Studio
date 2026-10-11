@@ -33,7 +33,7 @@ function advancedMessage(intents, understood) {
   const requested = [];
   if (intents.story) requested.push('revisar fotogramas y localizar posibles cambios de escena para preparar un montaje tipo historia');
   if (intents.dialogue) requested.push('transcribir diálogos o letras');
-  if (intents.narration) requested.push('añadir una narración con voz masculina en español');
+  if (intents.narration) requested.push('añadir narración con voz masculina en español');
   if (intents.backgroundMusic) requested.push('añadir música de fondo instrumental');
   if (intents.soundEffects) requested.push('añadir efectos de sonido sincronizados con los cortes');
   if (intents.visualAnalysis && !intents.story) requested.push('analizar visualmente el video');
