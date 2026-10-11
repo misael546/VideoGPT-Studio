@@ -104,7 +104,12 @@ generateBtn.addEventListener('click', async () => {
     await refreshVideoTask(data.taskId);
   } catch (error) {
     status.textContent = 'No completado';
-    generationNote.textContent = error.message || 'No se pudo generar el video.';
+    const providerMessage = error.message || 'No se pudo generar el video.';
+    const queueFull = /video queue is full|queue is full|cola.{0,30}(llena|saturada)/i.test(providerMessage);
+    const requestId = providerMessage.match(/request id:\s*([a-zA-Z0-9_-]+)/i)?.[1];
+    generationNote.textContent = queueFull
+      ? 'Agnes AI tiene la cola de videos llena. No se creó el video. Espera antes de volver a intentarlo.' + (requestId ? ' ID de solicitud: ' + requestId : '')
+      : providerMessage;
     addBubble('error', generationNote.textContent);
   } finally {
     activeTask = false;
