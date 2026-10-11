@@ -53,3 +53,8 @@ El servidor Express contiene rutas heredadas para proveedores externos. No son n
 - Validar entradas y el video final; mostrar errores reales en vez de fingir que la edición terminó.
 - No depender de enlaces temporales como almacenamiento permanente.
 - Probar la interfaz en móvil y escritorio.
+
+
+### Worker FFmpeg del mismo origen
+
+El editor y las herramientas avanzadas cargan el worker desde `public/vendor/ffmpeg/worker.js`, junto con sus dependencias locales `const.js` y `errors.js`. Los archivos corresponden a `@ffmpeg/ffmpeg@0.12.10` (licencia MIT); el motor Core/WebAssembly permanece fijado a `@ffmpeg/core@0.12.6` y se descarga bajo demanda. Para refrescar los archivos locales de acuerdo con la versión fijada, ejecuta `npm run prepare:ffmpeg`. El video del usuario continúa procesándose en el navegador.

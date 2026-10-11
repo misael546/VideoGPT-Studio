@@ -823,17 +823,9 @@ async function loadEngine() {
   progressLabel.textContent = 'Iniciando motor de edición…';
   progressDetail.textContent = 'Los componentes están descargados. Preparando el trabajador de FFmpeg desde este mismo sitio para evitar bloqueos entre dominios…';
   try {
-    // El navegador bloquea que Worker cargue directamente un script de otro origen.
-    // Cargamos el módulo remoto, lo convertimos a Blob local y damos esa URL al Worker.
-    const workerResponse = await fetch('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js', { cache: 'force-cache' });
-    if (!workerResponse.ok) throw new Error('No se pudo descargar el trabajador de FFmpeg (HTTP ' + workerResponse.status + ').');
-    let workerSource = await workerResponse.text();
-    // El worker es un módulo y su import relativo dejaría de resolverse al crear una URL Blob.
-    // Convertimos esa dependencia en una URL absoluta de la misma versión de FFmpeg.
-    workerSource = workerSource.replace(/(['\"])\.\/(const|errors)\.js\1/g, (match, quote, moduleName) => quote + "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/" + moduleName + ".js" + quote);
-    const workerBlobURL = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
-    engineAssetUrls.push(workerBlobURL);
-    await ffmpeg.load({ coreURL, wasmURL, classWorkerURL: workerBlobURL });
+    // El worker y sus dependencias se sirven desde el mismo origen que la página.
+    const classWorkerURL = new URL('./vendor/ffmpeg/worker.js', import.meta.url).href;
+    await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
   } catch (error) {
     progressDetail.textContent = 'No se pudo iniciar el trabajador de FFmpeg: ' + (error?.message || 'error desconocido');
     throw new Error('El motor de edición no pudo iniciarse en este navegador. Comprueba que no esté bloqueando trabajadores o WebAssembly y vuelve a intentarlo. Detalle: ' + (error?.message || 'sin detalles'));

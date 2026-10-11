@@ -5,6 +5,7 @@
   "description": "Interfaz conversacional para crear y editar proyectos de video con IA",
   "type": "module",
   "scripts": {
+    "prepare:ffmpeg": "node scripts/prepare-ffmpeg-assets.mjs",
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "node --test"
