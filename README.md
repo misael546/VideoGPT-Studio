@@ -45,3 +45,21 @@ El proveedor puede imponer cuotas, límites de frecuencia, condiciones de acceso
 
 ## Reglas
 Lee `PROJECT_RULES.md` antes de cada actualización.
+
+
+## Integración segura para un asistente externo
+
+El archivo `assistant-openapi.yaml` documenta endpoints protegidos para iniciar una generación y consultar el estado hasta obtener el enlace real. Esto permite configurar una integración de acciones en un asistente compatible; **no conecta automáticamente esta conversación de ChatGPT**.
+
+Para habilitarla en el hosting:
+1. Genera un secreto largo y aleatorio para `VIDEOGPT_ASSISTANT_TOKEN` y guárdalo únicamente en las variables de entorno de Vercel. No lo subas a GitHub ni lo pegues en el frontend.
+2. Conserva `AGNES_API_KEY` como secreto del servidor.
+3. Despliega la versión que contiene esta integración.
+4. En un asistente compatible con acciones/OpenAPI, importa `assistant-openapi.yaml` y configura autenticación Bearer con el mismo secreto.
+5. Prueba primero el endpoint de estado y después una única generación corta. La llamada de creación puede consumir créditos; no la repitas si Agnes AI responde que la cola está llena.
+
+Endpoints protegidos:
+- `POST /api/assistant/videos`: crea una tarea y devuelve `taskId`.
+- `GET /api/assistant/videos/{id}`: consulta la tarea; solo devuelve `outputUrl` si el proveedor confirma éxito y proporciona una URL HTTP(S) válida.
+
+El token no se incluye en el navegador y se compara en tiempo constante. Rota el secreto si se expone. La API aún no implementa cuentas de usuario ni cuotas persistentes, así que no la publiques como servicio abierto.
