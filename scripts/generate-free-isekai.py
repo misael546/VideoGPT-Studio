@@ -117,23 +117,32 @@ def run(args):
     subprocess.run(args, check=True)
 
 def make_voice():
+    """Prefer free neural Spanish TTS; fall back locally if the service is unavailable."""
     wavs=[]
     for i,(line,kind) in enumerate(LINES):
-        p=f"{WORK}/voice-{i}.wav"
-        run(["espeak-ng","-v","es","-s","145","-p","42","-w",p,line])
-        wavs.append(p)
-    # Concatenate PCM audio with short pauses, preserving format.
+        mp3=f"{WORK}/voice-{i}.mp3"
+        wav_path=f"{WORK}/voice-{i}.wav"
+        try:
+            run(["edge-tts","--voice","es-MX-DaliaNeural","--rate=-7%","--pitch=-2Hz",
+                 "--text",line,"--write-media",mp3])
+            run(["ffmpeg","-y","-i",mp3,"-ar","24000","-ac","1",wav_path])
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            run(["espeak-ng","-v","es","-s","138","-p","48","-w",wav_path,line])
+        wavs.append(wav_path)
     combined=f"{WORK}/narration.wav"
     with wave.open(wavs[0],"rb") as first:
         params=first.getparams()
         chunks=[]
         for i,p in enumerate(wavs):
-            with wave.open(p,"rb") as f:
-                if f.getparams()[:3] != params[:3]:
-                    raise RuntimeError("Formato de narración incompatible")
-                chunks.append(f.readframes(f.getnframes()))
-                if i < len(wavs)-1:
-                    chunks.append(b"\x00" * int(params.framerate*0.45)*params.sampwidth*params.nchannels)
+            with wave.open(p,"rb") as audio:
+                if audio.getparams()[:3] != params[:3]:
+                    normalized=f"{WORK}/normalized-{i}.wav"
+                    run(["ffmpeg","-y","-i",p,"-ar",str(params.framerate),"-ac",str(params.nchannels),normalized])
+                    p=normalized
+                with wave.open(p,"rb") as audio:
+                    chunks.append(audio.readframes(audio.getnframes()))
+                    if i < len(wavs)-1:
+                        chunks.append(b"\\x00" * int(params.framerate*0.55)*params.sampwidth*params.nchannels)
         with wave.open(combined,"wb") as out:
             out.setparams(params)
             out.writeframes(b"".join(chunks))
@@ -148,9 +157,12 @@ def main():
         # Gentle camera movement, fades, and a Spanish caption at the bottom.
         caption=f"{WORK}/caption-{i}.txt"
         with open(caption,"w",encoding="utf-8") as f: f.write(line)
-        vf=(f"zoompan=z='min(zoom+0.0007,1.04)':d={FPS*SCENE_SECONDS}:"
-            f"s={W}x{H}:fps={FPS},fade=t=in:st=0:d=0.5,"
-            f"fade=t=out:st={SCENE_SECONDS-0.5}:d=0.5,"
+        if i % 2 == 0:
+            camera = f"zoompan=z='min(1.0+0.0009*on,1.055)':x='iw/2-(iw/zoom/2)+10*sin(on/38)':y='ih/2-(ih/zoom/2)+7*cos(on/45)':d={FPS*SCENE_SECONDS}:s={W}x{H}:fps={FPS}"
+        else:
+            camera = f"zoompan=z='max(1.055-0.0008*on,1.0)':x='iw/2-(iw/zoom/2)+12*sin(on/42)':y='ih/2-(ih/zoom/2)+8*sin(on/51)':d={FPS*SCENE_SECONDS}:s={W}x{H}:fps={FPS}"
+        vf=(f"{camera},fade=t=in:st=0:d=0.65,"
+            f"fade=t=out:st={SCENE_SECONDS-0.65}:d=0.65,"
             f"drawbox=x=30:y=590:w=1220:h=90:color=black@0.58:t=fill,"
             f"drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:"
             f"textfile={caption}:fontcolor=white:fontsize=27:"
@@ -169,7 +181,7 @@ def main():
     # A quiet synthesized ambient bed keeps the short cinematic without external assets.
     run(["ffmpeg","-y","-i",silent,"-i",voice,"-f","lavfi","-i",
          "sine=frequency=110:sample_rate=44100:duration=24",
-         "-filter_complex","[1:a]volume=1.0[voice];[2:a]volume=0.035,lowpass=f=320[amb];[voice][amb]amix=inputs=2:duration=longest:dropout_transition=1[a]",
+         "-filter_complex","[1:a]highpass=f=90,lowpass=f=10000,acompressor=threshold=0.10:ratio=2.5:attack=20:release=180,volume=1.15[voice];[2:a]volume=0.018,lowpass=f=260[amb];[voice][amb]amix=inputs=2:duration=longest:dropout_transition=1[a]",
          "-map","0:v:0","-map","[a]","-t",str(len(LINES)*SCENE_SECONDS),
          "-c:v","copy","-c:a","aac","-b:a","128k","-movflags","+faststart",final])
     run(["ffprobe","-v","error","-show_entries","format=duration,size","-of","default=noprint_wrappers=1",final])
