@@ -58,3 +58,5 @@
 45. El editor debe admitir planes de edición JSON versionados preparados externamente por ChatGPT y validarlos antes de modificar controles o exportar.
 46. El plan JSON v1 solo puede ejecutar operaciones implementadas y validadas por el editor: trim en segundos, speed en opciones admitidas, aspect, volume y fade. No ejecutar código arbitrario ni expresiones FFmpeg proporcionadas por usuarios.
 47. Explicar que el puente actual es mediante copiar/pegar el plan entre ChatGPT y el editor; no afirmar conexión directa de la web con esta conversación.
+
+48. El extractor de cuadros debe funcionar localmente en el navegador, limitar la cantidad de capturas, permitir descargar cuadros y hoja de escenas, y restaurar la posición de reproducción al terminar.
