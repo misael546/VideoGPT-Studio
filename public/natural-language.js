@@ -23,7 +23,7 @@ function detectAdvancedIntent(text) {
     narration: has(text, /\b(narracion|narrador|voz masculina|voz de hombre|voz masculina|voz en off|locucion|que una voz|voz generada|hablado por)\b/),
     visualAnalysis: has(text, /\b(analiza|analizar|observa|revisa|detecta|reconoce|identifica)\b/) &&
       has(text, /\b(video|escenas?|personajes?|acciones?|fotogramas?|dialogos?|letras|texto)\b/),
-    imagePolish: has(text, /\b(pule|pula|pulas|pulir|pules|mejora|mejorar|retoca|retocar|nitidez|calidad visual)\b/)
+    imagePolish: !has(text, /\b(no|sin|nada de|no quiero)\s+(?:retoques?|retocar|mejoras? visuales?|mejorar las imagenes)\b/) && has(text, /\b(pule|pula|pulas|pulir|pules|mejora|mejorar|retoca|retocar|nitidez|calidad visual)\b/)
   };
 }
 
@@ -36,8 +36,8 @@ function advancedMessage(intents, understood) {
   const parts = [];
   if (requested.length) parts.push('Entendí que quieres ' + requested.join(', ') + '.');
   if (understood.length) parts.push('También entendí estos ajustes compatibles: ' + understood.join(', ') + '.');
-  if (intents.story) parts.push('Puedo analizar cambios visuales y mostrar fotogramas para que elijas puntos de corte. Esta versión todavía no retoca automáticamente la calidad de cada imagen ni une escenas seleccionadas en un montaje narrativo completo; no voy a fingir que ya lo hizo.');
-  if (intents.imagePolish) parts.push('El retoque automático de imágenes aún no está implementado.');
+  if (intents.story) parts.push('Prepararé un montaje vertical tipo historia con fragmentos del video, usando cambios visuales cuando se detecten y una selección distribuida si no hay suficientes. Esto es un montaje automático por señales visuales, no comprensión semántica de la trama.');
+  if (intents.imagePolish) parts.push('Aplicaré el ajuste visual disponible en el editor.');
   if (intents.dialogue || intents.narration) parts.push('Usa las herramientas de transcripción o narración solo si también las necesitas; no hacen falta para analizar escenas.');
   return parts.join(' ');
 }
