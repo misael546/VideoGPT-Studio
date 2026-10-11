@@ -1,4 +1,4 @@
-import { interpretVideoInstructions } from './natural-language.js';
+import { interpretVideoInstructions } from './natural-language.js?v=20261011-8';
 
 // Lightweight Spanish normalization for casual spelling, missing accents,
 // voice transcription mistakes and common chat abbreviations. This is a
