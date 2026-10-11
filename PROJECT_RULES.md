@@ -70,3 +70,5 @@
 54. Después de preparar el preset, mostrar el plan y permitir revisarlo antes de exportar. El archivo original no debe sobrescribirse y el procesamiento sigue siendo local sin servicios de pago.
 55. En GitHub Pages, el worker de @ffmpeg/ffmpeg debe servirse desde el mismo origen del sitio; no crear Worker directamente desde jsDelivr.
 56. El workflow de publicación debe descargar versiones fijadas de worker.js y sus dependencias, comprobar que existen y validar sintaxis antes de publicar. El motor core/WASM puede descargarse de la CDN fijada, sin subir videos del usuario.
+
+57. La página pública del editor debe mostrar únicamente la selección/carga del video y una vista previa opcional; no mostrar controles de edición, mezclador, extracción de escenas ni exportación hasta que el usuario indique qué desea hacer. Aclarar que seleccionar el archivo en GitHub Pages no lo adjunta automáticamente a este chat.
