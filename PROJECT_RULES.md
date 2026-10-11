@@ -48,3 +48,8 @@
 39. El editor gratuito no debe usar APIs de pago ni exponer credenciales. Las librerías públicas necesarias deben fijarse a versiones concretas y su descarga debe documentarse.
 40. No prometer que ChatGPT está conectado al editor ni que entiende cualquier instrucción automáticamente; describir con precisión las operaciones realmente implementadas.
 41. Validar el archivo exportado y comprobar errores de carga, recorte inválido, límites de memoria y compatibilidad móvil. Nunca reemplazar el video original automáticamente.
+
+
+42. La página de VideoGPT Studio no debe presentarse como si contuviera una IA propia conectada a este chat.
+43. Para solicitar una edición asistida por ChatGPT, indicar que el usuario debe adjuntar el video directamente en su conversación de ChatGPT; un sitio estático de GitHub Pages no puede entregar automáticamente archivos a la conversación actual.
+44. No inventar una conexión entre la web y ChatGPT ni afirmar que se recibió un archivo subido a la web. El editor local puede mantenerse como alternativa manual opcional.
