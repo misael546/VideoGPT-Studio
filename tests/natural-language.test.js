@@ -71,8 +71,8 @@ test('recognizes story edit, scene/frame analysis, dialogue/text and male narrat
   assert.equal(result.requestedFeatures.story, true);
   assert.equal(result.requestedFeatures.dialogue, true);
   assert.equal(result.requestedFeatures.narration, true);
-  assert.match(result.question, /Detectar cambios de escena/i);
-  assert.match(result.question, /voz masculina/i);
+  assert.match(result.question, /no retoca automáticamente/i);
+  assert.match(result.question, /añadir narración/i);
 });
 
 test('advanced request can also preserve understood basic changes without claiming advanced features', () => {
@@ -81,4 +81,14 @@ test('advanced request can also preserve understood basic changes without claimi
   assert.equal(result.plan.aspect, 'portrait');
   assert.equal(result.plan.volume, 70);
   assert.equal(result.requestedFeatures.narration, true);
+});
+
+test('understands an informal frame-by-frame story edit request and flags unsupported image retouching', () => {
+  const result = interpretVideoInstructions('Quiero que cortes fotograma por fotograma el video y pulas las imágenes y que las unas en un vídeo estilo historia', 48);
+  assert.equal(result.status, 'partial');
+  assert.equal(result.requestedFeatures.story, true);
+  assert.equal(result.requestedFeatures.imagePolish, true);
+  assert.equal(result.plan.aspect, 'portrait');
+  assert.match(result.question, /montaje tipo historia/i);
+  assert.match(result.question, /retoque automático/i);
 });
