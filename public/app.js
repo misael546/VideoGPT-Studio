@@ -148,7 +148,16 @@ async function loadGallery() {
         const index = document.createElement('span');
         index.className = 'video-index';
         index.textContent = 'VIDEO ' + String(shown).padStart(2, '0');
-        meta.append(category, index);
+        const durationSeconds = Number(item.duration_seconds);
+        if (Number.isFinite(durationSeconds) && durationSeconds > 0) {
+          const duration = document.createElement('span');
+          duration.className = 'video-duration';
+          const totalSeconds = Math.round(durationSeconds);
+          duration.textContent = Math.floor(totalSeconds / 60) + ':' + String(totalSeconds % 60).padStart(2, '0');
+          meta.append(category, index, duration);
+        } else {
+          meta.append(category, index);
+        }
         const heading = document.createElement('h3');
         heading.textContent = item.title;
         const description = document.createElement('p');

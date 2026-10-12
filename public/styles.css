@@ -81,7 +81,7 @@ button{cursor:pointer}
 .video-card-details{padding:15px 16px 17px}
 .video-card-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
 .video-category{padding:4px 7px;border:1px solid #504165;border-radius:5px;background:#292039;color:#d4c3ff;font-size:8px;font-weight:700;letter-spacing:.6px}
-.video-index{color:#77758d;font-size:9px;letter-spacing:1px}
+.video-index{color:#77758d;font-size:9px;letter-spacing:1px}.video-duration{color:#d4c3ff;font-size:9px;letter-spacing:.5px;white-space:nowrap}
 .video-card h3{margin:0 0 6px;font:600 15px 'Space Grotesk',sans-serif;letter-spacing:-.2px}
 .video-card p{margin:0;color:#9d9ab1;font-size:11px;line-height:1.65}
 .gallery-empty{grid-column:1/-1;padding:28px;border:1px dashed #39334c;border-radius:14px;background:#13121b;color:#a7a2bb;font-size:12px;text-align:center}
