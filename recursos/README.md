@@ -23,3 +23,7 @@ Edita `catalogo.json` para registrar cada recurso. Usa rutas relativas a la raí
 - Optimiza imágenes y audio para evitar inflar el repositorio.
 - No guardes MP4 finales aquí; los videos van en `public/videos/` y su catálogo en `public/videos/gallery.json`.
 - La biblioteca ayuda al generador a combinar mejores recursos; no entrena automáticamente un modelo de IA.
+
+## Validación automática
+
+Antes de generar un video, ejecuta `python scripts/validate-resource-library.py`. La validación revisa IDs y rutas duplicadas, licencias/procedencia declaradas, SVG sin referencias externas, escenas compatibles, tamaños, rutas de galería y separación entre recursos y videos finales.

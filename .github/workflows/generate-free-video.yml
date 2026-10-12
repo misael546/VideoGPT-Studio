@@ -5,9 +5,11 @@ on:
   push:
     paths:
       - "scripts/generate-free-isekai.py"
+      - "scripts/validate-resource-library.py"
       - ".github/workflows/generate-free-video.yml"
       - "recursos/catalogo.json"
       - "recursos/imagenes/**"
+      - "recursos/REVISION_VISUAL.md"
 
 permissions:
   contents: write
@@ -36,39 +38,30 @@ jobs:
           python -m pip install Pillow edge-tts cairosvg
       - name: Validate generator and reusable resource catalog
         run: |
-          python -m py_compile scripts/generate-free-isekai.py
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          import xml.etree.ElementTree as ET
-          root = Path(".").resolve()
-          catalog = json.loads((root / "recursos/catalogo.json").read_text(encoding="utf-8"))
-          for item in catalog.get("resources", []):
-              if item.get("type") != "image_overlay":
-                  continue
-              path = (root / item["path"]).resolve()
-              assert root in path.parents and path.is_file(), f"Recurso local ausente o fuera del repo: {item.get('path')}"
-              if path.suffix.lower() == ".svg":
-                  ET.parse(path)
-          print("Catálogo JSON, rutas locales y SVG: OK")
-          PY
+          python -m py_compile scripts/generate-free-isekai.py scripts/validate-resource-library.py
+          python scripts/validate-resource-library.py
       - name: Generate illustrated video without paid APIs
         run: python scripts/generate-free-isekai.py
       - name: Verify extended video and audio
         run: |
           test -s public/videos/isekai-mejorado.mp4
-          ffprobe -v error -show_entries format=duration,size:stream=codec_type -of json public/videos/isekai-mejorado.mp4 > /tmp/video-probe.json
+          ffprobe -v error -show_entries format=duration,size:stream=codec_type,codec_name,width,height -of json public/videos/isekai-mejorado.mp4 > /tmp/video-probe.json
           python - <<'PY'
           import json
           with open("/tmp/video-probe.json", encoding="utf-8") as f:
               data = json.load(f)
           duration = float(data.get("format", {}).get("duration", 0))
           size = int(data.get("format", {}).get("size", 0))
-          types = {stream.get("codec_type") for stream in data.get("streams", [])}
-          assert duration >= 55, f"Video demasiado corto: {duration:.1f}s"
+          streams = data.get("streams", [])
+          types = {stream.get("codec_type") for stream in streams}
+          video = next((stream for stream in streams if stream.get("codec_type") == "video"), {})
+          audio = next((stream for stream in streams if stream.get("codec_type") == "audio"), {})
+          assert 55 <= duration <= 70, f"Duración fuera de rango: {duration:.1f}s"
           assert size > 100_000, f"MP4 demasiado pequeño: {size} bytes"
           assert {"video", "audio"}.issubset(types), f"Faltan pistas: {types}"
-          print(f"MP4 válido: {duration:.1f}s, {size} bytes, pistas={types}")
+          assert (video.get("codec_name"), video.get("width"), video.get("height")) == ("h264", 1280, 720), f"Video inesperado: {video}"
+          assert audio.get("codec_name") == "aac", f"Audio inesperado: {audio}"
+          print(f"MP4 válido: {duration:.1f}s, {size} bytes, H.264 1280x720 + AAC")
           PY
       - name: Commit video safely
         run: |

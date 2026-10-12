@@ -53,3 +53,8 @@ El servidor Express contiene rutas heredadas para proveedores externos. No son n
 - Validar entradas y el video final; mostrar errores reales en vez de fingir que la edición terminó.
 - No depender de enlaces temporales como almacenamiento permanente.
 - Probar la interfaz en móvil y escritorio.
+
+
+## Biblioteca de recursos
+
+La biblioteca reutilizable está en [`recursos/`](recursos/). Para comprobar rutas, duplicados, licencias declaradas, SVG, tamaños y entradas de galería ejecuta `python scripts/validate-resource-library.py`. La comparación periódica de referencias visuales se registra en [`recursos/REVISION_VISUAL.md`](recursos/REVISION_VISUAL.md).

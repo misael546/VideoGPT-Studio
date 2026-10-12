@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create a short illustrated isekai video without paid APIs or API keys."""
 from PIL import Image, ImageDraw, ImageFont
-import math, os, subprocess, wave, struct, json
+import math, os, subprocess, wave, struct, json, hashlib, textwrap
 from io import BytesIO
 from pathlib import Path
 
@@ -19,43 +19,56 @@ def load_resource_catalog():
         return []
 
 def apply_image_overlays(image, scene_kind, resources):
-    """Composite catalogued transparent images over a scene, if matching files exist."""
+    """Composite only safe, local, scene-compatible images; skip malformed optional assets."""
     from PIL import Image
+    allowed_extensions = {".svg", ".png", ".jpg", ".jpeg", ".webp"}
+    root = ROOT.resolve()
     for item in resources:
         if item.get("type") != "image_overlay":
             continue
-        scenes = item.get("scenes", ["all"])
+        scenes = item.get("scenes", [])
         if not isinstance(scenes, list) or (scene_kind not in scenes and "all" not in scenes):
             continue
         rel_path = item.get("path")
         if not isinstance(rel_path, str) or not rel_path.strip():
             continue
-        asset_path = (ROOT / rel_path).resolve()
-        # Do not allow catalog entries to read files outside this repository.
-        if ROOT.resolve() not in asset_path.parents or not asset_path.is_file():
+        rel = Path(rel_path)
+        if rel.is_absolute() or ".." in rel.parts:
             continue
         try:
-            if asset_path.suffix.lower() == ".svg":
-                import cairosvg
-                overlay_bytes = cairosvg.svg2png(url=str(asset_path))
-                overlay = Image.open(BytesIO(overlay_bytes)).convert("RGBA")
-            else:
-                overlay = Image.open(asset_path).convert("RGBA")
+            asset_path = (root / rel).resolve()
+            if root not in asset_path.parents or not asset_path.is_file():
+                continue
+            if asset_path.suffix.lower() not in allowed_extensions:
+                continue
+            if asset_path.stat().st_size <= 0 or asset_path.stat().st_size > 2 * 1024 * 1024:
+                print(f"Aviso: se omitió recurso visual por tamaño: {rel_path}")
+                continue
             target_width = item.get("width")
             target_height = item.get("height")
-            if isinstance(target_width, int) and target_width > 0:
-                if isinstance(target_height, int) and target_height > 0:
-                    size = (target_width, target_height)
-                else:
-                    size = (target_width, max(1, round(overlay.height * target_width / overlay.width)))
-                overlay = overlay.resize(size, Image.Resampling.LANCZOS)
             x = item.get("x", 0)
             y = item.get("y", 0)
-            if not isinstance(x, int) or not isinstance(y, int):
+            values = (target_width, target_height, x, y)
+            if any(not isinstance(value, int) or isinstance(value, bool) for value in values):
                 continue
+            if not (1 <= target_width <= W and 1 <= target_height <= H):
+                continue
+            if x < 0 or y < 0 or x + target_width > W or y + target_height > H:
+                continue
+            if asset_path.suffix.lower() == ".svg":
+                import cairosvg
+                overlay_bytes = cairosvg.svg2png(
+                    url=str(asset_path), output_width=target_width, output_height=target_height
+                )
+                overlay = Image.open(BytesIO(overlay_bytes)).convert("RGBA")
+            else:
+                with Image.open(asset_path) as opened:
+                    overlay = opened.convert("RGBA")
+                overlay = overlay.resize((target_width, target_height), Image.Resampling.LANCZOS)
             image.paste(overlay, (x, y), overlay)
-        except (OSError, ValueError) as exc:
-            print(f"Aviso: se omitió recurso visual {rel_path}: {exc}")
+        except Exception as exc:
+            # Optional assets must never abort a complete video render.
+            print(f"Aviso: se omitió recurso visual {rel_path}: {type(exc).__name__}: {str(exc)[:160]}")
 
 W, H = 1280, 720
 OUT = "public/videos"
@@ -273,9 +286,24 @@ def make_scene(kind, path):
 def make_animation_frame(base_path, out_path, kind, frame, total):
     """Render an individual hand-crafted frame; the MP4 is assembled from this image stack."""
     im = Image.open(base_path).convert("RGB")
-    d = ImageDraw.Draw(im, "RGBA")
     t = frame / max(1, total - 1)
-    import math, random
+    # Gentle camera drift adds motion to the entire illustrated environment, not only particles.
+    # Some scenes push in while the soul/portal scenes slowly pull back for a calmer reveal.
+    zoom_progress = t if kind not in {"soul", "portal"} else 1.0 - t
+    zoom = 1.0 + 0.055 * zoom_progress
+    scaled_width = max(W, round(W * zoom))
+    scaled_height = max(H, round(H * zoom))
+    if scaled_width != W or scaled_height != H:
+        im = im.resize((scaled_width, scaled_height), Image.Resampling.LANCZOS)
+        max_x = scaled_width - W
+        max_y = scaled_height - H
+        pan_x = 0.42 + 0.16 * t if kind in {"forest", "village"} else 0.48 + 0.04 * math.sin(t * math.pi)
+        pan_y = 0.48 + 0.04 * math.sin(t * math.pi)
+        crop_x = min(max_x, max(0, int(max_x * pan_x)))
+        crop_y = min(max_y, max(0, int(max_y * pan_y)))
+        im = im.crop((crop_x, crop_y, crop_x + W, crop_y + H))
+    d = ImageDraw.Draw(im, "RGBA")
+    import random
     rng = random.Random(frame * 37 + sum((i + 1) * ord(char) for i, char in enumerate(kind)))
     # Each frame gets changing particles, light and small motion cues rather than a static slide.
     if kind == "old":
@@ -402,6 +430,10 @@ def make_sound_effects(path, duration):
     rate = 44100
     count = int(rate * duration)
     rng = random.Random(91027)
+    transition_events = tuple(i * SCENE_SECONDS - 0.55 for i in range(1, len(LINES)))
+    magic_events = tuple(i * SCENE_SECONDS + offset for i, (_, kind) in enumerate(LINES)
+                         if kind in {"soul", "baby", "forest", "portal"}
+                         for offset in (1.4, 3.1, 5.2))
     samples = []
     # Four short events: gentle room/wind ambience, transition swishes and tiny magical chimes.
     for n in range(count):
@@ -410,7 +442,6 @@ def make_sound_effects(path, duration):
         # Soft wind-like noise with a slow amplitude envelope.
         noise = (rng.random() * 2 - 1) * (0.012 + 0.012 * (0.5 + 0.5 * math.sin(t * 0.55)))
         effect = 0.0
-        transition_events = tuple(i * SCENE_SECONDS - 0.55 for i in range(1, len(LINES)))
         for event in transition_events:
             local = t - event
             if 0 <= local <= 0.85:
@@ -418,9 +449,6 @@ def make_sound_effects(path, duration):
                 effect += envelope * (0.08 * math.sin(2 * math.pi * (160 - 95 * local) * local))
                 effect += envelope * 0.025 * math.sin(2 * math.pi * 540 * local)
         # Tiny sparkling tones appear in the magical soul and rebirth scenes.
-        magic_events = tuple(i * SCENE_SECONDS + offset for i, (_, kind) in enumerate(LINES)
-                             if kind in {"soul", "baby", "forest", "portal"}
-                             for offset in (1.4, 3.1, 5.2))
         for event in magic_events:
             local = t - event
             if 0 <= local <= 0.35:
@@ -433,6 +461,11 @@ def make_sound_effects(path, duration):
         out.setsampwidth(2)
         out.setframerate(rate)
         out.writeframes(struct.pack("<" + "h" * len(samples), *samples))
+
+def wrap_caption(text, max_chars=56):
+    """Keep Spanish captions inside the safe area instead of letting long lines clip."""
+    return textwrap.fill(text, width=max_chars, break_long_words=False, break_on_hyphens=False)
+
 
 def main():
     clips=[]
@@ -449,14 +482,14 @@ def main():
             make_animation_frame(base,frame_path,kind,frame,frames_per_scene)
         clip=f"{WORK}/clip-{i}.mp4"
         caption=f"{WORK}/caption-{i}.txt"
-        with open(caption,"w",encoding="utf-8") as f: f.write(line)
+        with open(caption,"w",encoding="utf-8") as f: f.write(wrap_caption(line))
         # Frame-by-frame animation first, then smooth output cadence and cinematic captions.
         vf=(f"fps={FPS},fade=t=in:st=0:d=0.45,"
             f"fade=t=out:st={SCENE_SECONDS-0.45}:d=0.45,"
-            f"drawbox=x=30:y=590:w=1220:h=90:color=black@0.58:t=fill,"
+            f"drawbox=x=30:y=575:w=1220:h=115:color=black@0.62:t=fill,"
             f"drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:"
-            f"textfile={caption}:fontcolor=white:fontsize=27:"
-            f"x=(w-text_w)/2:y=620")
+            f"textfile={caption}:fontcolor=white:fontsize=25:line_spacing=8:"
+            f"x=(w-text_w)/2:y=600")
         run(["ffmpeg","-y","-framerate",str(frame_rate),"-i",f"{frame_dir}/frame-%03d.jpg",
              "-vf",vf,"-t",str(SCENE_SECONDS),"-r",str(FPS),"-an",
              "-c:v","libx264","-preset","veryfast","-crf","22","-pix_fmt","yuv420p",clip])
@@ -480,14 +513,23 @@ def main():
          "-c:v","copy","-c:a","aac","-b:a","160k","-movflags","+faststart",final])
     # Validate duration, size and playable video/audio streams before updating the gallery.
     probe = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration,size:stream=codec_type",
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration,size:stream=codec_type,codec_name,width,height",
          "-of", "json", final], check=True, capture_output=True, text=True)
     metadata = json.loads(probe.stdout)
     actual_duration = float(metadata.get("format", {}).get("duration", 0))
     actual_size = int(metadata.get("format", {}).get("size", 0))
-    stream_types = {stream.get("codec_type") for stream in metadata.get("streams", [])}
-    if actual_duration < 55 or actual_size <= 100_000 or not {"video", "audio"}.issubset(stream_types):
-        raise RuntimeError(f"El MP4 no pasó validación: duration={actual_duration}, size={actual_size}, streams={stream_types}")
+    streams = metadata.get("streams", [])
+    stream_types = {stream.get("codec_type") for stream in streams}
+    video_stream = next((stream for stream in streams if stream.get("codec_type") == "video"), {})
+    audio_stream = next((stream for stream in streams if stream.get("codec_type") == "audio"), {})
+    valid_video = video_stream.get("codec_name") == "h264" and video_stream.get("width") == W and video_stream.get("height") == H
+    valid_audio = audio_stream.get("codec_name") == "aac"
+    if (actual_duration < 55 or actual_duration > 70 or actual_size <= 100_000
+            or not {"video", "audio"}.issubset(stream_types) or not valid_video or not valid_audio):
+        raise RuntimeError(
+            f"El MP4 no pasó validación: duration={actual_duration}, size={actual_size}, "
+            f"streams={stream_types}, video={video_stream}, audio={audio_stream}"
+        )
     gallery_path = ROOT / "public" / "videos" / "gallery.json"
     try:
         gallery = json.loads(gallery_path.read_text(encoding="utf-8"))
@@ -496,11 +538,17 @@ def main():
     except (OSError, json.JSONDecodeError):
         gallery = []
     relative_src = "videos/isekai-mejorado.mp4"
-    gallery = [entry for entry in gallery if not (isinstance(entry, dict) and entry.get("src") == relative_src)]
+    def normalized_gallery_src(entry):
+        if not isinstance(entry, dict) or not isinstance(entry.get("src"), str):
+            return None
+        return entry["src"].split("?", 1)[0].split("#", 1)[0].removeprefix("./")
+    # Replace only this output, ignoring old cache-busting query strings.
+    gallery = [entry for entry in gallery if normalized_gallery_src(entry) != relative_src]
+    video_hash = hashlib.sha256(Path(final).read_bytes()).hexdigest()[:10]
     gallery.append({
         "title": "El comienzo de una segunda vida — versión extendida",
         "description": "Corto ilustrado extendido de fantasía: ocho escenas animadas, narración en español y efectos sonoros originales.",
-        "src": relative_src,
+        "src": f"{relative_src}?v={video_hash}",
         "category": "Fantasía"
     })
     gallery_path.write_text(json.dumps(gallery, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

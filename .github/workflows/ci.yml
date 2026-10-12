@@ -18,6 +18,10 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Validate resource library and video generator
+        run: |
+          python -m py_compile scripts/generate-free-isekai.py scripts/validate-resource-library.py
+          python scripts/validate-resource-library.py
       - name: Check server syntax
         run: node --check src/server.js
       - name: Check browser script syntax

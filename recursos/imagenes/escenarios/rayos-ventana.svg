@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="340" height="285" viewBox="0 0 340 285">
+<defs>
+  <linearGradient id="beamA" x1="0" y1="0" x2="0.15" y2="1"><stop stop-color="#fff4c4" stop-opacity=".72"/><stop offset=".55" stop-color="#ffd28b" stop-opacity=".25"/><stop offset="1" stop-color="#ffb45e" stop-opacity="0"/></linearGradient>
+  <linearGradient id="beamB" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#fff7d8" stop-opacity=".5"/><stop offset="1" stop-color="#ffb96c" stop-opacity="0"/></linearGradient>
+  <radialGradient id="windowGlow"><stop stop-color="#fff8cf" stop-opacity=".72"/><stop offset=".42" stop-color="#ffd47e" stop-opacity=".32"/><stop offset="1" stop-color="#ffc36b" stop-opacity="0"/></radialGradient>
+</defs>
+<ellipse cx="164" cy="28" rx="105" ry="76" fill="url(#windowGlow)"/>
+<path d="M91 0 L119 0 L13 285 L0 285 L0 245 Z" fill="url(#beamA)"/>
+<path d="M135 0 L153 0 L109 285 L58 285 Z" fill="url(#beamB)" opacity=".82"/>
+<path d="M179 0 L205 0 L340 250 L340 285 L290 285 Z" fill="url(#beamA)" opacity=".8"/>
+<path d="M207 0 L226 0 L340 170 L340 208 Z" fill="url(#beamB)" opacity=".68"/>
+<g fill="#fff1bb">
+  <circle cx="72" cy="116" r="2.6" opacity=".7"/><circle cx="99" cy="167" r="1.8" opacity=".55"/>
+  <circle cx="154" cy="98" r="2.2" opacity=".65"/><circle cx="194" cy="143" r="2.8" opacity=".52"/>
+  <circle cx="238" cy="181" r="1.7" opacity=".6"/><circle cx="123" cy="224" r="2.1" opacity=".42"/>
+  <circle cx="276" cy="236" r="2.4" opacity=".48"/><circle cx="43" cy="203" r="1.5" opacity=".6"/>
+</g>
+<g fill="none" stroke="#fff0b4" stroke-linecap="round" opacity=".35">
+  <path d="M84 130 l8 -5"/><path d="M216 90 l7 4"/><path d="M171 204 l9 -3"/><path d="M55 247 l6 -4"/>
+</g>
+</svg>

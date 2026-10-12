@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="230" viewBox="0 0 260 230">
+<defs>
+  <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9e99a"/><stop offset=".42" stop-color="#4fbd91"/><stop offset="1" stop-color="#176b69"/></linearGradient>
+  <linearGradient id="leafDark" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7fcf9a"/><stop offset="1" stop-color="#174b57"/></linearGradient>
+  <radialGradient id="mushGlow"><stop stop-color="#d7ffb0" stop-opacity=".65"/><stop offset="1" stop-color="#8effcb" stop-opacity="0"/></radialGradient>
+</defs>
+<ellipse cx="130" cy="218" rx="122" ry="10" fill="#071c25" opacity=".55"/>
+<g fill="none" stroke="#204f54" stroke-width="7" stroke-linecap="round">
+  <path d="M125 220 C90 169 66 113 39 34"/><path d="M128 220 C143 166 172 105 218 46"/><path d="M130 220 C121 158 126 95 139 24"/><path d="M118 220 C82 189 39 153 17 103"/>
+</g>
+<g fill="url(#leaf)" stroke="#205c59" stroke-width="2">
+  <path d="M88 165 Q44 166 29 133 Q67 129 88 165 Z"/><path d="M77 139 Q36 129 29 94 Q64 101 77 139 Z"/>
+  <path d="M61 103 Q28 83 36 52 Q64 68 61 103 Z"/><path d="M104 184 Q62 198 35 173 Q70 157 104 184 Z"/>
+  <path d="M153 171 Q195 166 217 135 Q176 134 153 171 Z"/><path d="M172 137 Q208 121 210 88 Q180 100 172 137 Z"/>
+  <path d="M192 101 Q220 79 207 50 Q184 70 192 101 Z"/><path d="M145 194 Q184 202 219 177 Q182 161 145 194 Z"/>
+  <path d="M118 146 Q83 120 92 83 Q123 102 118 146 Z"/><path d="M136 118 Q163 84 148 51 Q124 80 136 118 Z"/>
+</g>
+<g fill="url(#leafDark)" stroke="#153f4c" stroke-width="2">
+  <path d="M96 207 Q53 218 26 197 Q60 182 96 207 Z"/><path d="M155 211 Q198 221 239 198 Q202 181 155 211 Z"/>
+  <path d="M116 182 Q81 171 71 143 Q103 148 116 182 Z"/><path d="M146 184 Q177 168 186 143 Q156 151 146 184 Z"/>
+</g>
+<g fill="none" stroke="#d5f5ad" stroke-width="1.8" opacity=".9" stroke-linecap="round">
+  <path d="M88 165 L38 136 M77 139 L38 99 M61 103 L43 60 M104 184 L43 176"/>
+  <path d="M153 171 L209 139 M172 137 L203 94 M192 101 L205 57 M145 194 L213 179"/>
+  <path d="M118 146 L97 89 M136 118 L145 56"/>
+</g>
+<g>
+  <ellipse cx="48" cy="188" rx="34" ry="26" fill="url(#mushGlow)"/>
+  <path d="M46 204 L51 184 L59 204 Z" fill="#e7d7a5"/><ellipse cx="53" cy="183" rx="15" ry="7" fill="#f2a8b1" stroke="#6a526b" stroke-width="2"/>
+  <circle cx="49" cy="181" r="2" fill="#fff1c1"/><circle cx="57" cy="185" r="2" fill="#fff1c1"/>
+  <ellipse cx="218" cy="188" rx="29" ry="23" fill="url(#mushGlow)"/>
+  <path d="M214 204 L218 188 L225 204 Z" fill="#e7d7a5"/><ellipse cx="220" cy="187" rx="13" ry="6" fill="#8bd9cf" stroke="#3c6871" stroke-width="2"/>
+  <circle cx="216" cy="186" r="1.8" fill="#f4ffe2"/><circle cx="224" cy="188" r="1.8" fill="#f4ffe2"/>
+</g>
+<g fill="#e6ffd0"><circle cx="80" cy="118" r="2.3"/><circle cx="184" cy="112" r="2.1"/><circle cx="151" cy="77" r="1.8"/><circle cx="98" cy="195" r="1.8"/></g>
+</svg>

@@ -33,12 +33,15 @@ Esta lista es una selección inicial de paquetes que declaran licencia CC0 en su
 
 ## Recursos originales ya guardados localmente
 
-Se añadieron cuatro ilustraciones SVG originales dentro del repositorio y quedaron registradas como `image_overlay` en el catálogo:
+Se añadieron siete ilustraciones SVG originales dentro del repositorio y quedaron registradas como `image_overlay` en el catálogo:
 
 - `recursos/imagenes/objetos/farol-antiguo.svg` — escena `old`.
 - `recursos/imagenes/personajes/viajero.svg` — escena `village`.
 - `recursos/imagenes/escenarios/runas-antiguas.svg` — escena `forest`.
 - `recursos/imagenes/objetos/chispas-magicas.svg` — escenas `soul`, `baby` y `portal`.
+- `recursos/imagenes/escenarios/rayos-ventana.svg` — rayos cálidos y motas de polvo para `old`.
+- `recursos/imagenes/escenarios/helechos-luminosos.svg` — vegetación bioluminiscente de primer plano para `forest`.
+- `recursos/imagenes/objetos/marco-portal-antiguo.svg` — arco de piedra y runas para `portal`.
 
 El generador convierte estos SVG a PNG en tiempo de ejecución con CairoSVG; el workflow instala esa dependencia. Son recursos vectoriales originales del proyecto, no descargas de Kenney. La compatibilidad real se considera confirmada únicamente cuando el workflow termina correctamente.
 
@@ -47,3 +50,7 @@ El generador convierte estos SVG a PNG en tiempo de ejecución con CairoSVG; el 
 Los paquetes anteriores están catalogados como fuentes, pero todavía no se han descargado ni incorporado como archivos locales. El intento de descarga directa de Retro Textures Fantasy falló en el entorno de trabajo por un error de resolución de red. No deben tratarse como activos listos para usar hasta importarlos y probarlos. La biblioteca también incluye una referencia musical marcada como pendiente de verificación.
 
 La guía de Wikimedia/Creative Commons recuerda que los archivos tienen condiciones individuales y que, cuando la licencia lo exige, deben conservarse autor, fuente y licencia: https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia/en y https://creativecommons.org/reusing-cc-licensed-content/.
+
+## Revisión visual de referencia
+
+La revisión de composición, iluminación, detalle, coherencia y movimiento se documenta en [REVISION_VISUAL.md](REVISION_VISUAL.md). Las referencias públicas se usaron únicamente para extraer principios generales; no se descargaron ni copiaron imágenes, personajes, fotogramas ni diseños protegidos.
