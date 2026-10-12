@@ -170,6 +170,10 @@ def main() -> int:
         if not isinstance(entry, dict) or not isinstance(entry.get("src"), str):
             errors.append(f"gallery.json[{index}]: entrada/src inválido")
             continue
+        if "duration_seconds" in entry:
+            duration = entry["duration_seconds"]
+            if isinstance(duration, bool) or not isinstance(duration, (int, float)) or duration <= 0:
+                errors.append(f"gallery.json[{index}]: duration_seconds inválido")
         parsed = urlsplit(entry["src"])
         if (parsed.scheme or parsed.netloc or parsed.path.startswith("/")
                 or "\\" in parsed.path or ".." in Path(parsed.path).parts):

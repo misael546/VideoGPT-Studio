@@ -26,3 +26,8 @@
 Los tres SVG añadidos se dibujaron manualmente para esta biblioteca y no contienen referencias a archivos externos. Se registran como **CC0 1.0 (proyecto)**, con procedencia explícita en recursos/catalogo.json.
 
 Los paquetes externos de Kenney siguen siendo referencias de descarga, no recursos locales instalados. No se descargaron en esta revisión. El generador continúa siendo una animación ilustrada procedural; estos cambios no lo convierten en un modelo generativo de video ni equivalen a una producción 3D o a una película de estudio.
+
+
+## Verificación de generación — 12 de octubre de 2026
+
+La ejecución gratuita de GitHub Actions terminó correctamente. El MP4 pasó ffprobe: **64,0 s**, **5.443.078 bytes**, vídeo **H.264 1280×720** y audio **AAC**. El servicio gratuito de voz neuronal devolvió HTTP 403 en esa ejecución, así que el generador utilizó **eSpeak NG local** como respaldo; la voz puede sonar más robótica. Se ajustó el registro del generador para que este respaldo se informe de forma breve, sin imprimir trazas repetidas del intento fallido. No se usaron APIs de pago ni se habilitó facturación.

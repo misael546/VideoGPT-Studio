@@ -392,19 +392,26 @@ def run(args):
     subprocess.run(args, check=True)
 
 def make_voice():
-    """Prefer free neural Spanish male narration; fall back to a deeper local voice."""
+    """Prefer free neural Spanish male narration; use a local voice if the network service fails."""
     wavs=[]
+    fallback_used=False
     for i,(line,kind) in enumerate(LINES):
         mp3=f"{WORK}/voice-{i}.mp3"
         wav_path=f"{WORK}/voice-{i}.wav"
         try:
-            # Mexican Spanish male voice; slower and lower-pitched for a mature, resonant narrator.
-            run(["edge-tts","--voice","es-MX-JorgeNeural","--rate=-16%","--pitch=-12Hz",
-                 "--text",line,"--write-media",mp3])
+            # Try the free neural voice quietly; network blocks should not flood the workflow log.
+            subprocess.run(
+                ["edge-tts","--voice","es-MX-JorgeNeural","--rate=-16%","--pitch=-12Hz",
+                 "--text",line,"--write-media",mp3],
+                check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
             run(["ffmpeg","-y","-i",mp3,"-ar","24000","-ac","1",wav_path])
         except (subprocess.CalledProcessError, FileNotFoundError):
+            fallback_used=True
             run(["espeak-ng","-v","es+m3","-s","122","-p","28","-a","175","-w",wav_path,line])
         wavs.append(wav_path)
+    if fallback_used:
+        print("Aviso: edge-tts no estuvo disponible; se usó eSpeak NG local. La voz puede sonar más robótica.")
     combined=f"{WORK}/narration.wav"
     with wave.open(wavs[0],"rb") as first:
         params=first.getparams()
@@ -547,8 +554,9 @@ def main():
     video_hash = hashlib.sha256(Path(final).read_bytes()).hexdigest()[:10]
     gallery.append({
         "title": "El comienzo de una segunda vida — versión extendida",
-        "description": "Corto ilustrado extendido de fantasía: ocho escenas animadas, narración en español y efectos sonoros originales.",
+        "description": "Corto ilustrado de fantasía de 64 segundos: ocho escenas, movimiento de cámara suave, narración en español y efectos sonoros originales.",
         "src": f"{relative_src}?v={video_hash}",
+        "duration_seconds": round(actual_duration, 1),
         "category": "Fantasía"
     })
     gallery_path.write_text(json.dumps(gallery, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
