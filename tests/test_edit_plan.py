@@ -51,6 +51,20 @@ class EditPlanTests(unittest.TestCase):
         self.assertTrue(all(cut["review_status"] == "pending" for ep in plan["episodes"] for cut in ep["cuts"]))
         self.assertEqual(plan["episodes"][0]["cuts"][0]["start_seconds"], 82)
 
+    def test_preserves_visual_and_audio_evidence_for_manual_review(self):
+        self.scan["repeated_sequence_candidates"][0]["modalities"] = ["audio", "visual"]
+        self.scan["repeated_sequence_candidates"][0]["match_quality"] = {
+            "audio": {"level": "medium", "match_ratio": 0.95},
+            "visual": {"level": "high", "match_ratio": 1.0},
+        }
+        self.scan_path.write_text(json.dumps(self.scan), encoding="utf-8")
+        plan = planner.create_plan(self.scan_path)
+        cut = plan["episodes"][0]["cuts"][0]
+        self.assertEqual(cut["modalities"], ["audio", "visual"])
+        self.assertEqual(cut["match_quality"]["audio"]["level"], "medium")
+        self.assertEqual(cut["match_quality"]["visual"]["level"], "high")
+        self.assertFalse(cut["approved"])
+
     def test_uses_expanded_full_opening_bounds_when_scanner_provides_them(self):
         self.scan["repeated_sequence_candidates"][0].update({
             "episode_a_offset_seconds": 3,
