@@ -450,6 +450,31 @@ class RepeatedSequenceTests(unittest.TestCase):
         self.assertLess(best["match_ratio"], 1.0)
         self.assertEqual(best["matched_samples"], 18)
 
+    def test_valid_eight_sample_run_survives_coarse_screen_with_two_misses(self):
+        frame = int("A" * 64, 16)
+        other = frame ^ ((1 << 120) - 1)
+        left = [frame] * 8
+        right = [frame] * 8
+        right[0] = other
+        right[4] = other
+        matches = cutter.matching_runs(left, right, "start")
+        self.assertTrue(matches)
+        self.assertEqual(max(item["duration_seconds"] for item in matches), 8)
+        best = max(matches, key=lambda item: item["duration_seconds"])
+        self.assertEqual(best["matched_samples"], 6)
+
+    def test_three_spaced_mismatches_do_not_stay_in_one_candidate_run(self):
+        frame = int("A" * 64, 16)
+        other = frame ^ ((1 << 120) - 1)
+        left = [frame] * 20
+        right = [frame] * 20
+        for index in (5, 10, 15):
+            right[index] = other
+        matches = cutter.matching_runs(left, right, "start")
+        self.assertTrue(matches)
+        self.assertLess(max(item["duration_seconds"] for item in matches), 20)
+
+
     def test_empty_sequences_do_not_match(self):
         self.assertEqual(cutter.matching_runs([], [1] * 20, "end"), [])
 
