@@ -25,7 +25,7 @@ python cutter.py scan "D:\\Anime\\Temporada 1" --output scan-report.json
 
 La primera ejecución crea una caché local oculta `.cutter-studio-cache.json` dentro de la carpeta analizada. Las siguientes reutilizan metadatos y huellas visuales si el tamaño y la fecha de modificación del archivo no cambiaron; así se evita volver a decodificar los mismos vídeos al ajustar el plan. Para forzar un análisis completo usa `--no-cache`; para guardar la caché en otra ruta usa `--cache-file "D:\\CutterCache\\anime.json"`.
 
-El escáner obtiene duración, resolución y tamaño, calcula huellas visuales de los primeros y últimos 180 segundos y compara secuencias con hasta 15 segundos de desfase. Cada fotograma combina un hash de luminosidad media (aHash) y uno de gradientes horizontales (dHash), lo que ayuda a tolerar cambios uniformes de brillo y algunas diferencias de compresión. La comparación tolera hasta dos muestras visuales discordantes aisladas y registra proporción de coincidencias, distancia media y un nivel de calidad visual (alto/medio/bajo). Ese nivel describe la coincidencia visual, no confirma que el tramo sea opening o ending. Cuando la coincidencia toca el borde inicial/final del archivo, también propone ampliar el corte hasta el borde si queda a 10 segundos o menos; estos límites aparecen marcados para revisión. Propone el orden por número de episodio cuando puede inferirlo del nombre. Los tiempos reportados son segundos desde el inicio de cada episodio.
+El escáner obtiene duración, resolución y tamaño, propone el orden por número de episodio e inspecciona los primeros y últimos 180 segundos. La huella visual combina luminosidad media (aHash) y gradientes horizontales (dHash). Cuando existe una pista de audio, FFmpeg extrae características locales de cuatro bandas de frecuencia; estas ayudan a encontrar música repetida aunque cambien las imágenes. Ambas modalidades comparan secuencias con hasta 15 segundos de desfase, toleran hasta dos muestras discordantes aisladas y registran calidad de coincidencia por modalidad. Cuando visual y audio apuntan a un tramo cercano, sus evidencias se combinan en un candidato. Los límites cercanos al principio/final se pueden ampliar hasta el borde si quedan a 10 segundos o menos, pero siempre se marcan para revisión.
 
 ### 2. Crear el plan de edición revisable
 
@@ -57,8 +57,8 @@ La marca de agua es opcional. El renderizador normaliza segmentos a MP4 H.264/AA
 
 ## Límites y seguridad
 
-- Las coincidencias visuales son candidatas, no una garantía de que el tramo sea un opening o ending. Nunca se aprueban cortes automáticamente.
-- El análisis toma muestras visuales a un fotograma por segundo; todavía no analiza huellas de audio. Puede fallar si cambia el montaje, el recorte o la secuencia, aunque la música sea la misma.
-- La caché usa un esquema versionado para que los cambios en el formato de las huellas invalide datos antiguos automáticamente.
+- Las coincidencias visuales o de audio son candidatas, no una garantía de que el tramo sea un opening o ending. Nunca se aprueban cortes automáticamente; la música puede aparecer como fondo en otra escena.
+- El escáner muestrea una vez por segundo. La huella de audio resume la energía relativa en cuatro bandas de frecuencia; no es reconocimiento musical semántico y puede fallar con remezclas, cortes temporales o cambios de velocidad.
+- La caché usa un esquema versionado para invalidar huellas de versiones anteriores automáticamente. Si una extracción de audio falla, se registra en `audio_warnings` y aún pueden usarse las coincidencias visuales.
 - La herramienta funciona localmente por línea de comandos. No la ejecutes como servicio público ni abras puertos de red.
 - La CI instala FFmpeg y prueba la unión de clips sintéticos con y sin audio, además de validar el plan y sus intervalos.
