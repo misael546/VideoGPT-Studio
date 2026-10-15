@@ -357,6 +357,7 @@ def scan(
     for file_index, path in enumerate(paths, start=1):
         file_audio_warnings = []
         was_cached = False
+        resolved = None
         if progress:
             print(f"[{file_index}/{len(paths)}] Analizando {path.name}...", flush=True)
         try:
@@ -430,6 +431,10 @@ def scan(
                     },
                 }
         except (RuntimeError, ValueError, OSError, json.JSONDecodeError, TypeError) as exc:
+            # A partially extracted fingerprint must never be compared without valid metadata.
+            hashes.pop(path, None)
+            if resolved is not None:
+                new_cache.pop(resolved, None)
             errors.append({"filename": path.name, "error": str(exc)})
             if progress:
                 print(f"    ERROR: {exc}", flush=True)
