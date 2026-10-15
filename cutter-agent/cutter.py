@@ -13,7 +13,8 @@ from pathlib import Path
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v"}
 WINDOW_SECONDS = 180
 MIN_MATCH_SECONDS = 8
-MAX_HASH_DISTANCE = 48  # 18.75% of a 16x16 average hash
+MAX_HASH_DISTANCE = 42  # 16.4% of a 16x16 average hash
+MAX_CONSECUTIVE_MISSES = 2
 MAX_ALIGNMENT_SHIFT_SECONDS = 15
 
 
@@ -80,7 +81,7 @@ def frame_hashes(path: Path, duration: float, edge: str) -> list[int]:
 
 
 def matching_runs(left: list[int], right: list[int], edge: str) -> list[dict]:
-    """Find repeated sequences while allowing small timing offsets between episodes."""
+    """Align sampled frames and tolerate up to two isolated visual mismatches."""
     if not left or not right:
         return []
 
@@ -94,34 +95,56 @@ def matching_runs(left: list[int], right: list[int], edge: str) -> list[dict]:
             continue
 
         run_start = None
-        run_length = 0
+        last_match = None
+        miss_count = 0
+        distances = []
         for index in range(limit):
-            similar = (left[left_start + index] ^ right[right_start + index]).bit_count() <= MAX_HASH_DISTANCE
-            if similar:
+            distance = (left[left_start + index] ^ right[right_start + index]).bit_count()
+            if distance <= MAX_HASH_DISTANCE:
                 if run_start is None:
                     run_start = index
-                run_length += 1
-            else:
-                if run_length >= MIN_MATCH_SECONDS:
-                    candidates.append({
-                        "edge": edge,
-                        "episode_a_offset_seconds": left_start + run_start,
-                        "episode_b_offset_seconds": right_start + run_start,
-                        "duration_seconds": run_length,
-                        "alignment_shift_seconds": shift,
-                    })
-                run_start, run_length = None, 0
-        if run_length >= MIN_MATCH_SECONDS:
-            candidates.append({
-                "edge": edge,
-                "episode_a_offset_seconds": left_start + run_start,
-                "episode_b_offset_seconds": right_start + run_start,
-                "duration_seconds": run_length,
-                "alignment_shift_seconds": shift,
-            })
+                last_match = index
+                miss_count = 0
+                distances.append(distance)
+            elif run_start is not None:
+                miss_count += 1
+                if miss_count > MAX_CONSECUTIVE_MISSES:
+                    run_length = last_match - run_start + 1
+                    if run_length >= MIN_MATCH_SECONDS:
+                        candidates.append({
+                            "edge": edge,
+                            "episode_a_offset_seconds": left_start + run_start,
+                            "episode_b_offset_seconds": right_start + run_start,
+                            "duration_seconds": run_length,
+                            "alignment_shift_seconds": shift,
+                            "matched_samples": len(distances),
+                            "match_ratio": round(len(distances) / max(1, run_length), 3),
+                            "mean_hash_distance": round(sum(distances) / max(1, len(distances)), 2),
+                        })
+                    run_start, last_match, miss_count, distances = None, None, 0, []
+        if run_start is not None and last_match is not None:
+            run_length = last_match - run_start + 1
+            if run_length >= MIN_MATCH_SECONDS:
+                candidates.append({
+                    "edge": edge,
+                    "episode_a_offset_seconds": left_start + run_start,
+                    "episode_b_offset_seconds": right_start + run_start,
+                    "duration_seconds": run_length,
+                    "alignment_shift_seconds": shift,
+                    "matched_samples": len(distances),
+                    "match_ratio": round(len(distances) / max(1, run_length), 3),
+                    "mean_hash_distance": round(sum(distances) / max(1, len(distances)), 2),
+                })
 
-    # Nearby alignment shifts often describe the same physical sequence.
-    candidates.sort(key=lambda item: item["duration_seconds"], reverse=True)
+    # Nearby shifts usually represent the same physical sequence; keep the best-supported one.
+    candidates.sort(
+        key=lambda item: (
+            item["duration_seconds"] * item.get("match_ratio", 0),
+            item["duration_seconds"],
+            -item.get("mean_hash_distance", 256),
+        ),
+        reverse=True,
+    )
     kept = []
     for candidate in candidates:
         a_start = candidate["episode_a_offset_seconds"]
@@ -135,7 +158,6 @@ def matching_runs(left: list[int], right: list[int], edge: str) -> list[dict]:
         if not duplicate:
             kept.append(candidate)
     return sorted(kept, key=lambda item: (item["episode_a_offset_seconds"], item["episode_b_offset_seconds"]))
-
 
 def absolute_offset(offset: int, duration: float, edge: str) -> int:
     """Convert a sampled-window offset into seconds from the episode's start."""
@@ -198,6 +220,11 @@ def scan(folder: Path, output: Path, recursive: bool = False) -> dict:
                         "episode_a_number": left_meta["episode_number"],
                         "episode_b_number": right_meta["episode_number"],
                         "confidence": "candidate",
+                        "match_quality": {
+                            "matched_samples": match.get("matched_samples", 0),
+                            "match_ratio": match.get("match_ratio", 0),
+                            "mean_hash_distance": match.get("mean_hash_distance", 256),
+                        },
                         **match,
                     })
     report = {
