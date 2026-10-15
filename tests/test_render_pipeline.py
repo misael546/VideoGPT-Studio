@@ -85,6 +85,18 @@ class ManifestTests(unittest.TestCase):
         renderer.ensure_output_not_source(episodes, self.root / "final.mp4")
 
     @patch.object(renderer, "media_info", return_value={"duration": 20.0, "has_audio": True})
+    @patch.object(renderer, "media_info", return_value={"duration": 20.0, "has_audio": True})
+    def test_rejects_non_finite_render_interval_values(self, _probe):
+        for start, end in [(float("nan"), 5), (0, float("inf"))]:
+            self.write_manifest({
+                "schema": "cutter-studio-render/v1",
+                "episodes": [{"path": str(self.video), "start_seconds": start, "end_seconds": end}],
+            })
+            with self.subTest(start=start, end=end):
+                with self.assertRaisesRegex(ValueError, "tiempos finitos"):
+                    renderer.load_manifest(self.manifest)
+
+
     def test_rejects_negative_or_empty_intervals(self, _probe):
         for start, end in [(-1, 5), (5, 5), (8, 2)]:
             self.write_manifest({
