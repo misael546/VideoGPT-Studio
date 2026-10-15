@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -37,8 +38,14 @@ def media_info(path: Path) -> dict:
         "format=duration:stream=codec_type", "-of", "json", str(path),
     ], capture=True)
     data = json.loads(raw)
+    try:
+        duration = float((data.get("format") or {}).get("duration") or 0)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Duración no válida en el archivo: {path}") from exc
+    if not math.isfinite(duration) or duration <= 0:
+        raise ValueError(f"Duración no válida en el archivo: {path}")
     return {
-        "duration": float((data.get("format") or {}).get("duration") or 0),
+        "duration": duration,
         "has_audio": any(s.get("codec_type") == "audio" for s in data.get("streams", [])),
     }
 
@@ -62,8 +69,8 @@ def load_manifest(path: Path) -> list[dict]:
             end = float(item["end_seconds"])
         except (KeyError, TypeError, ValueError):
             raise ValueError(f"Episodio #{index}: define start_seconds y end_seconds numéricos.")
-        if start < 0 or end <= start:
-            raise ValueError(f"Episodio #{index}: el intervalo debe cumplir 0 <= inicio < fin.")
+        if not math.isfinite(start) or not math.isfinite(end) or start < 0 or end <= start:
+            raise ValueError(f"Episodio #{index}: el intervalo debe cumplir 0 <= inicio < fin con tiempos finitos.")
         info = media_info(source)
         if end > info["duration"] + 0.05:
             raise ValueError(f"Episodio #{index}: el final ({end}s) supera la duración ({info['duration']:.3f}s).")
