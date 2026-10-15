@@ -266,10 +266,11 @@ def create_plan(scan_path: Path) -> dict:
                     str(match.get("episode_a", "")),
                     str(match.get("episode_b", "")),
                 ],
-                "source_path_pair": [
-                    str(match.get("episode_a_path", "")),
-                    str(match.get("episode_b_path", "")),
-                ],
+                "source_path_pair": (
+                    [str(match.get("episode_a_path")), str(match.get("episode_b_path"))]
+                    if match.get("episode_a_path") and match.get("episode_b_path")
+                    else []
+                ),
                 "alignment_shift_seconds": int(match.get("alignment_shift_seconds") or 0),
                 "modalities": list(match.get("modalities", [])),
                 "match_quality": match.get("match_quality", {}),
