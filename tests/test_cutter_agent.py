@@ -348,6 +348,46 @@ class ScannerIntegrationTests(unittest.TestCase):
             self.assertEqual(candidate["episode_b_cut_start_seconds"], 0)
             self.assertIn(candidate["match_quality"]["visual"]["level"], {"low", "medium", "high"})
 
+    def test_scanner_finds_shared_ending_when_episode_openings_differ(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            first = folder / "Episode 01.mp4"
+            second = folder / "Episode 02.mp4"
+
+            def make_episode(path, intro_source, middle_source):
+                subprocess.run([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", f"{intro_source}=size=320x240:rate=10:duration=8",
+                    "-f", "lavfi", "-i", f"{middle_source}=size=320x240:rate=10:duration=8",
+                    "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=10:duration=10",
+                    "-filter_complex", "[0:v][1:v][2:v]concat=n=3:v=1:a=0,format=yuv420p[v]",
+                    "-map", "[v]", "-c:v", "libx264", "-preset", "ultrafast",
+                    "-pix_fmt", "yuv420p", str(path),
+                ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            make_episode(first, "testsrc", "smptebars")
+            make_episode(second, "smptebars", "testsrc")
+            report = cutter.scan(folder, root / "scan-ending.json", use_cache=False)
+
+            ending_candidates = [
+                item for item in report["repeated_sequence_candidates"]
+                if item["edge"] == "end"
+                and item["episode_a_offset_seconds"] >= 15
+                and item["episode_b_offset_seconds"] >= 15
+                and item["duration_seconds"] >= 8
+                and "visual" in item["modalities"]
+            ]
+            self.assertTrue(
+                ending_candidates,
+                "Se esperaba detectar los 10 s finales compartidos aunque los inicios fueran distintos",
+            )
+            best = max(ending_candidates, key=lambda item: item["duration_seconds"])
+            self.assertGreaterEqual(best["duration_seconds"], 8)
+            self.assertAlmostEqual(best["episode_a_offset_seconds"], 16, delta=2)
+            self.assertAlmostEqual(best["episode_b_offset_seconds"], 16, delta=2)
+
     def test_same_filenames_in_different_seasons_do_not_cross_combine_evidence(self):
         with tempfile.TemporaryDirectory() as temp_name:
             root = Path(temp_name)
