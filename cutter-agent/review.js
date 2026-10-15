@@ -147,6 +147,9 @@ function evidenceLabels(cut) {
     }
   }
   if (cut.boundary_expanded) labels.push("Límite ampliado hasta el borde");
+  if (Array.isArray(cut.source_pairs) && cut.source_pairs.length > 1) {
+    labels.push("Repetido en " + cut.source_pairs.length + " comparaciones");
+  }
   return labels.length ? labels : ["Sin métricas de coincidencia"];
 }
 
