@@ -50,7 +50,7 @@ call :check
 if errorlevel 1 goto menu
 echo.
 set "VIDEO_FOLDER="
-set /p "VIDEO_FOLDER=Ruta de la carpeta con episodios: "
+set /p "VIDEO_FOLDER=Ruta de la carpeta con episodios (sin comillas): "
 if not exist "%VIDEO_FOLDER%\" (
   echo ERROR: La carpeta no existe.
   pause
@@ -82,21 +82,21 @@ call :check
 if errorlevel 1 goto menu
 echo.
 set "PLAN="
-set /p "PLAN=Ruta completa al edit-plan.json revisado: "
+set /p "PLAN=Ruta completa a edit-plan-reviewed.json (sin comillas): "
 if not exist "%PLAN%" (
   echo ERROR: No encuentro ese archivo.
   pause
   goto menu
 )
 set "OUTPUT_FOLDER="
-set /p "OUTPUT_FOLDER=Carpeta donde guardar el resultado: "
+set /p "OUTPUT_FOLDER=Carpeta existente para guardar resultado/manifiesto (sin comillas): "
 if not exist "%OUTPUT_FOLDER%\" (
   echo ERROR: La carpeta de salida no existe.
   pause
   goto menu
 )
 set "OUTPUT_VIDEO="
-set /p "OUTPUT_VIDEO=Ruta completa del MP4 final (ej. D:\Anime\temporada-final.mp4): "
+set /p "OUTPUT_VIDEO=Ruta completa del MP4 final (ej. D:\Anime\temporada-final.mp4; sin comillas): "
 set "WATERMARK="
 set /p "WATERMARK=Ruta de marca de agua PNG/JPG/WebP (Enter para omitir): "
 python "%~dp0edit_plan.py" render-manifest "%PLAN%" --output "%OUTPUT_FOLDER%\render-manifest.json"
