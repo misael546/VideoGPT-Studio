@@ -4,7 +4,9 @@ Este componente se ejecuta en el PC del usuario. Los vídeos y los archivos de t
 
 ## Inicio rápido en Windows
 
-Abre `INICIAR_CUTTER_STUDIO.bat`. El menú permite analizar la carpeta de episodios y crear el plan revisable, o renderizar después de revisar y aprobar los cortes. El lanzador necesita Python 3.10+ y FFmpeg/FFprobe instalados en PATH. Los informes, la caché y el vídeo final se guardan localmente en las rutas elegidas.
+Abre `INICIAR_CUTTER_STUDIO.bat`. El menú permite analizar episodios, revisar cortes en una interfaz local del navegador y renderizar el plan aprobado. El lanzador necesita Python 3.10+ y FFmpeg/FFprobe instalados en PATH. Los informes, la caché y el vídeo final se guardan localmente.
+
+La página `review.html` funciona sin conexión: carga `edit-plan.json`, selecciona la carpeta de episodios para previsualizar, corrige los límites y elige «Aprobar eliminación», «Conservar» o «Pendiente de revisión». Exporta el JSON revisado y usa ese archivo en el menú de renderizado. El revisor no envía vídeos ni planes a servidores externos.
 
 
 ## Requisitos
@@ -33,16 +35,16 @@ El escáner obtiene duración, resolución y tamaño, propone el orden por núme
 python edit_plan.py create scan-report.json --output edit-plan.json
 ```
 
-El plan incluye el orden propuesto y los intervalos visualmente coincidentes como candidatos. Cada corte comienza con `"approved": false`; por tanto, **no se elimina nada por defecto**. Abre el JSON, reproduce cada episodio en los tiempos indicados y cambia a `true` solo los intervalos que hayas confirmado que deben eliminarse. Si el nombre de un archivo no es único, el generador no asigna candidatos ambiguos a una ruta.
+El plan incluye el orden propuesto y las coincidencias visuales y/o de audio como candidatos. Cada corte comienza con `"approved": false`; por tanto, **no se elimina nada por defecto**. Abre `review.html`, carga el plan y la carpeta de episodios, reproduce cada candidato, ajusta los tiempos y marca «Aprobar eliminación» solo cuando lo hayas confirmado. Si un nombre de archivo no es único, el generador no asigna candidatos ambiguos a una ruta.
 
 Los tiempos sugeridos corresponden únicamente al tramo que el escáner logró emparejar. No se asume que ese tramo cubra el opening o ending completo; revisa y ajusta `start_seconds` y `end_seconds` según corresponda. Los intervalos aprobados se eliminarán del episodio; los no aprobados se conservarán.
 
 ### 3. Generar un manifiesto de renderizado
 
-Después de revisar y guardar `edit-plan.json`:
+Después de exportar `edit-plan-reviewed.json` desde la interfaz de revisión:
 
 ```bash
-python edit_plan.py render-manifest edit-plan.json --output render-manifest.json
+python edit_plan.py render-manifest edit-plan-reviewed.json --output render-manifest.json
 ```
 
 El generador convierte los cortes aprobados en los segmentos que deben conservarse. Combina cortes aprobados que se solapan y se detiene si un episodio quedaría completamente vacío. El orden de la lista final sigue el orden del plan.
