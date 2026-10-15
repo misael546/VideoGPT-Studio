@@ -51,6 +51,32 @@ class EditPlanTests(unittest.TestCase):
         self.assertTrue(all(cut["review_status"] == "pending" for ep in plan["episodes"] for cut in ep["cuts"]))
         self.assertEqual(plan["episodes"][0]["cuts"][0]["start_seconds"], 82)
 
+    def test_does_not_merge_overlapping_candidates_from_different_edges(self):
+        ending = {
+            "episode_a": self.video_a.name,
+            "episode_b": self.video_b.name,
+            "episode_a_number": 1,
+            "episode_b_number": 2,
+            "edge": "end",
+            "episode_a_offset_seconds": 82,
+            "episode_b_offset_seconds": 80,
+            "episode_a_cut_start_seconds": 82,
+            "episode_a_cut_end_seconds": 172,
+            "episode_b_cut_start_seconds": 80,
+            "episode_b_cut_end_seconds": 170,
+            "duration_seconds": 90,
+            "alignment_shift_seconds": 2,
+            "modalities": ["audio"],
+            "match_quality": {"audio": {"level": "high", "match_ratio": 1.0}},
+        }
+        self.scan["repeated_sequence_candidates"].append(ending)
+        self.scan_path.write_text(json.dumps(self.scan), encoding="utf-8")
+        plan = planner.create_plan(self.scan_path)
+        for episode in plan["episodes"]:
+            self.assertEqual(len(episode["cuts"]), 2)
+            self.assertEqual({cut["edge"] for cut in episode["cuts"]}, {"start", "end"})
+
+
     def test_keeps_distinct_intro_and_ending_intervals_separate(self):
         ending = {
             "episode_a": self.video_a.name,
