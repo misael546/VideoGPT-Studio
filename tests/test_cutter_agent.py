@@ -34,6 +34,31 @@ class AbsoluteOffsetTests(unittest.TestCase):
 
 
 class ScanCacheTests(unittest.TestCase):
+    def test_audio_extraction_warnings_survive_cache_hits(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            video = folder / "Episode 01.mp4"
+            video.write_bytes(b"synthetic test input with audio")
+            metadata = {
+                "duration_seconds": 20.0,
+                "width": 640,
+                "height": 360,
+                "has_audio": True,
+                "size_bytes": video.stat().st_size,
+            }
+            with mock.patch.object(cutter, "probe", return_value=metadata), \
+                 mock.patch.object(cutter, "frame_hashes", return_value=[int("A" * 64, 16)] * 20), \
+                 mock.patch.object(cutter, "audio_frame_hashes", side_effect=RuntimeError("synthetic audio failure")):
+                first = cutter.scan(folder, root / "first.json")
+            self.assertEqual(len(first["audio_warnings"]), 2)
+            second = cutter.scan(folder, root / "second.json")
+            self.assertEqual(second["cache"]["hits"], 1)
+            self.assertEqual(len(second["audio_warnings"]), 2)
+            self.assertTrue(all("synthetic audio failure" in item["error"] for item in second["audio_warnings"]))
+
+
     def test_second_scan_reuses_metadata_and_frame_hashes(self):
         with tempfile.TemporaryDirectory() as temp_name:
             root = Path(temp_name)
