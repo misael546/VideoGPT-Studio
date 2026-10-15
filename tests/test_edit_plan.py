@@ -51,6 +51,29 @@ class EditPlanTests(unittest.TestCase):
         self.assertTrue(all(cut["review_status"] == "pending" for ep in plan["episodes"] for cut in ep["cuts"]))
         self.assertEqual(plan["episodes"][0]["cuts"][0]["start_seconds"], 82)
 
+    def test_keeps_distinct_intro_and_ending_intervals_separate(self):
+        ending = {
+            "episode_a": self.video_a.name,
+            "episode_b": self.video_b.name,
+            "episode_a_number": 1,
+            "episode_b_number": 2,
+            "edge": "end",
+            "episode_a_offset_seconds": 1100,
+            "episode_b_offset_seconds": 1095,
+            "duration_seconds": 80,
+            "alignment_shift_seconds": -5,
+            "modalities": ["audio"],
+            "match_quality": {"audio": {"level": "high", "match_ratio": 0.98}},
+        }
+        self.scan["repeated_sequence_candidates"].append(ending)
+        self.scan_path.write_text(json.dumps(self.scan), encoding="utf-8")
+        plan = planner.create_plan(self.scan_path)
+        self.assertEqual(plan["summary"]["cut_candidates"], 4)
+        for episode in plan["episodes"]:
+            self.assertEqual(len(episode["cuts"]), 2)
+            self.assertLess(episode["cuts"][0]["end_seconds"], episode["cuts"][1]["start_seconds"])
+
+
     def test_deduplicates_same_cut_found_against_multiple_episode_pairs(self):
         video_c = self.root / "Episode 03.mkv"
         scan = json.loads(json.dumps(self.scan))
