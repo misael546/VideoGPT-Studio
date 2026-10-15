@@ -20,6 +20,40 @@ class SeasonNumberTests(unittest.TestCase):
         self.assertEqual(cutter.season_number(Path("Season_03_Episode_07.webm")), 3)
         self.assertIsNone(cutter.season_number(Path("Episode_07.mkv")))
 
+    def test_season_number_can_come_from_parent_folder(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            s1 = root / "Season 01"
+            s2 = root / "Temporada 02"
+            s1.mkdir()
+            s2.mkdir()
+            paths = [
+                s2 / "Episode 01.mkv",
+                s1 / "Episode 02.mkv",
+                s1 / "Episode 01.mkv",
+            ]
+            for path in paths:
+                path.write_bytes(path.name.encode("utf-8"))
+            metadata = {
+                "duration_seconds": 5.0,
+                "width": 320,
+                "height": 240,
+                "has_audio": False,
+                "size_bytes": 20,
+            }
+            with mock.patch.object(cutter, "probe", return_value=metadata):
+                report = cutter.scan(root, root / "scan.json", recursive=True, use_cache=False)
+            self.assertEqual(
+                [(video["season_number"], video["episode_number"], video["filename"])
+                 for video in report["videos_in_proposed_order"]],
+                [
+                    (1, 1, "Episode 01.mkv"),
+                    (1, 2, "Episode 02.mkv"),
+                    (2, 1, "Episode 01.mkv"),
+                ],
+            )
+
+
     def test_recursive_scan_orders_by_season_then_episode(self):
         with tempfile.TemporaryDirectory() as temp_name:
             folder = Path(temp_name)
