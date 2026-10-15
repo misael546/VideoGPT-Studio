@@ -286,7 +286,7 @@ function renderPlan() {
     const cuts = Array.isArray(episode.cuts) ? episode.cuts : [];
     const filteredCuts = cuts.map(function (cut, index) { return { cut: cut, index: index }; })
       .filter(function (item) { return filter === "all" || getCutState(item.cut) === filter; });
-    if (filter !== "all" && filteredCuts.length === 0) continue;
+    if (filter !== "all" && filteredCuts.length === 0) return;
 
     const card = el("section", "episode-card");
     const header = el("div", "episode-header");
