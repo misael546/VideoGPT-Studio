@@ -320,35 +320,53 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
     videos = []
     hashes = {}
     errors = []
+    audio_warnings = []
     selected_cache_path = (cache_path or (folder / ".cutter-studio-cache.json")).expanduser().resolve()
     old_cache = load_cache(selected_cache_path) if use_cache else {}
     new_cache = {}
     cache_hits = 0
+    modalities = ("visual", "audio")
+
     for path in paths:
         try:
             resolved = str(path.resolve())
             signature = file_signature(path)
             cached = old_cache.get(resolved)
+            meta = None
             if use_cache and isinstance(cached, dict) and cached.get("signature") == signature:
-                meta = cached.get("metadata")
+                possible_meta = cached.get("metadata")
                 serialized_hashes = cached.get("hashes")
-                if isinstance(meta, dict) and isinstance(serialized_hashes, dict):
-                    hashes[path] = {
-                        edge: [int(value, 16) for value in serialized_hashes.get(edge, [])]
-                        for edge in ("start", "end")
-                    }
-                    cache_hits += 1
-                else:
-                    meta = None
-            else:
-                meta = None
-
+                if isinstance(possible_meta, dict) and isinstance(serialized_hashes, dict):
+                    try:
+                        hashes[path] = {
+                            modality: {
+                                edge: [int(value, 16) for value in serialized_hashes.get(modality, {}).get(edge, [])]
+                                for edge in ("start", "end")
+                            }
+                            for modality in modalities
+                        }
+                        meta = possible_meta
+                        cache_hits += 1
+                    except (ValueError, TypeError, AttributeError):
+                        meta = None
             if meta is None:
                 meta = probe(path)
-                hashes[path] = {}
+                hashes[path] = {
+                    modality: {"start": [], "end": []}
+                    for modality in modalities
+                }
                 if meta["duration_seconds"] >= MIN_MATCH_SECONDS:
-                    hashes[path]["start"] = frame_hashes(path, meta["duration_seconds"], "start")
-                    hashes[path]["end"] = frame_hashes(path, meta["duration_seconds"], "end")
+                    for edge in ("start", "end"):
+                        hashes[path]["visual"][edge] = frame_hashes(path, meta["duration_seconds"], edge)
+                        if meta.get("has_audio"):
+                            try:
+                                hashes[path]["audio"][edge] = audio_frame_hashes(path, meta["duration_seconds"], edge)
+                            except (RuntimeError, ValueError, OSError) as exc:
+                                audio_warnings.append({
+                                    "filename": path.name,
+                                    "edge": edge,
+                                    "error": str(exc),
+                                })
             entry = {
                 "filename": path.name,
                 "path": resolved,
@@ -361,14 +379,19 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
                     "signature": signature,
                     "metadata": meta,
                     "hashes": {
-                        edge: [format(value, "x") for value in hashes[path].get(edge, [])]
-                        for edge in ("start", "end")
+                        modality: {
+                            edge: [format(value, "x") for value in hashes[path][modality].get(edge, [])]
+                            for edge in ("start", "end")
+                        }
+                        for modality in modalities
                     },
                 }
         except (RuntimeError, ValueError, OSError, json.JSONDecodeError, TypeError) as exc:
             errors.append({"filename": path.name, "error": str(exc)})
+
     if use_cache:
         save_cache(selected_cache_path, new_cache)
+
     videos.sort(key=lambda v: (v["episode_number"] is None, v["episode_number"] or 0, v["filename"].lower()))
     candidates = []
     valid_paths = list(hashes)
@@ -377,46 +400,102 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
             left_meta = next(v for v in videos if v["path"] == str(left_path.resolve()))
             right_meta = next(v for v in videos if v["path"] == str(right_path.resolve()))
             for edge in ("start", "end"):
-                a = hashes[left_path].get(edge, [])
-                b = hashes[right_path].get(edge, [])
-                for match in matching_runs(a, b, edge):
-                    match["episode_a_offset_seconds"] = absolute_offset(
-                        match["episode_a_offset_seconds"], left_meta["duration_seconds"], edge
-                    )
-                    match["episode_b_offset_seconds"] = absolute_offset(
-                        match["episode_b_offset_seconds"], right_meta["duration_seconds"], edge
-                    )
-                    for side, meta in (("a", left_meta), ("b", right_meta)):
-                        match_start = float(match[f"episode_{side}_offset_seconds"])
-                        match_end = match_start + float(match["duration_seconds"])
-                        episode_duration = float(meta["duration_seconds"])
-                        # If a repeated sequence touches an episode edge, propose the full edge-to-match interval.
-                        # This expands only near the file boundary; internal matches remain untouched for review.
-                        cut_start = 0.0 if edge == "start" and match_start <= 10 else match_start
-                        cut_end = episode_duration if edge == "end" and episode_duration - match_end <= 10 else min(episode_duration, match_end)
-                        match[f"episode_{side}_cut_start_seconds"] = round(cut_start, 3)
-                        match[f"episode_{side}_cut_end_seconds"] = round(cut_end, 3)
-                        match[f"episode_{side}_boundary_expanded"] = (
-                            cut_start < match_start or cut_end > match_end
+                for modality in modalities:
+                    left_signatures = hashes[left_path][modality].get(edge, [])
+                    right_signatures = hashes[right_path][modality].get(edge, [])
+                    if not left_signatures or not right_signatures:
+                        continue
+                    threshold = AUDIO_HASH_DISTANCE if modality == "audio" else MAX_HASH_DISTANCE
+                    for match in matching_runs(
+                        left_signatures,
+                        right_signatures,
+                        edge,
+                        max_hash_distance=threshold,
+                    ):
+                        match["episode_a_offset_seconds"] = absolute_offset(
+                            match["episode_a_offset_seconds"], left_meta["duration_seconds"], edge
                         )
-                    candidates.append({
-                        "episode_a": left_path.name,
-                        "episode_b": right_path.name,
-                        "episode_a_number": left_meta["episode_number"],
-                        "episode_b_number": right_meta["episode_number"],
-                        "confidence": "candidate",
-                        "match_quality": {
+                        match["episode_b_offset_seconds"] = absolute_offset(
+                            match["episode_b_offset_seconds"], right_meta["duration_seconds"], edge
+                        )
+                        for side, meta in (("a", left_meta), ("b", right_meta)):
+                            match_start = float(match[f"episode_{side}_offset_seconds"])
+                            match_end = match_start + float(match["duration_seconds"])
+                            episode_duration = float(meta["duration_seconds"])
+                            cut_start = 0.0 if edge == "start" and match_start <= 10 else match_start
+                            cut_end = episode_duration if edge == "end" and episode_duration - match_end <= 10 else min(episode_duration, match_end)
+                            match[f"episode_{side}_cut_start_seconds"] = round(cut_start, 3)
+                            match[f"episode_{side}_cut_end_seconds"] = round(cut_end, 3)
+                            match[f"episode_{side}_boundary_expanded"] = (
+                                cut_start < match_start or cut_end > match_end
+                            )
+                        modality_quality = {
                             "matched_samples": match.get("matched_samples", 0),
                             "match_ratio": match.get("match_ratio", 0),
-                            "mean_hash_distance": match.get("mean_hash_distance", AHASH_BITS + DHASH_BITS),
+                            "mean_hash_distance": match.get("mean_hash_distance", 0),
                             "level": quality_level(
                                 int(match.get("duration_seconds", 0)),
                                 float(match.get("match_ratio", 0)),
-                                float(match.get("mean_hash_distance", AHASH_BITS + DHASH_BITS)),
+                                float(match.get("mean_hash_distance", 0)),
+                                modality,
                             ),
-                        },
-                        **match,
-                    })
+                        }
+                        candidates.append({
+                            "episode_a": left_path.name,
+                            "episode_b": right_path.name,
+                            "episode_a_number": left_meta["episode_number"],
+                            "episode_b_number": right_meta["episode_number"],
+                            "confidence": "candidate",
+                            "modalities": [modality],
+                            "match_quality": {modality: modality_quality},
+                            **match,
+                        })
+
+    # Join the visual and audio evidence when both point to the same sequence.
+    combined = []
+    for candidate in sorted(
+        candidates,
+        key=lambda item: (
+            item["episode_a"], item["episode_b"], item["edge"],
+            item["episode_a_offset_seconds"], item["episode_b_offset_seconds"],
+        ),
+    ):
+        modality = candidate["modalities"][0]
+        corroborating = next((
+            existing for existing in combined
+            if existing["episode_a"] == candidate["episode_a"]
+            and existing["episode_b"] == candidate["episode_b"]
+            and existing["edge"] == candidate["edge"]
+            and modality not in existing["modalities"]
+            and abs(existing["episode_a_offset_seconds"] - candidate["episode_a_offset_seconds"]) <= 3
+            and abs(existing["episode_b_offset_seconds"] - candidate["episode_b_offset_seconds"]) <= 3
+            and min(
+                existing["episode_a_offset_seconds"] + existing["duration_seconds"],
+                candidate["episode_a_offset_seconds"] + candidate["duration_seconds"],
+            ) >= max(existing["episode_a_offset_seconds"], candidate["episode_a_offset_seconds"])
+        ), None)
+        if corroborating is None:
+            combined.append(candidate)
+            continue
+
+        corroborating["modalities"] = sorted(set(corroborating["modalities"] + candidate["modalities"]))
+        corroborating["match_quality"].update(candidate["match_quality"])
+        corroborating["duration_seconds"] = max(
+            corroborating["duration_seconds"], candidate["duration_seconds"]
+        )
+        corroborating["confidence"] = "corroborated_candidate"
+        for side in ("a", "b"):
+            start_key = f"episode_{side}_offset_seconds"
+            cut_start_key = f"episode_{side}_cut_start_seconds"
+            cut_end_key = f"episode_{side}_cut_end_seconds"
+            corroborating[cut_start_key] = min(corroborating[cut_start_key], candidate[cut_start_key])
+            corroborating[cut_end_key] = max(corroborating[cut_end_key], candidate[cut_end_key])
+            corroborating[f"episode_{side}_boundary_expanded"] = (
+                corroborating[cut_start_key] < corroborating[start_key]
+                or corroborating[cut_end_key] > corroborating[start_key] + corroborating["duration_seconds"]
+            )
+
+    candidates = combined
     report = {
         "schema": "cutter-studio-scan/v1",
         "source_folder": str(folder.resolve()),
@@ -430,10 +509,12 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
         "videos_in_proposed_order": videos,
         "repeated_sequence_candidates": candidates,
         "errors": errors,
+        "audio_warnings": audio_warnings,
         "notes": [
-            "Coincidencias visuales aproximadas; revisar antes de recortar.",
-            "No se modificaron ni subieron los vídeos originales.",
-            "La detección usa muestras visuales; aún no analiza huellas de audio."
+            "Las huellas visuales y las de audio son señales candidatas; confirmar el opening/ending antes de recortar.",
+            "Una coincidencia de audio puede ser música de fondo compartida y no implica que deba eliminarse todo ese intervalo.",
+            "Si coinciden visual y audio para una secuencia cercana, el informe combina ambas evidencias.",
+            "No se modificaron ni subieron los vídeos originales."
         ],
     }
     output.parent.mkdir(parents=True, exist_ok=True)
