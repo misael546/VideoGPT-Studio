@@ -155,16 +155,21 @@ class EditPlanTests(unittest.TestCase):
             "edge": "start",
             "error": "No se pudo decodificar audio",
         }]
+        self.scan["visual_warnings"] = [{
+            "filename": self.video_b.name,
+            "edge": "end",
+            "error": "No se pudo decodificar fotograma",
+        }]
         self.scan["errors"] = [{
             "filename": self.video_b.name,
             "error": "Archivo dañado",
         }]
         self.scan_path.write_text(json.dumps(self.scan), encoding="utf-8")
         plan = planner.create_plan(self.scan_path)
-        self.assertEqual(len(plan["scan_warnings"]), 2)
+        self.assertEqual(len(plan["scan_warnings"]), 3)
         self.assertEqual(
             {warning["type"] for warning in plan["scan_warnings"]},
-            {"audio_warning", "video_error"},
+            {"audio_warning", "visual_warning", "video_error"},
         )
 
 
