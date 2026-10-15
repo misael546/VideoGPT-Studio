@@ -121,6 +121,12 @@ def render(manifest: Path, output: Path, watermark: Path | None = None, overwrit
         rendered = []
         for index, episode in enumerate(episodes, start=1):
             segment = temp / f"segment_{index:04d}.mp4"
+            source_label = Path(episode["path"]).name
+            print(
+                f"[{index}/{len(episodes)}] Codificando {source_label} "
+                f"({episode['start']:.3f}s–{episode['end']:.3f}s)…",
+                flush=True,
+            )
             args = [
                 "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
                 "-ss", f"{episode['start']:.3f}", "-i", str(episode["path"]),
@@ -158,6 +164,7 @@ def render(manifest: Path, output: Path, watermark: Path | None = None, overwrit
             ]
             command(args)
             rendered.append(segment)
+            print(f"[{index}/{len(episodes)}] Segmento listo.", flush=True)
 
         concat_file = temp / "concat.txt"
         concat_file.write_text(
@@ -165,12 +172,14 @@ def render(manifest: Path, output: Path, watermark: Path | None = None, overwrit
             encoding="utf-8",
         )
         staged_output = temp / "final.mp4"
+        print(f"Uniendo {len(rendered)} segmentos en el orden revisado…", flush=True)
         command([
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
             "-f", "concat", "-safe", "0", "-i", str(concat_file),
             "-c", "copy", "-movflags", "+faststart", str(staged_output),
         ])
         # Validate the staged MP4 before publishing it. A failed validation leaves any old output intact.
+        print("Validando el MP4 final antes de guardarlo…", flush=True)
         staged_info = media_info(staged_output)
         if staged_info.get("has_video") is not True:
             raise RuntimeError("La validación final falló: el MP4 no contiene una pista de vídeo.")
@@ -187,6 +196,7 @@ def render(manifest: Path, output: Path, watermark: Path | None = None, overwrit
         if output.exists() and not overwrite:
             raise FileExistsError(f"La salida apareció durante el proceso: {output}")
         os.replace(staged_output, output)
+    print("Validación correcta; resultado guardado.", flush=True)
     return output
 
 
