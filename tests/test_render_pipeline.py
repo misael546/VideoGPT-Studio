@@ -57,6 +57,15 @@ class ManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "supera la duración"):
             renderer.load_manifest(self.manifest)
 
+    def test_prevents_output_from_replacing_source_video(self):
+        episodes = [{"path": self.video.resolve()}]
+        with self.assertRaisesRegex(ValueError, "originales"):
+            renderer.ensure_output_not_source(episodes, self.video.resolve())
+
+    def test_allows_output_in_separate_path(self):
+        episodes = [{"path": self.video.resolve()}]
+        renderer.ensure_output_not_source(episodes, self.root / "final.mp4")
+
     @patch.object(renderer, "media_info", return_value={"duration": 20.0, "has_audio": True})
     def test_rejects_negative_or_empty_intervals(self, _probe):
         for start, end in [(-1, 5), (5, 5), (8, 2)]:
