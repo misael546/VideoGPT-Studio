@@ -214,6 +214,14 @@ def create_plan(scan_path: Path) -> dict:
                 "edge": str(warning.get("edge", "")),
                 "message": str(warning.get("error", "No se pudo extraer la huella de audio.")),
             })
+    for warning in scan.get("visual_warnings", []):
+        if isinstance(warning, dict):
+            scan_warnings.append({
+                "type": "visual_warning",
+                "filename": str(warning.get("filename", "")),
+                "edge": str(warning.get("edge", "")),
+                "message": str(warning.get("error", "No se pudo extraer la huella visual.")),
+            })
 
     candidate_count = 0
     for match in candidates:
