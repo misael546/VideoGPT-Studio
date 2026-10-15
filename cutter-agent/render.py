@@ -93,6 +93,8 @@ def render(manifest: Path, output: Path, watermark: Path | None = None, overwrit
         if not watermark.is_file() or watermark.suffix.lower() not in WATERMARK_EXTENSIONS:
             raise ValueError("La marca de agua debe ser un archivo PNG, JPG o WebP existente.")
     episodes = load_manifest(manifest.expanduser())
+    if any(episode["path"] == output for episode in episodes):
+        raise ValueError("La salida no puede reemplazar uno de los vídeos originales.")
     output.parent.mkdir(parents=True, exist_ok=True)
 
     # All work is staged in a temporary directory. Originals are read-only and never edited.
@@ -122,7 +124,7 @@ def render(manifest: Path, output: Path, watermark: Path | None = None, overwrit
             if watermark_index is not None:
                 args += [
                     "-filter_complex",
-                    f"[0:v]{base_filter}[base];[base][{watermark_index}:v]overlay=W-w-24:H-h-24:shortest=1[v]",
+                    f"[0:v]{base_filter}[base];[{watermark_index}:v]scale=320:-2[wm];[base][wm]overlay=W-w-24:H-h-24:shortest=1[v]",
                     "-map", "[v]",
                 ]
             else:
