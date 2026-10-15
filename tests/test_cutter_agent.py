@@ -1,6 +1,8 @@
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "cutter-agent" / "cutter.py"
 SPEC = importlib.util.spec_from_file_location("cutter_agent", MODULE_PATH)
@@ -27,6 +29,31 @@ class AbsoluteOffsetTests(unittest.TestCase):
 
     def test_short_episode_end_offset_stays_inside_episode(self):
         self.assertEqual(cutter.absolute_offset(4, 20, "end"), 4)
+
+
+class ScanCacheTests(unittest.TestCase):
+    def test_second_scan_reuses_metadata_and_frame_hashes(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            video = folder / "Episode 01.mp4"
+            video.write_bytes(b"synthetic test input")
+            report_one = root / "scan-one.json"
+            report_two = root / "scan-two.json"
+            metadata = {"duration_seconds": 20.0, "width": 640, "height": 360, "size_bytes": video.stat().st_size}
+            with mock.patch.object(cutter, "probe", return_value=metadata) as probe_mock, \
+                 mock.patch.object(cutter, "frame_hashes", return_value=[int("A" * 64, 16)] * 20) as frame_mock:
+                first = cutter.scan(folder, report_one)
+                self.assertEqual(probe_mock.call_count, 1)
+                self.assertEqual(frame_mock.call_count, 2)
+            with mock.patch.object(cutter, "probe", side_effect=AssertionError("cache miss")), \
+                 mock.patch.object(cutter, "frame_hashes", side_effect=AssertionError("cache miss")):
+                second = cutter.scan(folder, report_two)
+            self.assertEqual(first["cache"]["hits"], 0)
+            self.assertEqual(second["cache"]["hits"], 1)
+            self.assertEqual(second["cache"]["misses"], 0)
+            self.assertEqual(second["videos_in_proposed_order"][0]["duration_seconds"], 20.0)
 
 
 class RepeatedSequenceTests(unittest.TestCase):
