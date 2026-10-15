@@ -51,6 +51,23 @@ class EditPlanTests(unittest.TestCase):
         self.assertTrue(all(cut["review_status"] == "pending" for ep in plan["episodes"] for cut in ep["cuts"]))
         self.assertEqual(plan["episodes"][0]["cuts"][0]["start_seconds"], 82)
 
+    def test_uses_expanded_full_opening_bounds_when_scanner_provides_them(self):
+        self.scan["repeated_sequence_candidates"][0].update({
+            "episode_a_offset_seconds": 3,
+            "episode_b_offset_seconds": 5,
+            "episode_a_cut_start_seconds": 0,
+            "episode_a_cut_end_seconds": 93,
+            "episode_b_cut_start_seconds": 0,
+            "episode_b_cut_end_seconds": 85,
+            "episode_a_boundary_expanded": True,
+            "episode_b_boundary_expanded": True,
+        })
+        self.scan_path.write_text(json.dumps(self.scan), encoding="utf-8")
+        plan = planner.create_plan(self.scan_path)
+        self.assertEqual(plan["episodes"][0]["cuts"][0]["start_seconds"], 0)
+        self.assertEqual(plan["episodes"][0]["cuts"][0]["end_seconds"], 93)
+        self.assertTrue(plan["episodes"][0]["cuts"][0]["boundary_expanded"])
+
     def test_rejects_non_scan_schema(self):
         self.scan["schema"] = "other"
         self.scan_path.write_text(json.dumps(self.scan), encoding="utf-8")
