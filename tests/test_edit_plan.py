@@ -216,6 +216,34 @@ class EditPlanTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "eliminarían todo"):
             planner.build_render_manifest(plan)
 
+    def test_rejects_non_finite_episode_duration(self):
+        for duration in [float("nan"), float("inf"), float("-inf")]:
+            self.scan["videos_in_proposed_order"][0]["duration_seconds"] = duration
+            self.scan_path.write_text(json.dumps(self.scan), encoding="utf-8")
+            with self.subTest(duration=duration):
+                with self.assertRaisesRegex(ValueError, "Duración inválida"):
+                    planner.create_plan(self.scan_path)
+        # Restore the fixture to avoid leaking a changed duration into other assertions.
+        self.scan["videos_in_proposed_order"][0]["duration_seconds"] = 1200
+
+    def test_rejects_non_finite_approved_cut_times(self):
+        for field, value in [
+            ("start_seconds", float("nan")),
+            ("end_seconds", float("inf")),
+        ]:
+            plan = planner.create_plan(self.scan_path)
+            plan["episodes"][0]["cuts"] = [{
+                "id": "bad-finite",
+                "start_seconds": 0,
+                "end_seconds": 10,
+                "approved": True,
+            }]
+            plan["episodes"][0]["cuts"][0][field] = value
+            with self.subTest(field=field, value=value):
+                with self.assertRaisesRegex(ValueError, "intervalo fuera"):
+                    planner.build_render_manifest(plan)
+
+
     def test_rejects_invalid_approved_interval(self):
         plan = planner.create_plan(self.scan_path)
         plan["episodes"][0]["cuts"] = [{"id": "bad", "start_seconds": 20, "end_seconds": 1300, "approved": True}]
