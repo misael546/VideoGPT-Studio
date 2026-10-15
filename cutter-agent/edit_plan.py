@@ -57,6 +57,24 @@ def _source_pairs(cut: dict) -> list[list[str]]:
     return result
 
 
+def _source_path_pairs(cut: dict) -> list[list[str]]:
+    pairs = cut.get("source_path_pairs")
+    if not isinstance(pairs, list):
+        pair = cut.get("source_path_pair")
+        pairs = [pair] if isinstance(pair, list) else []
+    result = []
+    seen = set()
+    for pair in pairs:
+        if not isinstance(pair, list) or len(pair) != 2:
+            continue
+        normalized = [str(pair[0]), str(pair[1])]
+        key = tuple(normalized)
+        if key not in seen:
+            seen.add(key)
+            result.append(normalized)
+    return result
+
+
 def _merge_cut_quality(existing: dict, incoming: dict) -> None:
     left = existing.get("match_quality", {})
     right = incoming.get("match_quality", {})
@@ -104,8 +122,11 @@ def _deduplicate_episode_cuts(cuts: list[dict]) -> list[dict]:
             clone = dict(cut)
             clone["modalities"] = sorted(set(clone.get("modalities", [])))
             clone["source_pairs"] = _source_pairs(clone)
+            clone["source_path_pairs"] = _source_path_pairs(clone)
             if not clone.get("source_pair") and clone["source_pairs"]:
                 clone["source_pair"] = clone["source_pairs"][0]
+            if not clone.get("source_path_pair") and clone["source_path_pairs"]:
+                clone["source_path_pair"] = clone["source_path_pairs"][0]
             grouped.append(clone)
             continue
 
@@ -118,8 +139,16 @@ def _deduplicate_episode_cuts(cuts: list[dict]) -> list[dict]:
             pair for pair in pair_list
             if tuple(pair) not in seen and not seen.add(tuple(pair))
         ]
+        path_pair_list = _source_path_pairs(duplicate) + _source_path_pairs(cut)
+        seen_paths = set()
+        duplicate["source_path_pairs"] = [
+            pair for pair in path_pair_list
+            if tuple(pair) not in seen_paths and not seen_paths.add(tuple(pair))
+        ]
         if duplicate["source_pairs"]:
             duplicate["source_pair"] = duplicate["source_pairs"][0]
+        if duplicate["source_path_pairs"]:
+            duplicate["source_path_pair"] = duplicate["source_path_pairs"][0]
         _merge_cut_quality(duplicate, cut)
         duplicate["boundary_expanded"] = bool(
             duplicate.get("boundary_expanded") or cut.get("boundary_expanded")
