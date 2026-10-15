@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Avoid wasting Actions minutes on superseded commits while a PR is changing rapidly.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
