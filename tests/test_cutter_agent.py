@@ -105,7 +105,7 @@ class ScannerIntegrationTests(unittest.TestCase):
                 ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             make_episode(first, "smptebars=size=320x240:rate=10:duration=8")
-            make_episode(second, "mandelbrot=size=320x240:rate=10:duration=8")
+            make_episode(second, "testsrc=size=320x240:rate=10:duration=8")
             report = cutter.scan(folder, root / "scan.json", use_cache=False)
 
             candidates = [
