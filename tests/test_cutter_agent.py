@@ -12,6 +12,32 @@ cutter = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(cutter)
 
 
+class ProbeValidationTests(unittest.TestCase):
+    def test_rejects_non_finite_duration_from_ffprobe(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            path = Path(temp_name) / "bad.mp4"
+            path.write_bytes(b"synthetic")
+            payload = {
+                "format": {"duration": "NaN", "size": str(path.stat().st_size)},
+                "streams": [{"codec_type": "video", "width": 320, "height": 240}],
+            }
+            with mock.patch.object(cutter, "run", return_value=__import__("json").dumps(payload)):
+                with self.assertRaisesRegex(ValueError, "Duración no válida"):
+                    cutter.probe(path)
+
+    def test_rejects_missing_video_dimensions(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            path = Path(temp_name) / "audio-only.mp4"
+            path.write_bytes(b"synthetic")
+            payload = {
+                "format": {"duration": "3.0", "size": str(path.stat().st_size)},
+                "streams": [{"codec_type": "audio"}],
+            }
+            with mock.patch.object(cutter, "run", return_value=__import__("json").dumps(payload)):
+                with self.assertRaisesRegex(ValueError, "dimensiones"):
+                    cutter.probe(path)
+
+
 class EpisodeNumberTests(unittest.TestCase):
     def test_episode_labels(self):
         self.assertEqual(cutter.episode_number(Path("Anime_Ep_007.mkv")), 7)
