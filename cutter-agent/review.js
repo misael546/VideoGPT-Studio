@@ -183,6 +183,7 @@ async function preview(episode, cut, episodeIndex) {
     setStatus("Generando vista previa local con FFmpeg…", "warning");
     const params = new URLSearchParams({
       episode: String(episodeIndex),
+      episode_path: String(episode.path || ""),
       start: String(cut.start_seconds),
       end: String(cut.end_seconds),
     });
