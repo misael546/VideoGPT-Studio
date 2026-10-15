@@ -6,7 +6,7 @@ Este componente se ejecuta en el PC del usuario. Los vídeos y los archivos de t
 
 Abre `INICIAR_CUTTER_STUDIO.bat`. El menú permite analizar episodios, revisar cortes en una interfaz local del navegador y renderizar el plan aprobado. El lanzador necesita Python 3.10+ y FFmpeg/FFprobe instalados en PATH. Los informes, la caché y el vídeo final se guardan localmente.
 
-La página `review.html` funciona sin conexión: carga `edit-plan.json`, selecciona la carpeta de episodios para previsualizar, corrige los límites y elige «Aprobar eliminación», «Conservar» o «Pendiente de revisión». Exporta el JSON revisado y usa ese archivo en el menú de renderizado. El revisor no envía vídeos ni planes a servidores externos.
+El lanzador abre `review_server.py`, que enlaza solo a `127.0.0.1` en un puerto local. La interfaz `review.html` carga el plan automáticamente; FFmpeg convierte las vistas previas a MP4 para admitir MKV y otros formatos. Ajusta los límites y elige «Aprobar eliminación», «Conservar» o «Pendiente de revisión». El botón de guardar crea `edit-plan-reviewed.json` en la carpeta local. Los vídeos no se suben a Internet y el servidor se detiene al cerrar su ventana.
 
 
 ## Requisitos
@@ -62,5 +62,5 @@ La marca de agua es opcional. El renderizador normaliza segmentos a MP4 H.264/AA
 - Las coincidencias visuales o de audio son candidatas, no una garantía de que el tramo sea un opening o ending. Nunca se aprueban cortes automáticamente; la música puede aparecer como fondo en otra escena.
 - El escáner muestrea una vez por segundo. La huella de audio resume la energía relativa en cuatro bandas de frecuencia; no es reconocimiento musical semántico y puede fallar con remezclas, cortes temporales o cambios de velocidad.
 - La caché usa un esquema versionado para invalidar huellas de versiones anteriores automáticamente. Si una extracción de audio falla, se registra en `audio_warnings` y aún pueden usarse las coincidencias visuales.
-- La herramienta funciona localmente por línea de comandos. No la ejecutes como servicio público ni abras puertos de red.
-- La CI instala FFmpeg y prueba la unión de clips sintéticos con y sin audio, además de validar el plan y sus intervalos.
+- El revisor escucha solo en `127.0.0.1`, limita las vistas previas a vídeos dentro de la carpeta seleccionada y guarda el plan junto al original sin reemplazarlo. Las vistas previas temporales se eliminan al cerrar el servidor. No expongas el servidor a la red.
+- La CI instala FFmpeg y prueba la unión de clips sintéticos, la detección multimodal y las funciones del servidor local.
