@@ -13,7 +13,8 @@ from pathlib import Path
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v"}
 WINDOW_SECONDS = 180
 MIN_MATCH_SECONDS = 8
-MAX_HASH_DISTANCE = 64  # 25% of a 16x16 average hash
+MAX_HASH_DISTANCE = 48  # 18.75% of a 16x16 average hash
+MAX_ALIGNMENT_SHIFT_SECONDS = 15
 
 
 def run(command: list[str], *, binary: bool = False):
@@ -79,22 +80,61 @@ def frame_hashes(path: Path, duration: float, edge: str) -> list[int]:
 
 
 def matching_runs(left: list[int], right: list[int], edge: str) -> list[dict]:
-    runs = []
-    active_start = None
-    active_length = 0
-    limit = min(len(left), len(right))
-    for i in range(limit):
-        if (left[i] ^ right[i]).bit_count() <= MAX_HASH_DISTANCE:
-            if active_start is None:
-                active_start = i
-            active_length += 1
-        else:
-            if active_length >= MIN_MATCH_SECONDS:
-                runs.append({"edge": edge, "offset_seconds": active_start, "duration_seconds": active_length})
-            active_start, active_length = None, 0
-    if active_length >= MIN_MATCH_SECONDS:
-        runs.append({"edge": edge, "offset_seconds": active_start, "duration_seconds": active_length})
-    return runs
+    """Find repeated sequences while allowing small timing offsets between episodes."""
+    if not left or not right:
+        return []
+
+    candidates = []
+    max_shift = min(MAX_ALIGNMENT_SHIFT_SECONDS, max(len(left), len(right)) - 1)
+    for shift in range(-max_shift, max_shift + 1):
+        left_start = max(0, shift)
+        right_start = max(0, -shift)
+        limit = min(len(left) - left_start, len(right) - right_start)
+        if limit < MIN_MATCH_SECONDS:
+            continue
+
+        run_start = None
+        run_length = 0
+        for index in range(limit):
+            similar = (left[left_start + index] ^ right[right_start + index]).bit_count() <= MAX_HASH_DISTANCE
+            if similar:
+                if run_start is None:
+                    run_start = index
+                run_length += 1
+            else:
+                if run_length >= MIN_MATCH_SECONDS:
+                    candidates.append({
+                        "edge": edge,
+                        "episode_a_offset_seconds": left_start + run_start,
+                        "episode_b_offset_seconds": right_start + run_start,
+                        "duration_seconds": run_length,
+                        "alignment_shift_seconds": shift,
+                    })
+                run_start, run_length = None, 0
+        if run_length >= MIN_MATCH_SECONDS:
+            candidates.append({
+                "edge": edge,
+                "episode_a_offset_seconds": left_start + run_start,
+                "episode_b_offset_seconds": right_start + run_start,
+                "duration_seconds": run_length,
+                "alignment_shift_seconds": shift,
+            })
+
+    # Nearby alignment shifts often describe the same physical sequence.
+    candidates.sort(key=lambda item: item["duration_seconds"], reverse=True)
+    kept = []
+    for candidate in candidates:
+        a_start = candidate["episode_a_offset_seconds"]
+        b_start = candidate["episode_b_offset_seconds"]
+        duplicate = any(
+            existing["edge"] == candidate["edge"]
+            and abs(a_start - existing["episode_a_offset_seconds"]) <= 3
+            and abs(b_start - existing["episode_b_offset_seconds"]) <= 3
+            for existing in kept
+        )
+        if not duplicate:
+            kept.append(candidate)
+    return sorted(kept, key=lambda item: (item["episode_a_offset_seconds"], item["episode_b_offset_seconds"]))
 
 
 def scan(folder: Path, output: Path, recursive: bool = False) -> dict:
