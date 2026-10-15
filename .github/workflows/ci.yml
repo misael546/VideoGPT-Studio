@@ -58,3 +58,18 @@ jobs:
           done
           cat /tmp/videogpt.log
           exit 1
+      - name: Assemble standalone Cutter Studio local package
+        run: |
+          mkdir -p dist/Cutter-Studio
+          cp cutter-agent/cutter.py cutter-agent/edit_plan.py cutter-agent/render.py cutter-agent/review_server.py dist/Cutter-Studio/
+          cp cutter-agent/review.html cutter-agent/review.css cutter-agent/review.js cutter-agent/INICIAR_CUTTER_STUDIO.bat cutter-agent/README.md dist/Cutter-Studio/
+          printf 'Commit: %s\nBuilt (UTC): %s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/Cutter-Studio/BUILD_INFO.txt
+          test -s dist/Cutter-Studio/INICIAR_CUTTER_STUDIO.bat
+          test -s dist/Cutter-Studio/review_server.py
+      - name: Upload standalone Cutter Studio Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cutter-Studio-Windows-Local
+          path: dist/Cutter-Studio/
+          if-no-files-found: error
+          retention-days: 30
