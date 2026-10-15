@@ -489,8 +489,8 @@ class RepeatedSequenceTests(unittest.TestCase):
         other = frame ^ ((1 << 120) - 1)
         left = [frame] * 8
         right = [frame] * 8
-        right[0] = other
-        right[4] = other
+        right[2] = other
+        right[6] = other
         matches = cutter.matching_runs(left, right, "start")
         self.assertTrue(matches)
         self.assertEqual(max(item["duration_seconds"] for item in matches), 8)
