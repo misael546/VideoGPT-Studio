@@ -32,7 +32,8 @@ function renderScanWarnings(plan) {
   ui.scanWarnings.hidden = warnings.length === 0;
   for (const warning of warnings) {
     const li = el("li", "", [
-      warning.type === "audio_warning" ? "Audio" : "Vídeo",
+      warning.type === "audio_warning" ? "Audio" :
+        warning.type === "visual_warning" ? "Visual" : "Vídeo",
       warning.filename || "archivo desconocido",
       warning.edge ? "(" + warning.edge + ")" : "",
       warning.message || "Error de análisis sin detalle",
