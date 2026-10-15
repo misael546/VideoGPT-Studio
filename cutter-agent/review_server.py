@@ -93,6 +93,29 @@ def validate_plan(data: object, root: Path) -> dict:
     return data
 
 
+def preview_episode_index(episodes: list[dict], requested_index: int, requested_path: str | None, root: Path) -> int:
+    """Resolve a preview by its source path when supplied so client-side reordering is safe."""
+    if requested_path:
+        try:
+            resolved_requested = Path(requested_path).expanduser().resolve()
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise ValueError("La ruta del episodio no es válida.") from exc
+        if not is_within(resolved_requested, root):
+            raise ValueError("La ruta de previsualización está fuera de la carpeta autorizada.")
+        for index, episode in enumerate(episodes):
+            try:
+                candidate = Path(str(episode.get("path", ""))).expanduser().resolve()
+            except (OSError, RuntimeError, ValueError):
+                continue
+            if candidate == resolved_requested:
+                return index
+        raise ValueError("La ruta solicitada no corresponde a un episodio del plan cargado.")
+
+    if requested_index < 0 or requested_index >= len(episodes):
+        raise ValueError("Episodio fuera del plan.")
+    return requested_index
+
+
 def build_handler(root: Path, plan_path: Path, preview_dir: Path):
     class ReviewHandler(BaseHTTPRequestHandler):
         server_version = "CutterStudioLocal/1.0"
@@ -183,8 +206,11 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
                 self.send_json(400, {"error": str(exc)})
                 return
             episodes = plan["episodes"]
-            if episode_index < 0 or episode_index >= len(episodes):
-                self.send_json(400, {"error": "Episodio fuera del plan."})
+            requested_path = query.get("episode_path", [None])[0]
+            try:
+                episode_index = preview_episode_index(episodes, episode_index, requested_path, root)
+            except ValueError as exc:
+                self.send_json(400, {"error": str(exc)})
                 return
             episode = episodes[episode_index]
             duration = float(episode["duration_seconds"])
