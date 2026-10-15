@@ -517,6 +517,9 @@ def scan(
         v["episode_number"] or 0,
         v["filename"].lower(),
     ))
+    # Pairwise matching can be expensive for large seasons. Resolve metadata in O(1)
+    # rather than repeatedly linearly scanning every episode for each pair.
+    videos_by_path = {video["path"]: video for video in videos}
     candidates = []
     valid_paths = list(hashes)
     pair_total = len(valid_paths) * (len(valid_paths) - 1) // 2
@@ -528,8 +531,8 @@ def scan(
             if progress and (pair_index % progress_step == 0 or pair_index == pair_total):
                 percentage = round(100 * pair_index / max(1, pair_total))
                 print(f"Comparando secuencias: {pair_index}/{pair_total} pares ({percentage}%)", flush=True)
-            left_meta = next(v for v in videos if v["path"] == str(left_path.resolve()))
-            right_meta = next(v for v in videos if v["path"] == str(right_path.resolve()))
+            left_meta = videos_by_path[str(left_path.resolve())]
+            right_meta = videos_by_path[str(right_path.resolve())]
             for edge in ("start", "end"):
                 for modality in modalities:
                     left_signatures = hashes[left_path][modality].get(edge, [])
