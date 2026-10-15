@@ -5,6 +5,8 @@ const ui = {
   planFile: document.getElementById("planFile"),
   videoFolder: document.getElementById("videoFolder"),
   status: document.getElementById("status"),
+  scanWarnings: document.getElementById("scanWarnings"),
+  scanWarningList: document.getElementById("scanWarningList"),
   summary: document.getElementById("summary"),
   episodeCount: document.getElementById("episodeCount"),
   cutCount: document.getElementById("cutCount"),
@@ -22,6 +24,30 @@ function setStatus(message, kind) {
   ui.status.textContent = message;
   if (kind) ui.status.dataset.kind = kind;
   else delete ui.status.dataset.kind;
+}
+
+function renderScanWarnings(plan) {
+  const warnings = plan && Array.isArray(plan.scan_warnings) ? plan.scan_warnings : [];
+  ui.scanWarningList.replaceChildren();
+  ui.scanWarnings.hidden = warnings.length === 0;
+  for (const warning of warnings) {
+    const li = el("li", "", [
+      warning.type === "audio_warning" ? "Audio" : "Vídeo",
+      warning.filename || "archivo desconocido",
+      warning.edge ? "(" + warning.edge + ")" : "",
+      warning.message || "Error de análisis sin detalle",
+    ].filter(Boolean).join(" — "));
+    ui.scanWarningList.append(li);
+  }
+}
+
+function loadedPlanStatus(plan, fromServer) {
+  const warnings = plan && Array.isArray(plan.scan_warnings) ? plan.scan_warnings.length : 0;
+  const prefix = fromServer ? "Plan cargado desde tu PC: " : "Plan cargado: ";
+  const message = prefix + plan.episodes.length + " episodios y " + cutCountForPlan() + " candidatos." +
+    (fromServer ? " Las vistas previas se generan localmente con FFmpeg." : " Selecciona la carpeta de vídeos para previsualizar.") +
+    (warnings ? " Hay " + warnings + " advertencias del análisis; consulta el panel." : "");
+  return { message: message, kind: warnings ? "warning" : "success" };
 }
 
 function formatSeconds(value) {
@@ -359,10 +385,13 @@ async function loadPlanFile(file) {
     }
     state.plan = parsed;
     renderPlan();
-    setStatus("Plan cargado: " + parsed.episodes.length + " episodios y " + cutCountForPlan() + " candidatos. Selecciona la carpeta de vídeos para previsualizar.", "success");
+    renderScanWarnings(parsed);
+    const status = loadedPlanStatus(parsed, false);
+    setStatus(status.message, status.kind);
   } catch (error) {
     state.plan = null;
     renderPlan();
+    renderScanWarnings(null);
     setStatus(error.message || "No se pudo leer el plan JSON.", "error");
   }
 }
@@ -443,7 +472,9 @@ if (isServerMode()) {
       if (!response.ok) throw new Error(data.error || "No se pudo cargar el plan.");
       const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
       await loadPlanFile(blob);
-      setStatus("Plan cargado desde tu PC: " + data.episodes.length + " episodios. Las vistas previas se generan localmente con FFmpeg.", "success");
+      renderScanWarnings(data);
+      const status = loadedPlanStatus(data, true);
+      setStatus(status.message, status.kind);
     })
     .catch(function (error) {
       setStatus(error.message || "No se pudo cargar el plan desde el servidor local.", "error");
