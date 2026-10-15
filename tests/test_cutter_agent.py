@@ -18,6 +18,17 @@ class EpisodeNumberTests(unittest.TestCase):
         self.assertIsNone(cutter.episode_number(Path("opening-final.mkv")))
 
 
+class AbsoluteOffsetTests(unittest.TestCase):
+    def test_start_offset_is_already_absolute(self):
+        self.assertEqual(cutter.absolute_offset(12, 1200, "start"), 12)
+
+    def test_end_offset_accounts_for_tail_window(self):
+        self.assertEqual(cutter.absolute_offset(12, 1200, "end"), 1032)
+
+    def test_short_episode_end_offset_stays_inside_episode(self):
+        self.assertEqual(cutter.absolute_offset(4, 20, "end"), 4)
+
+
 class RepeatedSequenceTests(unittest.TestCase):
     def test_detects_eight_or_more_similar_samples(self):
         frames = [int('A' * 64, 16) for _ in range(10)]
