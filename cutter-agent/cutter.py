@@ -20,7 +20,11 @@ DHASH_BITS = HASH_HEIGHT * (HASH_WIDTH - 1)
 MAX_HASH_DISTANCE = 88  # ~17.7% of the combined 496-bit aHash + dHash signature
 MAX_CONSECUTIVE_MISSES = 2
 MAX_ALIGNMENT_SHIFT_SECONDS = 15
-CACHE_SCHEMA = "cutter-studio-cache/v2"
+AUDIO_SAMPLE_RATE = 8000
+AUDIO_CHANNELS = 4
+AUDIO_SUBCHUNKS_PER_SECOND = 10
+AUDIO_HASH_DISTANCE = 24
+CACHE_SCHEMA = "cutter-studio-cache/v3"
 
 
 def run(command: list[str], *, binary: bool = False):
@@ -42,17 +46,19 @@ def episode_number(path: Path) -> int | None:
 
 def probe(path: Path) -> dict:
     raw = run([
-        "ffprobe", "-v", "error", "-select_streams", "v:0",
-        "-show_entries", "format=duration,size:stream=width,height",
+        "ffprobe", "-v", "error",
+        "-show_entries", "format=duration,size:stream=width,height,codec_type",
         "-of", "json", str(path),
     ])
     data = json.loads(raw)
-    stream = (data.get("streams") or [{}])[0]
+    streams = data.get("streams") or []
+    stream = next((item for item in streams if item.get("codec_type") == "video"), {})
     fmt = data.get("format") or {}
     return {
         "duration_seconds": round(float(fmt.get("duration") or 0), 3),
         "width": stream.get("width"),
         "height": stream.get("height"),
+        "has_audio": any(item.get("codec_type") == "audio" for item in streams),
         "size_bytes": int(fmt.get("size") or path.stat().st_size),
     }
 
@@ -74,13 +80,90 @@ def perceptual_hash(pixels: bytes) -> int:
     return (ahash << DHASH_BITS) | dhash
 
 
-def quality_level(duration_seconds: int, match_ratio: float, mean_hash_distance: float) -> str:
-    """Grade the visual match only; this is not a claim that it is an OP/ED."""
+def quality_level(
+    duration_seconds: int,
+    match_ratio: float,
+    mean_hash_distance: float,
+    modality: str = "visual",
+) -> str:
+    """Grade one modality's match, not whether the sequence is definitely an OP/ED."""
+    if modality == "audio":
+        if duration_seconds >= 30 and match_ratio >= 0.90 and mean_hash_distance <= 12:
+            return "high"
+        if duration_seconds >= 15 and match_ratio >= 0.80 and mean_hash_distance <= 24:
+            return "medium"
+        return "low"
     if duration_seconds >= 30 and match_ratio >= 0.90 and mean_hash_distance <= 36:
         return "high"
     if duration_seconds >= 15 and match_ratio >= 0.80 and mean_hash_distance <= 66:
         return "medium"
     return "low"
+
+
+def audio_fingerprints(raw: bytes) -> list[int]:
+    """Create one 80-bit fingerprint per second from four filtered audio bands."""
+    from array import array
+    import math
+
+    samples = array("f")
+    samples.frombytes(raw)
+    if sys.byteorder != "little":
+        samples.byteswap()
+    samples_per_second = AUDIO_SAMPLE_RATE * AUDIO_CHANNELS
+    samples = samples[:len(samples) - (len(samples) % samples_per_second)]
+    if not samples:
+        return []
+
+    subchunk_frames = AUDIO_SAMPLE_RATE // AUDIO_SUBCHUNKS_PER_SECOND
+    subchunk_values = subchunk_frames * AUDIO_CHANNELS
+    fingerprints = []
+    for second_start in range(0, len(samples), samples_per_second):
+        fingerprint = 0
+        valid_bins = 0
+        for subchunk_index in range(AUDIO_SUBCHUNKS_PER_SECOND):
+            start = second_start + subchunk_index * subchunk_values
+            powers = [0.0] * AUDIO_CHANNELS
+            end = start + subchunk_values
+            for sample_index in range(start, end, AUDIO_CHANNELS):
+                for channel in range(AUDIO_CHANNELS):
+                    value = samples[sample_index + channel]
+                    powers[channel] += value * value
+            powers = [value / subchunk_frames for value in powers]
+            total = sum(powers)
+            if total <= 1e-12 or math.sqrt(total / AUDIO_CHANNELS) < 0.002:
+                continue
+            valid_bins += 1
+            for power in powers:
+                quantized = min(3, int((power / total) * 4))
+                fingerprint = (fingerprint << 2) | quantized
+        fingerprints.append(
+            fingerprint if valid_bins >= AUDIO_SUBCHUNKS_PER_SECOND * 0.7 else -1
+        )
+    return fingerprints
+
+
+def audio_frame_hashes(path: Path, duration: float, edge: str) -> list[int]:
+    """Extract local audio features from four frequency bands, one signature per second."""
+    if duration <= 0:
+        return []
+    count = min(WINDOW_SECONDS, max(1, int(duration)))
+    seek = 0 if edge == "start" else max(0, duration - count)
+    filter_graph = (
+        "[0:a:0]aresample=8000,aformat=channel_layouts=mono,asplit=4[a][b][c][d];"
+        "[a]lowpass=f=250[lo];"
+        "[b]highpass=f=250,lowpass=f=700[mid1];"
+        "[c]highpass=f=700,lowpass=f=1800[mid2];"
+        "[d]highpass=f=1800,lowpass=f=3800[hi];"
+        "[lo][mid1][mid2][hi]amerge=inputs=4,"
+        "aformat=sample_fmts=flt:sample_rates=8000:channel_layouts=4.0[out]"
+    )
+    raw = run([
+        "ffmpeg", "-v", "error", "-ss", str(seek), "-i", str(path),
+        "-t", str(count), "-filter_complex", filter_graph, "-map", "[out]",
+        "-vn", "-sn", "-f", "f32le", "-ac", str(AUDIO_CHANNELS),
+        "-ar", str(AUDIO_SAMPLE_RATE), "pipe:1",
+    ], binary=True)
+    return audio_fingerprints(raw)
 
 
 def frame_hashes(path: Path, duration: float, edge: str) -> list[int]:
@@ -102,18 +185,26 @@ def frame_hashes(path: Path, duration: float, edge: str) -> list[int]:
     ]
 
 
-def matching_runs(left: list[int], right: list[int], edge: str) -> list[dict]:
-    """Align sampled frames and tolerate up to two isolated visual mismatches."""
+def matching_runs(
+    left: list[int],
+    right: list[int],
+    edge: str,
+    *,
+    max_hash_distance: int = MAX_HASH_DISTANCE,
+    max_alignment_shift: int = MAX_ALIGNMENT_SHIFT_SECONDS,
+    min_match_seconds: int = MIN_MATCH_SECONDS,
+) -> list[dict]:
+    """Align sampled signatures and tolerate up to two isolated mismatches."""
     if not left or not right:
         return []
 
     candidates = []
-    max_shift = min(MAX_ALIGNMENT_SHIFT_SECONDS, max(len(left), len(right)) - 1)
+    max_shift = min(max_alignment_shift, max(len(left), len(right)) - 1)
     for shift in range(-max_shift, max_shift + 1):
         left_start = max(0, shift)
         right_start = max(0, -shift)
         limit = min(len(left) - left_start, len(right) - right_start)
-        if limit < MIN_MATCH_SECONDS:
+        if limit < min_match_seconds:
             continue
 
         run_start = None
@@ -121,8 +212,10 @@ def matching_runs(left: list[int], right: list[int], edge: str) -> list[dict]:
         miss_count = 0
         distances = []
         for index in range(limit):
-            distance = (left[left_start + index] ^ right[right_start + index]).bit_count()
-            if distance <= MAX_HASH_DISTANCE:
+            left_hash = left[left_start + index]
+            right_hash = right[right_start + index]
+            distance = max_hash_distance + 1 if left_hash < 0 or right_hash < 0 else (left_hash ^ right_hash).bit_count()
+            if distance <= max_hash_distance:
                 if run_start is None:
                     run_start = index
                 last_match = index
@@ -132,7 +225,7 @@ def matching_runs(left: list[int], right: list[int], edge: str) -> list[dict]:
                 miss_count += 1
                 if miss_count > MAX_CONSECUTIVE_MISSES:
                     run_length = last_match - run_start + 1
-                    if run_length >= MIN_MATCH_SECONDS:
+                    if run_length >= min_match_seconds:
                         candidates.append({
                             "edge": edge,
                             "episode_a_offset_seconds": left_start + run_start,
@@ -146,7 +239,7 @@ def matching_runs(left: list[int], right: list[int], edge: str) -> list[dict]:
                     run_start, last_match, miss_count, distances = None, None, 0, []
         if run_start is not None and last_match is not None:
             run_length = last_match - run_start + 1
-            if run_length >= MIN_MATCH_SECONDS:
+            if run_length >= min_match_seconds:
                 candidates.append({
                     "edge": edge,
                     "episode_a_offset_seconds": left_start + run_start,
