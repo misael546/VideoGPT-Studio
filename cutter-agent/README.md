@@ -21,7 +21,8 @@ El escaneo:
 - obtiene duración, resolución y tamaño con FFprobe;
 - calcula huellas visuales ligeras en los primeros y últimos 180 segundos;
 - compara muestras con tolerancia de hasta 15 segundos de desfase y informa secuencias visualmente parecidas como **candidatas** a opening/ending, con offsets separados para cada episodio;
-- propone un orden por número de episodio cuando puede inferirlo del nombre.
+- propone un orden por número de episodio cuando puede inferirlo del nombre;
+- expresa los tiempos de las coincidencias de ending como segundos desde el inicio del episodio, no desde el comienzo de la ventana final.
 
 No recorta ni modifica originales. Las coincidencias son sugerencias para revisar, no una garantía de que una secuencia sea opening/ending. El informe no se publica ni se envía a ninguna parte.
 
