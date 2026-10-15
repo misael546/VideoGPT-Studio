@@ -397,6 +397,7 @@ def scan(
     hashes = {}
     errors = []
     audio_warnings = []
+    visual_warnings = []
     selected_cache_path = (cache_path or (folder / ".cutter-studio-cache.json")).expanduser().resolve()
     old_cache = load_cache(selected_cache_path) if use_cache else {}
     new_cache = {}
@@ -405,6 +406,7 @@ def scan(
 
     for file_index, path in enumerate(paths, start=1):
         file_audio_warnings = []
+        file_visual_warnings = []
         was_cached = False
         resolved = None
         if progress:
@@ -430,9 +432,16 @@ def scan(
                         was_cached = True
                         cached_audio_warnings = cached.get("audio_warnings", [])
                         if isinstance(cached_audio_warnings, list):
-                            audio_warnings.extend(
+                            file_audio_warnings = [
                                 warning for warning in cached_audio_warnings if isinstance(warning, dict)
-                            )
+                            ]
+                            audio_warnings.extend(file_audio_warnings)
+                        cached_visual_warnings = cached.get("visual_warnings", [])
+                        if isinstance(cached_visual_warnings, list):
+                            file_visual_warnings = [
+                                warning for warning in cached_visual_warnings if isinstance(warning, dict)
+                            ]
+                            visual_warnings.extend(file_visual_warnings)
                         cache_hits += 1
                     except (ValueError, TypeError, AttributeError):
                         meta = None
@@ -444,7 +453,16 @@ def scan(
                 }
                 if meta["duration_seconds"] >= MIN_MATCH_SECONDS:
                     for edge in ("start", "end"):
-                        hashes[path]["visual"][edge] = frame_hashes(path, meta["duration_seconds"], edge)
+                        try:
+                            hashes[path]["visual"][edge] = frame_hashes(path, meta["duration_seconds"], edge)
+                        except (RuntimeError, ValueError, OSError) as exc:
+                            warning = {
+                                "filename": path.name,
+                                "edge": edge,
+                                "error": str(exc),
+                            }
+                            file_visual_warnings.append(warning)
+                            visual_warnings.append(warning)
                         if meta.get("has_audio"):
                             try:
                                 hashes[path]["audio"][edge] = audio_frame_hashes(path, meta["duration_seconds"], edge)
@@ -472,6 +490,7 @@ def scan(
                     "signature": signature,
                     "metadata": meta,
                     "audio_warnings": file_audio_warnings,
+                    "visual_warnings": file_visual_warnings,
                     "hashes": {
                         modality: {
                             edge: [format(value, "x") for value in hashes[path][modality].get(edge, [])]
@@ -632,6 +651,7 @@ def scan(
         "repeated_sequence_candidates": candidates,
         "errors": errors,
         "audio_warnings": audio_warnings,
+        "visual_warnings": visual_warnings,
         "notes": [
             "Las huellas visuales y las de audio son señales candidatas; confirmar el opening/ending antes de recortar.",
             "Una coincidencia de audio puede ser música de fondo compartida y no implica que deba eliminarse todo ese intervalo.",
@@ -680,6 +700,8 @@ def main() -> int:
         print(f"Archivos con error: {len(report['errors'])}")
     if report["audio_warnings"]:
         print(f"Advertencias de audio: {len(report['audio_warnings'])}; las coincidencias visuales siguen disponibles")
+    if report["visual_warnings"]:
+        print(f"Advertencias visuales: {len(report['visual_warnings'])}; las coincidencias de audio siguen disponibles")
     return 0
 
 
