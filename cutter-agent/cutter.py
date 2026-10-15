@@ -556,6 +556,8 @@ def main() -> int:
     print(f"Informe local: {args.output.resolve()}")
     if report["errors"]:
         print(f"Archivos con error: {len(report['errors'])}")
+    if report["audio_warnings"]:
+        print(f"Advertencias de audio: {len(report['audio_warnings'])}; las coincidencias visuales siguen disponibles")
     return 0
 
 
