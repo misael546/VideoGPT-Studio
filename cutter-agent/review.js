@@ -36,6 +36,10 @@ function formatSeconds(value) {
     : remainder + "." + tenths + " s";
 }
 
+function isServerMode() {
+  return window.location.protocol === "http:" && window.location.hostname === "127.0.0.1";
+}
+
 function basename(path) {
   return String(path || "").split(/[\\/]/).pop() || "";
 }
@@ -120,39 +124,65 @@ function evidenceLabels(cut) {
   return labels.length ? labels : ["Sin métricas de coincidencia"];
 }
 
-function preview(episode, cut) {
-  const filename = String(episode.filename || basename(episode.path)).toLowerCase();
-  const choices = state.filesByName.get(filename);
-  if (!choices || choices.length === 0) {
-    setStatus("Selecciona primero la carpeta que contiene los episodios para activar las previsualizaciones.", "warning");
-    return;
-  }
-  if (choices.length > 1) {
-    setStatus('Hay varios archivos llamados "' + episode.filename + '". Usa nombres únicos para previsualizarlos sin ambigüedad.', "warning");
-    return;
+async function preview(episode, cut, episodeIndex) {
+  ui.previewFilename.textContent = episode.filename || basename(episode.path);
+  ui.previewHelp.textContent = "Candidato " + (cut.id || "") + ": " + formatSeconds(cut.start_seconds) + "–" + formatSeconds(cut.end_seconds) + ". Comprueba ambos límites antes de aprobar.";
+  document.querySelector(".preview-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  let nextUrl;
+  let playbackStart = 0;
+
+  if (isServerMode()) {
+    setStatus("Generando vista previa local con FFmpeg…", "warning");
+    const params = new URLSearchParams({
+      episode: String(episodeIndex),
+      start: String(cut.start_seconds),
+      end: String(cut.end_seconds),
+    });
+    try {
+      const response = await fetch("/api/preview?" + params.toString(), { cache: "no-store" });
+      if (!response.ok) {
+        let detail = "No se pudo generar la vista previa.";
+        try { detail = (await response.json()).error || detail; } catch (_) {}
+        throw new Error(detail);
+      }
+      playbackStart = Number(response.headers.get("X-Preview-Start")) || 0;
+      nextUrl = URL.createObjectURL(await response.blob());
+    } catch (error) {
+      setStatus(error.message || "Falló la vista previa local.", "error");
+      return;
+    }
+  } else {
+    const filename = String(episode.filename || basename(episode.path)).toLowerCase();
+    const choices = state.filesByName.get(filename);
+    if (!choices || choices.length === 0) {
+      setStatus("Selecciona primero la carpeta que contiene los episodios para activar las previsualizaciones.", "warning");
+      return;
+    }
+    if (choices.length > 1) {
+      setStatus('Hay varios archivos llamados "' + episode.filename + '". Usa nombres únicos para previsualizarlos sin ambigüedad.', "warning");
+      return;
+    }
+    nextUrl = URL.createObjectURL(choices[0]);
   }
 
-  const file = choices[0];
-  const nextUrl = URL.createObjectURL(file);
   const oldUrl = state.previewUrl;
   ui.previewVideo.pause();
   ui.previewVideo.src = nextUrl;
   state.previewUrl = nextUrl;
-  ui.previewFilename.textContent = episode.filename || file.name;
-  ui.previewHelp.textContent = "Candidato " + (cut.id || "") + ": " + formatSeconds(cut.start_seconds) + "–" + formatSeconds(cut.end_seconds) + ". Comprueba ambos límites antes de aprobar.";
   ui.previewVideo.load();
   ui.previewVideo.onloadedmetadata = function () {
     const start = Number(cut.start_seconds) || 0;
-    ui.previewVideo.currentTime = Math.max(0, Math.min(start - 5, Math.max(0, ui.previewVideo.duration - 0.1)));
+    const target = isServerMode() ? start - playbackStart : start - 5;
+    ui.previewVideo.currentTime = Math.max(0, Math.min(target, Math.max(0, ui.previewVideo.duration - 0.1)));
+    setStatus("Vista previa lista. Comprueba el inicio y el final del intervalo.", "success");
   };
   ui.previewVideo.onerror = function () {
-    setStatus("El navegador no pudo reproducir ese archivo. Prueba una fuente compatible o abre el episodio en tu reproductor habitual.", "warning");
+    setStatus("El navegador no pudo reproducir la vista previa.", "warning");
   };
   if (oldUrl) URL.revokeObjectURL(oldUrl);
-  document.querySelector(".preview-panel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function makeCutCard(episode, cut, index) {
+function makeCutCard(episode, cut, index, episodeIndex) {
   const card = el("article", "cut-card");
   const head = el("div", "cut-head");
   const titleBlock = el("div");
@@ -204,7 +234,7 @@ function makeCutCard(episode, cut, index) {
 
   const previewButton = el("button", "secondary-button", "Ver candidato");
   previewButton.type = "button";
-  previewButton.addEventListener("click", function () { preview(episode, cut); });
+  previewButton.addEventListener("click", function () { preview(episode, cut, episodeIndex); });
 
   function handleTimeChange() {
     const start = Number(startInput.value);
@@ -252,7 +282,7 @@ function renderPlan() {
   }
   const filter = ui.filterStatus.value;
   let visibleCuts = 0;
-  for (const episode of state.plan.episodes) {
+  state.plan.episodes.forEach(function (episode, episodeIndex) {
     const cuts = Array.isArray(episode.cuts) ? episode.cuts : [];
     const filteredCuts = cuts.map(function (cut, index) { return { cut: cut, index: index }; })
       .filter(function (item) { return filter === "all" || getCutState(item.cut) === filter; });
@@ -269,11 +299,11 @@ function renderPlan() {
     const list = el("div", "cut-list");
     for (const item of filteredCuts) {
       visibleCuts += 1;
-      list.append(makeCutCard(episode, item.cut, item.index));
+      list.append(makeCutCard(episode, item.cut, item.index, episodeIndex));
     }
     card.append(header, list);
     ui.episodeList.append(card);
-  }
+  });
   if (!visibleCuts) ui.episodeList.append(el("div", "empty-state", "No hay candidatos para este filtro."));
   updateCounters();
 }
@@ -309,8 +339,7 @@ function validatePlanForExport() {
   return errors;
 }
 
-ui.planFile.addEventListener("change", async function () {
-  const file = ui.planFile.files && ui.planFile.files[0];
+async function loadPlanFile(file) {
   if (!file) return;
   try {
     const parsed = JSON.parse(await file.text());
@@ -336,6 +365,11 @@ ui.planFile.addEventListener("change", async function () {
     renderPlan();
     setStatus(error.message || "No se pudo leer el plan JSON.", "error");
   }
+}
+
+ui.planFile.addEventListener("change", async function () {
+  const file = ui.planFile.files && ui.planFile.files[0];
+  await loadPlanFile(file);
 });
 
 ui.videoFolder.addEventListener("change", function () {
@@ -358,12 +392,32 @@ ui.videoFolder.addEventListener("change", function () {
 
 ui.filterStatus.addEventListener("change", renderPlan);
 
-ui.exportPlan.addEventListener("click", function () {
+async function exportPlan() {
   if (!state.plan) return;
   const errors = validatePlanForExport();
   if (errors.length) {
     setStatus("No se puede exportar todavía: " + errors.slice(0, 3).join(" "), "error");
     return;
+  }
+  const approved = state.plan.episodes.reduce(function (sum, episode) {
+    return sum + episode.cuts.filter(function (cut) { return cut.approved === true; }).length;
+  }, 0);
+  if (isServerMode()) {
+    setStatus("Guardando plan revisado localmente…", "warning");
+    try {
+      const response = await fetch("/api/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state.plan),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "No se pudo guardar el plan.");
+      setStatus("Plan guardado en tu PC: " + result.filename + ". " + approved + " cortes aprobados; los demás se conservarán.", "success");
+      return;
+    } catch (error) {
+      setStatus(error.message || "No se pudo guardar el plan local.", "error");
+      return;
+    }
   }
   const blob = new Blob([JSON.stringify(state.plan, null, 2)], { type: "application/json;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -374,11 +428,27 @@ ui.exportPlan.addEventListener("click", function () {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
-  const approved = state.plan.episodes.reduce(function (sum, episode) {
-    return sum + episode.cuts.filter(function (cut) { return cut.approved === true; }).length;
-  }, 0);
   setStatus("Plan exportado. " + approved + " cortes quedaron aprobados; los demás se conservarán. Usa edit-plan-reviewed.json para generar el manifiesto.", "success");
-});
+}
+ui.exportPlan.addEventListener("click", exportPlan);
+
+if (isServerMode()) {
+  document.querySelector(".input-grid").hidden = true;
+  document.getElementById("import-title").textContent = "Plan cargado desde tu PC";
+  ui.exportPlan.textContent = "Guardar plan revisado en el PC";
+  ui.videoFolder.closest("label").hidden = true;
+  fetch("/api/plan", { cache: "no-store" })
+    .then(async function (response) {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "No se pudo cargar el plan.");
+      const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+      await loadPlanFile(blob);
+      setStatus("Plan cargado desde tu PC: " + data.episodes.length + " episodios. Las vistas previas se generan localmente con FFmpeg.", "success");
+    })
+    .catch(function (error) {
+      setStatus(error.message || "No se pudo cargar el plan desde el servidor local.", "error");
+    });
+}
 
 window.addEventListener("beforeunload", function () {
   if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
