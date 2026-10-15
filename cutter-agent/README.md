@@ -45,6 +45,8 @@ python edit_plan.py create scan-report.json --output edit-plan.json
 
 El plan incluye el orden propuesto y las coincidencias visuales y/o de audio como candidatos. Agrupa intervalos superpuestos descubiertos en varias comparaciones entre episodios y conserva las modalidades y pares que aportaron evidencia, evitando mostrar repetidamente el mismo corte. Cada corte comienza con `"approved": false`; por tanto, **no se elimina nada por defecto**. Abre `review.html`, carga el plan y la carpeta de episodios, reproduce cada candidato, ajusta los tiempos y marca «Aprobar eliminación» solo cuando lo hayas confirmado. Si un nombre de archivo no es único, el generador no asigna candidatos ambiguos a una ruta.
 
+**Orden manual de unión:** cada tarjeta de episodio incluye el selector «Orden de salida». Cambia la posición final de cada episodio, incluso si el archivo no incluye número o la numeración se detectó mal. Al mover uno, los demás se desplazan y se renumeran automáticamente; las decisiones de cortes permanecen asociadas al episodio correcto. El orden que ves en el plan revisado es el que usará el montaje final. Exporta/guarda el plan revisado para conservar el orden.
+
 Los tiempos sugeridos corresponden únicamente al tramo que el escáner logró emparejar. No se asume que ese tramo cubra el opening o ending completo; revisa y ajusta `start_seconds` y `end_seconds` según corresponda. Los intervalos aprobados se eliminarán del episodio; los no aprobados se conservarán.
 
 ### 3. Generar un manifiesto de renderizado
