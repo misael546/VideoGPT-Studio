@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import shutil
 import subprocess
 import tempfile
@@ -21,7 +22,7 @@ class ProbeValidationTests(unittest.TestCase):
                 "format": {"duration": "NaN", "size": str(path.stat().st_size)},
                 "streams": [{"codec_type": "video", "width": 320, "height": 240}],
             }
-            with mock.patch.object(cutter, "run", return_value=__import__("json").dumps(payload)):
+            with mock.patch.object(cutter, "run", return_value=json.dumps(payload)):
                 with self.assertRaisesRegex(ValueError, "Duración no válida"):
                     cutter.probe(path)
 
