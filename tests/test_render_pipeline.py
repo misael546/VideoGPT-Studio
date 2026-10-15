@@ -65,6 +65,34 @@ class ManifestTests(unittest.TestCase):
             renderer.ensure_output_not_source(episodes, self.video.resolve())
 
     @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg/FFprobe no instalados")
+    @skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg/FFprobe no instalados")
+    def test_failed_final_validation_preserves_previous_output(self):
+        output = self.root / "final.mp4"
+        original_bytes = b"previous validated output"
+        output.write_bytes(original_bytes)
+        self.write_manifest({
+            "schema": "cutter-studio-render/v1",
+            "episodes": [{"path": str(self.video), "start_seconds": 0, "end_seconds": 10}],
+        })
+
+        def fake_command(args, capture=False):
+            target = Path(args[-1])
+            target.write_bytes(b"x" * 2048)
+            return ""
+
+        with patch.object(
+            renderer,
+            "media_info",
+            side_effect=[
+                {"duration": 120.0, "has_audio": True, "has_video": True},
+                {"duration": 10.0, "has_audio": True, "has_video": False},
+            ],
+        ), patch.object(renderer, "command", side_effect=fake_command):
+            with self.assertRaisesRegex(RuntimeError, "no contiene una pista de vídeo"):
+                renderer.render(self.manifest, output, overwrite=True)
+        self.assertEqual(output.read_bytes(), original_bytes)
+
+
     def test_failed_overwrite_render_preserves_previous_output(self):
         output = self.root / "final.mp4"
         original_bytes = b"previous known-good output"
