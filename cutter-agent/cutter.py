@@ -557,8 +557,14 @@ def scan(
         modality = candidate["modalities"][0]
         corroborating = next((
             existing for existing in combined
-            if existing["episode_a"] == candidate["episode_a"]
-            and existing["episode_b"] == candidate["episode_b"]
+            if (
+                existing.get("episode_a_path", existing["episode_a"])
+                == candidate.get("episode_a_path", candidate["episode_a"])
+            )
+            and (
+                existing.get("episode_b_path", existing["episode_b"])
+                == candidate.get("episode_b_path", candidate["episode_b"])
+            )
             and existing["edge"] == candidate["edge"]
             and modality not in existing["modalities"]
             and abs(existing["episode_a_offset_seconds"] - candidate["episode_a_offset_seconds"]) <= 3
