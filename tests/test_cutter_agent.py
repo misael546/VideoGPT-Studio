@@ -30,11 +30,11 @@ class RepeatedSequenceTests(unittest.TestCase):
         self.assertEqual(cutter.matching_runs(frames, frames.copy(), "end"), [])
 
     def test_splits_matches_when_a_frame_differs(self):
-        a = [int('A' * 64, 16) for _ in range(12)]
+        a = [int('A' * 64, 16) for _ in range(20)]
         b = a.copy()
-        b[5] = 0
+        b[10] = 0
         matches = cutter.matching_runs(a, b, "start")
-        self.assertEqual([m["duration_seconds"] for m in matches], [5, 6])
+        self.assertEqual([m["duration_seconds"] for m in matches], [10, 9])
 
 
 if __name__ == "__main__":
