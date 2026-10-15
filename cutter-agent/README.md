@@ -20,7 +20,7 @@ El escaneo:
 - localiza vídeos compatibles en la carpeta (sin recorrer subcarpetas por defecto);
 - obtiene duración, resolución y tamaño con FFprobe;
 - calcula huellas visuales ligeras en los primeros y últimos 180 segundos;
-- informa secuencias visualmente parecidas entre episodios como **candidatas** a opening/ending;
+- compara muestras con tolerancia de hasta 15 segundos de desfase y informa secuencias visualmente parecidas como **candidatas** a opening/ending, con offsets separados para cada episodio;
 - propone un orden por número de episodio cuando puede inferirlo del nombre.
 
 No recorta ni modifica originales. Las coincidencias son sugerencias para revisar, no una garantía de que una secuencia sea opening/ending. El informe no se publica ni se envía a ninguna parte.
