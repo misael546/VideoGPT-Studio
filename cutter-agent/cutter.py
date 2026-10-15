@@ -20,7 +20,7 @@ HASH_HEIGHT = 16
 AHASH_BITS = HASH_WIDTH * HASH_HEIGHT
 DHASH_BITS = HASH_HEIGHT * (HASH_WIDTH - 1)
 MAX_HASH_DISTANCE = 88  # ~17.7% of the combined 496-bit aHash + dHash signature
-MAX_CONSECUTIVE_MISSES = 2
+MAX_MISSES_PER_RUN = 2
 MAX_ALIGNMENT_SHIFT_SECONDS = 15
 AUDIO_SAMPLE_RATE = 8000
 AUDIO_CHANNELS = 4
@@ -226,13 +226,31 @@ def matching_runs(
 
     candidates = []
     max_shift = min(max_alignment_shift, max(len(left), len(right)) - 1)
+
+    # Cheap coarse screen: with an 8-second minimum run and at most 2 mismatches,
+    # sampling every 2 seconds must still find at least 2 matches for every valid run.
+    # This cuts full alignment work for unrelated episode pairs in long seasons.
+    candidate_shifts = []
     for shift in range(-max_shift, max_shift + 1):
         left_start = max(0, shift)
         right_start = max(0, -shift)
         limit = min(len(left) - left_start, len(right) - right_start)
         if limit < min_match_seconds:
             continue
+        coarse_matches = 0
+        for index in range(0, limit, 2):
+            left_hash = left[left_start + index]
+            right_hash = right[right_start + index]
+            if left_hash >= 0 and right_hash >= 0 and (left_hash ^ right_hash).bit_count() <= max_hash_distance:
+                coarse_matches += 1
+                if coarse_matches >= 2:
+                    candidate_shifts.append(shift)
+                    break
 
+    for shift in candidate_shifts:
+        left_start = max(0, shift)
+        right_start = max(0, -shift)
+        limit = min(len(left) - left_start, len(right) - right_start)
         run_start = None
         last_match = None
         miss_count = 0
@@ -245,11 +263,10 @@ def matching_runs(
                 if run_start is None:
                     run_start = index
                 last_match = index
-                miss_count = 0
                 distances.append(distance)
             elif run_start is not None:
                 miss_count += 1
-                if miss_count > MAX_CONSECUTIVE_MISSES:
+                if miss_count > MAX_MISSES_PER_RUN:
                     run_length = last_match - run_start + 1
                     if run_length >= min_match_seconds:
                         candidates.append({
