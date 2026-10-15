@@ -58,6 +58,10 @@ select:focus, input:focus, button:focus-visible { outline: 2px solid var(--accen
 .episode-list { display: grid; gap: 15px; }
 .episode-card { border: 1px solid var(--border); border-radius: 15px; overflow: hidden; background: #111824; }
 .episode-header { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 15px 18px; background: #182231; border-bottom: 1px solid var(--border); }
+.episode-title-group { min-width: 0; flex: 1; }
+.episode-order { display: flex; flex-direction: column; gap: 5px; min-width: 150px; flex: 0 0 165px; }
+.episode-order .field-title { font-size: .75rem; }
+.episode-order select { min-width: 0; }
 .episode-header h3 { margin: 0; font-size: .98rem; overflow-wrap: anywhere; }
 .episode-header p { margin: 3px 0 0; color: var(--muted); font-size: .8rem; }
 .cut-list { display: grid; gap: 0; }
@@ -96,6 +100,7 @@ footer { max-width: 1180px; margin: 0 auto; padding: 0 24px 28px; color: #748398
   .cut-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cut-controls button { grid-column: 1 / -1; }
   .episode-header { align-items: flex-start; flex-direction: column; }
+  .episode-order { width: 100%; min-width: 0; flex-basis: auto; }
   footer { padding: 0 16px 24px; }
 }
 @media (max-width: 430px) {
