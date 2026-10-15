@@ -72,7 +72,7 @@ echo.
 echo Se abrira el revisor local en el navegador.
 echo Carga edit-plan.json y la carpeta de episodios en la pantalla.
 echo Previsualiza los candidatos, corrige tiempos y aprueba solo cortes confirmados.
-echo Exporta edit-plan-reviewed.json en la carpeta de episodios.
+echo Exporta edit-plan-reviewed.json y selecciona ese archivo al renderizar.
 start "" "%~dp0review.html"
 pause
 goto menu
