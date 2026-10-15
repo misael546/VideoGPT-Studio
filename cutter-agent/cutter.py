@@ -137,6 +137,14 @@ def matching_runs(left: list[int], right: list[int], edge: str) -> list[dict]:
     return sorted(kept, key=lambda item: (item["episode_a_offset_seconds"], item["episode_b_offset_seconds"]))
 
 
+def absolute_offset(offset: int, duration: float, edge: str) -> int:
+    """Convert a sampled-window offset into seconds from the episode's start."""
+    if edge == "end":
+        window_length = min(WINDOW_SECONDS, max(1, int(duration)))
+        return max(0, int(duration - window_length)) + offset
+    return offset
+
+
 def scan(folder: Path, output: Path, recursive: bool = False) -> dict:
     if not folder.is_dir():
         raise ValueError(f"No existe la carpeta: {folder}")
@@ -172,12 +180,18 @@ def scan(folder: Path, output: Path, recursive: bool = False) -> dict:
     valid_paths = list(hashes)
     for i, left_path in enumerate(valid_paths):
         for right_path in valid_paths[i + 1:]:
-            left_meta = next(v for v in videos if v["filename"] == left_path.name)
-            right_meta = next(v for v in videos if v["filename"] == right_path.name)
+            left_meta = next(v for v in videos if v["path"] == str(left_path.resolve()))
+            right_meta = next(v for v in videos if v["path"] == str(right_path.resolve()))
             for edge in ("start", "end"):
                 a = hashes[left_path].get(edge, [])
                 b = hashes[right_path].get(edge, [])
                 for match in matching_runs(a, b, edge):
+                    match["episode_a_offset_seconds"] = absolute_offset(
+                        match["episode_a_offset_seconds"], left_meta["duration_seconds"], edge
+                    )
+                    match["episode_b_offset_seconds"] = absolute_offset(
+                        match["episode_b_offset_seconds"], right_meta["duration_seconds"], edge
+                    )
                     candidates.append({
                         "episode_a": left_path.name,
                         "episode_b": right_path.name,
