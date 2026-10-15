@@ -89,16 +89,23 @@ if not exist "%PLAN%" (
   goto menu
 )
 set "OUTPUT_FOLDER="
-set /p "OUTPUT_FOLDER=Carpeta existente para guardar resultado/manifiesto (sin comillas): "
-if not exist "%OUTPUT_FOLDER%\" (
-  echo ERROR: La carpeta de salida no existe.
+if defined VIDEO_FOLDER set "OUTPUT_FOLDER=%VIDEO_FOLDER%\Cutter-Studio-Output"
+set /p "OUTPUT_FOLDER=Carpeta para guardar resultado/manifiesto (Enter usa %OUTPUT_FOLDER%; sin comillas): "
+if not defined OUTPUT_FOLDER (
+  echo ERROR: Indica una carpeta de salida o primero analiza una temporada.
   pause
   goto menu
 )
-set "OUTPUT_VIDEO="
-set /p "OUTPUT_VIDEO=Ruta completa del MP4 final (ej. D:\Anime\temporada-final.mp4; sin comillas): "
+if not exist "%OUTPUT_FOLDER%\" mkdir "%OUTPUT_FOLDER%"
+if not exist "%OUTPUT_FOLDER%\" (
+  echo ERROR: No se pudo crear la carpeta de salida.
+  pause
+  goto menu
+)
+set "OUTPUT_VIDEO=%OUTPUT_FOLDER%\temporada-final.mp4"
+set /p "OUTPUT_VIDEO=Ruta MP4 final (Enter usa %OUTPUT_VIDEO%; sin comillas): "
 set "WATERMARK="
-set /p "WATERMARK=Ruta de marca de agua PNG/JPG/WebP (Enter para omitir): "
+set /p "WATERMARK=Ruta de marca de agua PNG/JPG/WebP (Enter para omitir; sin comillas): "
 python "%~dp0edit_plan.py" render-manifest "%PLAN%" --output "%OUTPUT_FOLDER%\render-manifest.json"
 if errorlevel 1 (
   echo No se pudo validar el plan; no se renderizo nada.
