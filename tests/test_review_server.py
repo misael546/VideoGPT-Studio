@@ -146,6 +146,15 @@ class ReviewServerTests(unittest.TestCase):
         self.assertGreater(len(payload), 1000)
         self.assertTrue(list(self.preview_dir.glob("*.mp4")))
 
+    def test_rejects_non_finite_preview_query_times(self):
+        for start, end in [("nan", "1.5"), ("0.5", "inf"), ("-inf", "1.5")]:
+            query = urlencode({"episode": 0, "start": start, "end": end})
+            with self.subTest(start=start, end=end):
+                with self.assertRaises(HTTPError) as context:
+                    urlopen(self.base_url + "/api/preview?" + query, timeout=5)
+                self.assertEqual(context.exception.code, 400)
+
+
     def test_rejects_preview_interval_beyond_episode_duration(self):
         query = urlencode({"episode": 0, "start": 2.5, "end": 4})
         with self.assertRaises(HTTPError) as context:
