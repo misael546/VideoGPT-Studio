@@ -73,6 +73,12 @@ class ReviewServerTests(unittest.TestCase):
         self.thread.join(timeout=2)
         self.temp.cleanup()
 
+    def test_serves_episode_ordering_module(self):
+        with urlopen(self.base_url + "/episode-order.js", timeout=5) as response:
+            self.assertIn("javascript", response.headers.get("Content-Type", ""))
+            payload = response.read().decode("utf-8")
+        self.assertIn("moveEpisodeToPosition", payload)
+
     def test_plan_api_reads_configured_plan(self):
         with urlopen(self.base_url + "/api/plan", timeout=5) as response:
             data = json.loads(response.read().decode("utf-8"))
