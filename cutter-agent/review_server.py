@@ -187,7 +187,14 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
                 return
             episode = episodes[episode_index]
             duration = float(episode["duration_seconds"])
-            if start < 0 or end <= start or end > duration + 0.05 or end - start > MAX_PREVIEW_SECONDS:
+            if (
+                not math.isfinite(start)
+                or not math.isfinite(end)
+                or start < 0
+                or end <= start
+                or end > duration + 0.05
+                or end - start > MAX_PREVIEW_SECONDS
+            ):
                 self.send_json(400, {"error": "Intervalo de vista previa no válido o demasiado largo."})
                 return
             source = Path(episode["path"]).resolve()
