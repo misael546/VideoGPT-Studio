@@ -37,6 +37,15 @@ def run(command: list[str], *, binary: bool = False):
     return result.stdout if binary else result.stdout.decode("utf-8", "replace").strip()
 
 
+def season_number(path: Path) -> int | None:
+    name = path.stem.lower()
+    labeled = re.search(
+        r"(?:season|temporada|temp|s)[ ._-]*0*(\d{1,3})(?:[ ._-]*e[ ._-]*0*\d{1,4})?\b",
+        name,
+    )
+    return int(labeled.group(1)) if labeled else None
+
+
 def episode_number(path: Path) -> int | None:
     name = path.stem.lower()
     labeled = re.search(r"(?:episode|episodio|chapter|capitulo|cap|ep|e)[ ._-]*0*(\d{1,4})\b", name)
@@ -429,6 +438,7 @@ def scan(
             entry = {
                 "filename": path.name,
                 "path": resolved,
+                "season_number": season_number(path),
                 "episode_number": episode_number(path),
                 **meta,
             }
@@ -461,7 +471,12 @@ def scan(
     if use_cache:
         save_cache(selected_cache_path, new_cache)
 
-    videos.sort(key=lambda v: (v["episode_number"] is None, v["episode_number"] or 0, v["filename"].lower()))
+    videos.sort(key=lambda v: (
+        v.get("season_number") or 0,
+        v["episode_number"] is None,
+        v["episode_number"] or 0,
+        v["filename"].lower(),
+    ))
     candidates = []
     valid_paths = list(hashes)
     pair_total = len(valid_paths) * (len(valid_paths) - 1) // 2
@@ -519,6 +534,10 @@ def scan(
                         candidates.append({
                             "episode_a": left_path.name,
                             "episode_b": right_path.name,
+                            "episode_a_path": str(left_path.resolve()),
+                            "episode_b_path": str(right_path.resolve()),
+                            "episode_a_season": left_meta.get("season_number"),
+                            "episode_b_season": right_meta.get("season_number"),
                             "episode_a_number": left_meta["episode_number"],
                             "episode_b_number": right_meta["episode_number"],
                             "confidence": "candidate",
