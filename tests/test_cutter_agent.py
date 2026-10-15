@@ -297,6 +297,83 @@ class ScannerIntegrationTests(unittest.TestCase):
             self.assertEqual(candidate["episode_b_cut_start_seconds"], 0)
             self.assertIn(candidate["match_quality"]["visual"]["level"], {"low", "medium", "high"})
 
+    def test_same_filenames_in_different_seasons_do_not_cross_combine_evidence(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            season_one = root / "Season_01"
+            season_two = root / "Season_02"
+            season_one.mkdir()
+            season_two.mkdir()
+            files = {
+                "s1e1": season_one / "Episode 01.mkv",
+                "s1e2": season_one / "Episode 02.mkv",
+                "s2e1": season_two / "Episode 01.mkv",
+                "s2e2": season_two / "Episode 02.mkv",
+            }
+            for path in files.values():
+                path.write_bytes(path.name.encode("utf-8"))
+
+            visual_bases = {
+                "s1e1": 0,
+                "s1e2": 0,
+                "s2e1": sum(1 << bit for bit in range(0, 120)),
+                "s2e2": sum(1 << bit for bit in range(200, 320)),
+            }
+            audio_bases = {
+                "s1e1": sum(1 << bit for bit in range(0, 30)),
+                "s1e2": sum(1 << bit for bit in range(40, 70)),
+                "s2e1": 0,
+                "s2e2": 0,
+            }
+
+            def key_for_path(path):
+                for key, value in files.items():
+                    if value.resolve() == path.resolve():
+                        return key
+                raise AssertionError("unexpected test path: " + str(path))
+
+            def fake_probe(path):
+                return {
+                    "duration_seconds": 20.0,
+                    "width": 320,
+                    "height": 240,
+                    "has_audio": True,
+                    "size_bytes": path.stat().st_size,
+                }
+
+            def fake_visual(path, duration, edge):
+                base = visual_bases[key_for_path(path)]
+                return [base ^ (1 << (400 + (i % 20))) for i in range(20)]
+
+            def fake_audio(path, duration, edge):
+                base = audio_bases[key_for_path(path)]
+                return [base | (1 << (70 + (i % 10))) for i in range(20)]
+
+            with mock.patch.object(cutter, "probe", side_effect=fake_probe), \
+                 mock.patch.object(cutter, "frame_hashes", side_effect=fake_visual), \
+                 mock.patch.object(cutter, "audio_frame_hashes", side_effect=fake_audio):
+                report = cutter.scan(root, root / "scan.json", recursive=True, use_cache=False)
+
+            start_candidates = [
+                item for item in report["repeated_sequence_candidates"]
+                if item["edge"] == "start"
+            ]
+            s1_pair = {str(files["s1e1"].resolve()), str(files["s1e2"].resolve())}
+            s2_pair = {str(files["s2e1"].resolve()), str(files["s2e2"].resolve())}
+            visual_s1 = [
+                item for item in start_candidates
+                if {item["episode_a_path"], item["episode_b_path"]} == s1_pair
+            ]
+            audio_s2 = [
+                item for item in start_candidates
+                if {item["episode_a_path"], item["episode_b_path"]} == s2_pair
+            ]
+            self.assertTrue(visual_s1, "Debe existir la coincidencia visual en temporada 1")
+            self.assertTrue(audio_s2, "Debe existir la coincidencia de audio en temporada 2")
+            self.assertTrue(all(item["modalities"] == ["visual"] for item in visual_s1))
+            self.assertTrue(all(item["modalities"] == ["audio"] for item in audio_s2))
+
+
     def test_scanner_finds_shared_audio_when_opening_images_differ(self):
         with tempfile.TemporaryDirectory() as temp_name:
             root = Path(temp_name)
