@@ -8,6 +8,14 @@ Abre `INICIAR_CUTTER_STUDIO.bat`. El menú permite analizar episodios, revisar c
 
 El lanzador abre `review_server.py`, que enlaza solo a `127.0.0.1` en un puerto local. La interfaz `review.html` carga el plan automáticamente; FFmpeg convierte las vistas previas a MP4 para admitir MKV y otros formatos. Ajusta los límites y elige «Aprobar eliminación», «Conservar» o «Pendiente de revisión». El botón de guardar crea `edit-plan-reviewed.json` en la carpeta local. Los vídeos no se suben a Internet y el servidor se detiene al cerrar su ventana.
 
+Para iniciar el revisor manualmente desde una terminal:
+
+```bash
+python review_server.py --folder "D:\\Anime\\Temporada 1" --plan "D:\\Anime\\Temporada 1\\edit-plan.json"
+```
+
+El servidor elige un puerto disponible automáticamente y abre el navegador. Solo escucha en `127.0.0.1`; no lo publiques ni lo expongas a la red.
+
 
 ## Requisitos
 
