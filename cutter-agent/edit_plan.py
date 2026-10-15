@@ -70,8 +70,11 @@ def create_plan(scan_path: Path) -> dict:
                 # Ambiguous duplicate filenames should never silently target a wrong source.
                 continue
             episode = possible[0]
-            start = max(0.0, offset)
-            end = min(episode["duration_seconds"], offset + duration)
+            start = max(0.0, float(match.get(f"episode_{side}_cut_start_seconds", offset)))
+            end = min(
+                episode["duration_seconds"],
+                float(match.get(f"episode_{side}_cut_end_seconds", offset + duration)),
+            )
             if end <= start:
                 continue
             candidate_count += 1
@@ -86,6 +89,7 @@ def create_plan(scan_path: Path) -> dict:
                 ],
                 "alignment_shift_seconds": int(match.get("alignment_shift_seconds") or 0),
                 "match_quality": match.get("match_quality", {}),
+                "boundary_expanded": bool(match.get(f"episode_{side}_boundary_expanded", False)),
                 "review_status": "pending",
                 "approved": False,
             })
