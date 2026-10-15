@@ -18,6 +18,8 @@ Desde esta carpeta:
 python cutter.py scan "D:\\Anime\\Temporada 1" --output scan-report.json
 ```
 
+La primera ejecución crea una caché local oculta `.cutter-studio-cache.json` dentro de la carpeta analizada. Las siguientes reutilizan metadatos y huellas visuales si el tamaño y la fecha de modificación del archivo no cambiaron; así se evita volver a decodificar los mismos vídeos al ajustar el plan. Para forzar un análisis completo usa `--no-cache`; para guardar la caché en otra ruta usa `--cache-file "D:\\CutterCache\\anime.json"`.
+
 El escáner obtiene duración, resolución y tamaño, calcula huellas visuales de los primeros y últimos 180 segundos y compara secuencias con hasta 15 segundos de desfase, tolera hasta dos fotogramas aislados distintos y registra métricas de calidad (proporción de muestras coincidentes y distancia media de hash). Cuando la coincidencia toca el borde inicial/final del archivo, también propone ampliar el corte hasta el borde si queda a 10 segundos o menos; estos límites aparecen marcados para revisión. Propone el orden por número de episodio cuando puede inferirlo del nombre. Los tiempos reportados son segundos desde el inicio de cada episodio.
 
 ### 2. Crear el plan de edición revisable
