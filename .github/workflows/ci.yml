@@ -18,6 +18,10 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Install FFmpeg for local render integration tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
       - name: Validate resource library and video generator
         run: |
           python -m py_compile scripts/generate-free-isekai.py scripts/validate-resource-library.py
