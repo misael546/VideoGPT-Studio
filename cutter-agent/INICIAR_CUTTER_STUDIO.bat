@@ -12,14 +12,20 @@ echo ========================================
 echo.
 echo 1. Analizar episodios y crear plan
 echo 2. Renderizar un plan ya revisado
-echo 3. Salir
+echo 3. Preparar/verificar requisitos de Windows
+echo 4. Salir
 echo.
 set "CHOICE="
 set /p "CHOICE=Selecciona una opcion: "
 
 if "%CHOICE%"=="1" goto scan
 if "%CHOICE%"=="2" goto render
-if "%CHOICE%"=="3" exit /b 0
+if "%CHOICE%"=="3" goto requirements
+if "%CHOICE%"=="4" exit /b 0
+goto menu
+
+:requirements
+call "%~dp0PREPARAR_REQUISITOS_WINDOWS.bat"
 goto menu
 
 :check
