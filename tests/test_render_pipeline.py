@@ -65,7 +65,7 @@ class ManifestTests(unittest.TestCase):
             renderer.ensure_output_not_source(episodes, self.video.resolve())
 
     @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg/FFprobe no instalados")
-    @skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg/FFprobe no instalados")
+    @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg/FFprobe no instalados")
     def test_failed_final_validation_preserves_previous_output(self):
         output = self.root / "final.mp4"
         original_bytes = b"previous validated output"
