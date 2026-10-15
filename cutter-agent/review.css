@@ -40,6 +40,10 @@ input[type="file"]::file-selector-button { margin-right: 10px; padding: 7px 10px
 .status[data-kind="success"] { border-color: #2d614e; color: var(--good); }
 .status[data-kind="error"] { border-color: #714444; color: var(--danger); }
 .status[data-kind="warning"] { border-color: #745e2d; color: var(--warning); }
+.scan-warnings { margin-top: 12px; padding: 13px 15px; border: 1px solid #705b30; border-radius: 10px; background: #33291680; color: #f1dfb9; }
+.scan-warnings h3 { margin: 0 0 7px; font-size: .84rem; }
+.scan-warnings ul { margin: 0; padding-left: 20px; }
+.scan-warnings li { margin-top: 5px; font-size: .8rem; overflow-wrap: anywhere; }
 .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
 .stat { padding: 16px 18px; border: 1px solid var(--border); border-radius: 13px; background: var(--panel); }
 .stat-label { display: block; color: var(--muted); font-size: .78rem; margin-bottom: 5px; }
