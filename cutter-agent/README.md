@@ -31,3 +31,35 @@ No recorta ni modifica originales. Las coincidencias son sugerencias para revisa
 La detección compara muestras visuales de un fotograma por segundo y puede fallar con openings que tengan montaje variable, logos distintos, episodios recortados o escenas parecidas. El análisis de audio, la revisión visual guiada, el recorte automático, la unión y la marca de agua se incorporarán en fases posteriores, con pruebas antes de habilitarlos.
 
 No ejecutar el agente como servicio público ni abrir puertos de red. Esta primera versión es una herramienta de línea de comandos local.
+
+## Renderizado de un plan revisado
+
+El renderizador todavía **no corta automáticamente** las candidatas del escáner. Primero debes revisar los tiempos y preparar un JSON manual, por ejemplo:
+
+```json
+{
+  "schema": "cutter-studio-render/v1",
+  "episodes": [
+    {
+      "path": "D:/Anime/Temporada 1/Episodio 01.mkv",
+      "start_seconds": 84.5,
+      "end_seconds": 1320
+    },
+    {
+      "path": "D:/Anime/Temporada 1/Episodio 02.mkv",
+      "start_seconds": 83,
+      "end_seconds": 1317
+    }
+  ]
+}
+```
+
+Los intervalos son los segmentos que quieres conservar. Los episodios se unirán en el orden de la lista. Después:
+
+```bash
+python render.py plan.json --output "D:\\Anime\\Temporada 1\\temporada-final.mp4" --watermark "D:\\Anime\\marca.png"
+```
+
+La marca de agua es opcional. El renderizador normaliza los segmentos a MP4 H.264/AAC de 1920×1080, 30 fps y audio estéreo de 48 kHz para poder unirlos de forma consistente; esto puede aumentar el tiempo de procesamiento y cambiar la resolución de origen. Revisa que haya espacio libre suficiente. No sobrescribe la salida existente salvo que añadas `--overwrite`. Los originales se leen, no se editan. Los archivos temporales se eliminan tras el proceso.
+
+El JSON es una lista de cortes explícitos: no uses un informe automático sin revisar los tiempos, porque un opening parecido no siempre significa que deba eliminarse.
