@@ -76,6 +76,10 @@ class ReviewServerTests(unittest.TestCase):
     def test_plan_api_reads_configured_plan(self):
         with urlopen(self.base_url + "/api/plan", timeout=5) as response:
             data = json.loads(response.read().decode("utf-8"))
+            self.assertIn("default-src 'self'", response.headers.get("Content-Security-Policy", ""))
+            self.assertEqual(response.headers.get("X-Frame-Options"), "DENY")
+            self.assertEqual(response.headers.get("X-Content-Type-Options"), "nosniff")
+            self.assertEqual(response.headers.get("Referrer-Policy"), "no-referrer")
         self.assertEqual(data["schema"], "cutter-studio-edit-plan/v1")
         self.assertEqual(data["episodes"][0]["cuts"][0]["id"], "C00001")
 
@@ -134,6 +138,8 @@ class ReviewServerTests(unittest.TestCase):
         with urlopen(self.base_url + "/api/preview?" + query, timeout=30) as response:
             content_type = response.headers.get("Content-Type")
             preview_start = float(response.headers["X-Preview-Start"])
+            self.assertEqual(response.headers.get("X-Content-Type-Options"), "nosniff")
+            self.assertEqual(response.headers.get("Cross-Origin-Resource-Policy"), "same-origin")
             payload = response.read()
         self.assertEqual(content_type, "video/mp4")
         self.assertEqual(preview_start, 0.0)
