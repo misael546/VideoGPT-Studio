@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v"}
+IGNORED_SCAN_DIRS = {"cutter-studio-output"}
 WINDOW_SECONDS = 180
 MIN_MATCH_SECONDS = 8
 HASH_WIDTH = 16
@@ -347,9 +348,17 @@ def scan(
 ) -> dict:
     if not folder.is_dir():
         raise ValueError(f"No existe la carpeta: {folder}")
+    scan_paths = folder.rglob("*") if recursive else folder.iterdir()
     paths = sorted(
-        (p for p in (folder.rglob("*") if recursive else folder.iterdir())
-         if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS),
+        (
+            p for p in scan_paths
+            if p.is_file()
+            and p.suffix.lower() in VIDEO_EXTENSIONS
+            and not any(
+                part.casefold() in IGNORED_SCAN_DIRS
+                for part in p.relative_to(folder).parts[:-1]
+            )
+        ),
         key=lambda p: p.name.lower(),
     )
     if not paths:
