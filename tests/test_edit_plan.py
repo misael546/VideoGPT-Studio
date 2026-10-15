@@ -142,6 +142,43 @@ class EditPlanTests(unittest.TestCase):
         )
 
 
+    def test_uses_source_paths_when_episode_filenames_repeat(self):
+        season_two = self.root / "Season 02"
+        season_two.mkdir()
+        duplicate_name = season_two / self.video_b.name
+        scan = json.loads(json.dumps(self.scan))
+        scan["videos_in_proposed_order"].append({
+            "filename": duplicate_name.name,
+            "path": str(duplicate_name),
+            "season_number": 2,
+            "episode_number": 2,
+            "duration_seconds": 1190,
+        })
+        scan["repeated_sequence_candidates"] = [{
+            "episode_a": self.video_a.name,
+            "episode_b": duplicate_name.name,
+            "episode_a_path": str(self.video_a),
+            "episode_b_path": str(duplicate_name),
+            "episode_a_number": 1,
+            "episode_b_number": 2,
+            "edge": "start",
+            "episode_a_offset_seconds": 0,
+            "episode_b_offset_seconds": 0,
+            "duration_seconds": 90,
+            "alignment_shift_seconds": 0,
+            "modalities": ["visual"],
+            "match_quality": {"visual": {"level": "high", "match_ratio": 1.0}},
+        }]
+        self.scan_path.write_text(json.dumps(scan), encoding="utf-8")
+
+        plan = planner.create_plan(self.scan_path)
+        self.assertEqual(len(plan["episodes"][1]["cuts"]), 0)
+        self.assertEqual(len(plan["episodes"][2]["cuts"]), 1)
+        self.assertEqual(plan["episodes"][2]["path"], str(duplicate_name.resolve()))
+        self.assertEqual(plan["episodes"][2]["cuts"][0]["source_path_pair"], [
+            str(self.video_a.resolve()), str(duplicate_name.resolve())
+        ])
+
     def test_preserves_visual_and_audio_evidence_for_manual_review(self):
         self.scan["repeated_sequence_candidates"][0]["modalities"] = ["audio", "visual"]
         self.scan["repeated_sequence_candidates"][0]["match_quality"] = {
