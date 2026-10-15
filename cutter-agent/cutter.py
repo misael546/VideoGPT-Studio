@@ -38,11 +38,15 @@ def run(command: list[str], *, binary: bool = False):
 
 
 def season_number(path: Path) -> int | None:
-    name = path.stem.lower()
-    # Season metadata is parsed independently from the episode label, so both
-    # "S01E12" and "Season_01_Episode_12" retain the same season number.
-    labeled = re.search(r"(?:season|temporada|temp|s)[ ._-]*0*(\d{1,3})", name)
-    return int(labeled.group(1)) if labeled else None
+    # Prefer season labels in the filename; otherwise infer from a parent folder.
+    # This supports both "S01E12.mkv" and "Season 01/Episode 12.mkv".
+    labels = [path.stem, *(parent.name for parent in path.parents)]
+    pattern = re.compile(r"(?:season|temporada|temp|s)[ ._-]*0*(\d{1,3})", re.IGNORECASE)
+    for label in labels:
+        match = pattern.search(label.lower())
+        if match:
+            return int(match.group(1))
+    return None
 
 
 def episode_number(path: Path) -> int | None:
