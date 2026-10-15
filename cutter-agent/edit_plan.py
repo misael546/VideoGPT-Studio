@@ -31,7 +31,8 @@ def _quality_score(value: object) -> tuple:
     except (TypeError, ValueError):
         ratio = 0.0
     try:
-        distance = float(value.get("mean_hash_distance") or 999)
+        raw_distance = value.get("mean_hash_distance")
+        distance = float(raw_distance) if raw_distance is not None else 999.0
     except (TypeError, ValueError):
         distance = 999.0
     return (level, ratio, -distance)
