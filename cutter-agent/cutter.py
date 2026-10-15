@@ -139,8 +139,8 @@ def matching_runs(left: list[int], right: list[int], edge: str) -> list[dict]:
     # Nearby shifts usually represent the same physical sequence; keep the best-supported one.
     candidates.sort(
         key=lambda item: (
-            item["duration_seconds"] * item.get("match_ratio", 0),
             item["duration_seconds"],
+            item.get("match_ratio", 0),
             -item.get("mean_hash_distance", 256),
         ),
         reverse=True,
