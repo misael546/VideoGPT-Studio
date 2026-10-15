@@ -1,6 +1,6 @@
 # Cutter Studio — agente local
 
-Este componente está pensado para ejecutarse en el PC del usuario. Los vídeos permanecen en carpetas locales; no se suben a GitHub ni a servicios externos.
+Este componente se ejecuta en el PC del usuario. Los vídeos y los archivos de trabajo permanecen en carpetas locales; no se suben a GitHub ni a servicios externos.
 
 ## Requisitos
 
@@ -8,7 +8,9 @@ Este componente está pensado para ejecutarse en el PC del usuario. Los vídeos 
 - FFmpeg y FFprobe instalados y disponibles en `PATH`
 - Espacio libre para informes y archivos de salida
 
-## Primer uso
+## Flujo recomendado
+
+### 1. Inventariar episodios y buscar coincidencias
 
 Desde esta carpeta:
 
@@ -16,50 +18,39 @@ Desde esta carpeta:
 python cutter.py scan "D:\\Anime\\Temporada 1" --output scan-report.json
 ```
 
-El escaneo:
-- localiza vídeos compatibles en la carpeta (sin recorrer subcarpetas por defecto);
-- obtiene duración, resolución y tamaño con FFprobe;
-- calcula huellas visuales ligeras en los primeros y últimos 180 segundos;
-- compara muestras con tolerancia de hasta 15 segundos de desfase y informa secuencias visualmente parecidas como **candidatas** a opening/ending, con offsets separados para cada episodio;
-- propone un orden por número de episodio cuando puede inferirlo del nombre;
-- expresa los tiempos de las coincidencias de ending como segundos desde el inicio del episodio, no desde el comienzo de la ventana final.
+El escáner obtiene duración, resolución y tamaño, calcula huellas visuales de los primeros y últimos 180 segundos y compara secuencias con hasta 15 segundos de desfase. Propone el orden por número de episodio cuando puede inferirlo del nombre. Los tiempos reportados son segundos desde el inicio de cada episodio.
 
-No recorta ni modifica originales. Las coincidencias son sugerencias para revisar, no una garantía de que una secuencia sea opening/ending. El informe no se publica ni se envía a ninguna parte.
-
-## Límites iniciales
-
-La detección compara muestras visuales de un fotograma por segundo y puede fallar con openings que tengan montaje variable, logos distintos, episodios recortados o escenas parecidas. El análisis de audio, la revisión visual guiada, el recorte automático, la unión y la marca de agua se incorporarán en fases posteriores, con pruebas antes de habilitarlos.
-
-No ejecutar el agente como servicio público ni abrir puertos de red. Esta primera versión es una herramienta de línea de comandos local.
-
-## Renderizado de un plan revisado
-
-El renderizador todavía **no corta automáticamente** las candidatas del escáner. Primero debes revisar los tiempos y preparar un JSON manual, por ejemplo:
-
-```json
-{
-  "schema": "cutter-studio-render/v1",
-  "episodes": [
-    {
-      "path": "D:/Anime/Temporada 1/Episodio 01.mkv",
-      "start_seconds": 84.5,
-      "end_seconds": 1320
-    },
-    {
-      "path": "D:/Anime/Temporada 1/Episodio 02.mkv",
-      "start_seconds": 83,
-      "end_seconds": 1317
-    }
-  ]
-}
-```
-
-Los intervalos son los segmentos que quieres conservar. Los episodios se unirán en el orden de la lista. Después:
+### 2. Crear el plan de edición revisable
 
 ```bash
-python render.py plan.json --output "D:\\Anime\\Temporada 1\\temporada-final.mp4" --watermark "D:\\Anime\\marca.png"
+python edit_plan.py create scan-report.json --output edit-plan.json
 ```
 
-La marca de agua es opcional. El renderizador normaliza los segmentos a MP4 H.264/AAC de 1920×1080, 30 fps y audio estéreo de 48 kHz para poder unirlos de forma consistente; esto puede aumentar el tiempo de procesamiento y cambiar la resolución de origen. Revisa que haya espacio libre suficiente. No sobrescribe la salida existente salvo que añadas `--overwrite`. Los originales se leen, no se editan. Los archivos temporales se eliminan tras el proceso. La CI incluye una prueba de integración con vídeos sintéticos para verificar la unión de clips con y sin audio.
+El plan incluye el orden propuesto y los intervalos visualmente coincidentes como candidatos. Cada corte comienza con `"approved": false`; por tanto, **no se elimina nada por defecto**. Abre el JSON, reproduce cada episodio en los tiempos indicados y cambia a `true` solo los intervalos que hayas confirmado que deben eliminarse. Si el nombre de un archivo no es único, el generador no asigna candidatos ambiguos a una ruta.
 
-El JSON es una lista de cortes explícitos: no uses un informe automático sin revisar los tiempos, porque un opening parecido no siempre significa que deba eliminarse.
+Los tiempos sugeridos corresponden únicamente al tramo que el escáner logró emparejar. No se asume que ese tramo cubra el opening o ending completo; revisa y ajusta `start_seconds` y `end_seconds` según corresponda. Los intervalos aprobados se eliminarán del episodio; los no aprobados se conservarán.
+
+### 3. Generar un manifiesto de renderizado
+
+Después de revisar y guardar `edit-plan.json`:
+
+```bash
+python edit_plan.py render-manifest edit-plan.json --output render-manifest.json
+```
+
+El generador convierte los cortes aprobados en los segmentos que deben conservarse. Combina cortes aprobados que se solapan y se detiene si un episodio quedaría completamente vacío. El orden de la lista final sigue el orden del plan.
+
+### 4. Renderizar el vídeo unido
+
+```bash
+python render.py render-manifest.json --output "D:\\Anime\\Temporada 1\\temporada-final.mp4" --watermark "D:\\Anime\\marca.png"
+```
+
+La marca de agua es opcional. El renderizador normaliza segmentos a MP4 H.264/AAC, 1920×1080, 30 fps y audio estéreo de 48 kHz. Esto puede aumentar el tiempo de procesamiento y cambiar la resolución original; reserva espacio libre suficiente. No sobrescribe una salida existente salvo que se indique `--overwrite`. Los originales se leen, no se editan, y el archivo final solo se coloca en su destino cuando la operación completa termina correctamente.
+
+## Límites y seguridad
+
+- Las coincidencias visuales son candidatas, no una garantía de que el tramo sea un opening o ending.
+- El análisis actual toma muestras visuales a un fotograma por segundo; todavía no analiza huellas de audio y puede fallar si cambian el montaje, el logo o el recorte.
+- La herramienta funciona localmente por línea de comandos. No la ejecutes como servicio público ni abras puertos de red.
+- La CI instala FFmpeg y prueba la unión de clips sintéticos con y sin audio, además de validar el plan y sus intervalos.
