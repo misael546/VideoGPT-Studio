@@ -16,6 +16,7 @@ MIN_MATCH_SECONDS = 8
 MAX_HASH_DISTANCE = 42  # 16.4% of a 16x16 average hash
 MAX_CONSECUTIVE_MISSES = 2
 MAX_ALIGNMENT_SHIFT_SECONDS = 15
+CACHE_SCHEMA = "cutter-studio-cache/v1"
 
 
 def run(command: list[str], *, binary: bool = False):
@@ -167,7 +168,32 @@ def absolute_offset(offset: int, duration: float, edge: str) -> int:
     return offset
 
 
-def scan(folder: Path, output: Path, recursive: bool = False) -> dict:
+def file_signature(path: Path) -> dict:
+    stat = path.stat()
+    return {"size_bytes": stat.st_size, "mtime_ns": stat.st_mtime_ns}
+
+
+def load_cache(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("schema") == CACHE_SCHEMA and isinstance(data.get("entries"), dict):
+            return data["entries"]
+    except (OSError, json.JSONDecodeError, AttributeError):
+        pass
+    return {}
+
+
+def save_cache(path: Path, entries: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(
+        json.dumps({"schema": CACHE_SCHEMA, "entries": entries}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    temporary.replace(path)
+
+
+def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = True, cache_path: Path | None = None) -> dict:
     if not folder.is_dir():
         raise ValueError(f"No existe la carpeta: {folder}")
     paths = sorted(
@@ -180,23 +206,55 @@ def scan(folder: Path, output: Path, recursive: bool = False) -> dict:
     videos = []
     hashes = {}
     errors = []
+    selected_cache_path = (cache_path or (folder / ".cutter-studio-cache.json")).expanduser().resolve()
+    old_cache = load_cache(selected_cache_path) if use_cache else {}
+    new_cache = {}
+    cache_hits = 0
     for path in paths:
         try:
-            meta = probe(path)
-            number = episode_number(path)
+            resolved = str(path.resolve())
+            signature = file_signature(path)
+            cached = old_cache.get(resolved)
+            if use_cache and isinstance(cached, dict) and cached.get("signature") == signature:
+                meta = cached.get("metadata")
+                serialized_hashes = cached.get("hashes")
+                if isinstance(meta, dict) and isinstance(serialized_hashes, dict):
+                    hashes[path] = {
+                        edge: [int(value, 16) for value in serialized_hashes.get(edge, [])]
+                        for edge in ("start", "end")
+                    }
+                    cache_hits += 1
+                else:
+                    meta = None
+            else:
+                meta = None
+
+            if meta is None:
+                meta = probe(path)
+                hashes[path] = {}
+                if meta["duration_seconds"] >= MIN_MATCH_SECONDS:
+                    hashes[path]["start"] = frame_hashes(path, meta["duration_seconds"], "start")
+                    hashes[path]["end"] = frame_hashes(path, meta["duration_seconds"], "end")
             entry = {
                 "filename": path.name,
-                "path": str(path.resolve()),
-                "episode_number": number,
+                "path": resolved,
+                "episode_number": episode_number(path),
                 **meta,
             }
             videos.append(entry)
-            hashes[path] = {}
-            if meta["duration_seconds"] >= MIN_MATCH_SECONDS:
-                hashes[path]["start"] = frame_hashes(path, meta["duration_seconds"], "start")
-                hashes[path]["end"] = frame_hashes(path, meta["duration_seconds"], "end")
-        except (RuntimeError, ValueError, OSError, json.JSONDecodeError) as exc:
+            if use_cache:
+                new_cache[resolved] = {
+                    "signature": signature,
+                    "metadata": meta,
+                    "hashes": {
+                        edge: [format(value, "x") for value in hashes[path].get(edge, [])]
+                        for edge in ("start", "end")
+                    },
+                }
+        except (RuntimeError, ValueError, OSError, json.JSONDecodeError, TypeError) as exc:
             errors.append({"filename": path.name, "error": str(exc)})
+    if use_cache:
+        save_cache(selected_cache_path, new_cache)
     videos.sort(key=lambda v: (v["episode_number"] is None, v["episode_number"] or 0, v["filename"].lower()))
     candidates = []
     valid_paths = list(hashes)
@@ -244,6 +302,12 @@ def scan(folder: Path, output: Path, recursive: bool = False) -> dict:
         "schema": "cutter-studio-scan/v1",
         "source_folder": str(folder.resolve()),
         "video_count": len(videos),
+        "cache": {
+            "enabled": use_cache,
+            "hits": cache_hits,
+            "misses": max(0, len(videos) - cache_hits),
+            "path": str(selected_cache_path) if use_cache else None,
+        },
         "videos_in_proposed_order": videos,
         "repeated_sequence_candidates": candidates,
         "errors": errors,
@@ -265,6 +329,8 @@ def main() -> int:
     scan_parser.add_argument("folder", type=Path, help="Carpeta local con episodios.")
     scan_parser.add_argument("--output", type=Path, default=Path("cutter-scan-report.json"))
     scan_parser.add_argument("--recursive", action="store_true", help="Incluir subcarpetas.")
+    scan_parser.add_argument("--no-cache", action="store_true", help="Volver a analizar todos los vídeos sin usar caché.")
+    scan_parser.add_argument("--cache-file", type=Path, help="Ruta opcional para la caché local.")
     args = parser.parse_args()
 
     missing = [tool for tool in ("ffmpeg", "ffprobe") if shutil.which(tool) is None]
@@ -272,11 +338,13 @@ def main() -> int:
         print("Faltan dependencias en PATH: " + ", ".join(missing), file=sys.stderr)
         return 2
     try:
-        report = scan(args.folder.expanduser(), args.output.expanduser(), args.recursive)
+        report = scan(args.folder.expanduser(), args.output.expanduser(), args.recursive, not args.no_cache, args.cache_file)
     except (ValueError, RuntimeError, OSError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     print(f"Vídeos analizados: {report['video_count']}")
+    if report["cache"]["enabled"]:
+        print(f"Caché local: {report['cache']['hits']} reutilizados; {report['cache']['misses']} nuevos o modificados")
     print(f"Candidatas a opening/ending: {len(report['repeated_sequence_candidates'])}")
     print(f"Informe local: {args.output.resolve()}")
     if report["errors"]:
