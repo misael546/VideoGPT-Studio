@@ -34,6 +34,41 @@ class AbsoluteOffsetTests(unittest.TestCase):
 
 
 class ScanCacheTests(unittest.TestCase):
+    def test_failed_partial_fingerprint_is_excluded_without_crashing_pair_scan(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            first = folder / "Episode 01.mp4"
+            second = folder / "Episode 02.mp4"
+            first.write_bytes(b"synthetic 01")
+            second.write_bytes(b"synthetic 02")
+
+            def fake_probe(path):
+                return {
+                    "duration_seconds": 20.0,
+                    "width": 640,
+                    "height": 360,
+                    "has_audio": False,
+                    "size_bytes": path.stat().st_size,
+                }
+
+            def fake_frames(path, duration, edge):
+                if path.name == second.name and edge == "end":
+                    raise RuntimeError("frame decode failed")
+                return [int("A" * 64, 16)] * 20
+
+            with mock.patch.object(cutter, "probe", side_effect=fake_probe), \
+                 mock.patch.object(cutter, "frame_hashes", side_effect=fake_frames):
+                report = cutter.scan(folder, root / "scan.json", use_cache=False)
+
+            self.assertEqual(report["video_count"], 1)
+            self.assertEqual(report["videos_in_proposed_order"][0]["filename"], first.name)
+            self.assertEqual(len(report["errors"]), 1)
+            self.assertIn("frame decode failed", report["errors"][0]["error"])
+            self.assertEqual(report["repeated_sequence_candidates"], [])
+
+
     def test_audio_extraction_warnings_survive_cache_hits(self):
         with tempfile.TemporaryDirectory() as temp_name:
             root = Path(temp_name)
