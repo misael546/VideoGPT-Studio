@@ -39,11 +39,9 @@ def run(command: list[str], *, binary: bool = False):
 
 def season_number(path: Path) -> int | None:
     name = path.stem.lower()
-    labeled = re.search(
-        r"(?:season|temporada|temp|s)[ ._-]*0*(\d{1,3})"
-        r"(?:[ ._-]*(?:episode|episodio|chapter|capitulo|ep|cap|e)[ ._-]*0*\d{1,4})?\b",
-        name,
-    )
+    # Season metadata is parsed independently from the episode label, so both
+    # "S01E12" and "Season_01_Episode_12" retain the same season number.
+    labeled = re.search(r"(?:season|temporada|temp|s)[ ._-]*0*(\d{1,3})", name)
     return int(labeled.group(1)) if labeled else None
 
 
