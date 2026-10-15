@@ -22,6 +22,115 @@ def read_json(path: Path) -> dict:
     return value
 
 
+def _quality_score(value: object) -> tuple:
+    if not isinstance(value, dict):
+        return (0, 0.0, -999.0)
+    level = {"low": 1, "medium": 2, "high": 3}.get(str(value.get("level", "")).lower(), 0)
+    try:
+        ratio = float(value.get("match_ratio") or 0)
+    except (TypeError, ValueError):
+        ratio = 0.0
+    try:
+        distance = float(value.get("mean_hash_distance") or 999)
+    except (TypeError, ValueError):
+        distance = 999.0
+    return (level, ratio, -distance)
+
+
+def _source_pairs(cut: dict) -> list[list[str]]:
+    pairs = cut.get("source_pairs")
+    if not isinstance(pairs, list):
+        pair = cut.get("source_pair")
+        pairs = [pair] if isinstance(pair, list) else []
+    result = []
+    seen = set()
+    for pair in pairs:
+        if not isinstance(pair, list) or len(pair) != 2:
+            continue
+        normalized = [str(pair[0]), str(pair[1])]
+        key = tuple(normalized)
+        if key not in seen:
+            seen.add(key)
+            result.append(normalized)
+    return result
+
+
+def _merge_cut_quality(existing: dict, incoming: dict) -> None:
+    left = existing.get("match_quality", {})
+    right = incoming.get("match_quality", {})
+    if not isinstance(left, dict):
+        left = {}
+    if not isinstance(right, dict):
+        right = {}
+    modalities = set(existing.get("modalities", [])) | set(incoming.get("modalities", []))
+    if not modalities:
+        existing["match_quality"] = max((left, right), key=_quality_score)
+        return
+
+    merged = {}
+    for modality in modalities:
+        candidates = [item for item in (left.get(modality), right.get(modality)) if isinstance(item, dict)]
+        if candidates:
+            merged[modality] = max(candidates, key=_quality_score)
+    existing["match_quality"] = merged
+
+
+def _same_cut_candidate(left: dict, right: dict) -> bool:
+    left_start = float(left["start_seconds"])
+    left_end = float(left["end_seconds"])
+    right_start = float(right["start_seconds"])
+    right_end = float(right["end_seconds"])
+    start_delta = abs(left_start - right_start)
+    end_delta = abs(left_end - right_end)
+    intersection = max(0.0, min(left_end, right_end) - max(left_start, right_start))
+    shorter = min(left_end - left_start, right_end - right_start)
+    overlap_ratio = intersection / shorter if shorter > 0 else 0.0
+
+    # Pairwise comparisons for one repeated intro/outro often produce slightly different
+    # boundaries. Merge only close, strongly overlapping candidates, not separate scenes.
+    same_edge = left.get("edge") == right.get("edge")
+    if start_delta <= 4.0 and end_delta <= 20.0 and overlap_ratio >= 0.75:
+        return True
+    return same_edge and start_delta <= 12.0 and overlap_ratio >= 0.70
+
+
+def _deduplicate_episode_cuts(cuts: list[dict]) -> list[dict]:
+    grouped = []
+    for cut in sorted(cuts, key=lambda item: (item["start_seconds"], item["end_seconds"], item["id"])):
+        duplicate = next((item for item in reversed(grouped) if _same_cut_candidate(item, cut)), None)
+        if duplicate is None:
+            clone = dict(cut)
+            clone["modalities"] = sorted(set(clone.get("modalities", [])))
+            clone["source_pairs"] = _source_pairs(clone)
+            if not clone.get("source_pair") and clone["source_pairs"]:
+                clone["source_pair"] = clone["source_pairs"][0]
+            grouped.append(clone)
+            continue
+
+        duplicate["start_seconds"] = round(min(duplicate["start_seconds"], cut["start_seconds"]), 3)
+        duplicate["end_seconds"] = round(max(duplicate["end_seconds"], cut["end_seconds"]), 3)
+        duplicate["modalities"] = sorted(set(duplicate.get("modalities", [])) | set(cut.get("modalities", [])))
+        pair_list = _source_pairs(duplicate) + _source_pairs(cut)
+        seen = set()
+        duplicate["source_pairs"] = [
+            pair for pair in pair_list
+            if tuple(pair) not in seen and not seen.add(tuple(pair))
+        ]
+        if duplicate["source_pairs"]:
+            duplicate["source_pair"] = duplicate["source_pairs"][0]
+        _merge_cut_quality(duplicate, cut)
+        duplicate["boundary_expanded"] = bool(
+            duplicate.get("boundary_expanded") or cut.get("boundary_expanded")
+        )
+        if abs(int(cut.get("alignment_shift_seconds") or 0)) < abs(int(duplicate.get("alignment_shift_seconds") or 0)):
+            duplicate["alignment_shift_seconds"] = int(cut.get("alignment_shift_seconds") or 0)
+        # Candidate cuts are never auto-approved, including after grouping.
+        duplicate["approved"] = False
+        duplicate["review_status"] = "pending"
+
+    return grouped
+
+
 def create_plan(scan_path: Path) -> dict:
     scan = read_json(scan_path)
     if scan.get("schema") != "cutter-studio-scan/v1":
@@ -112,8 +221,15 @@ def create_plan(scan_path: Path) -> dict:
                 "approved": False,
             })
 
+    candidate_count = 0
     for episode in episodes:
+        episode["cuts"] = _deduplicate_episode_cuts(episode["cuts"])
         episode["cuts"].sort(key=lambda cut: (cut["start_seconds"], cut["end_seconds"], cut["id"]))
+        for cut in episode["cuts"]:
+            candidate_count += 1
+            cut["id"] = f"C{candidate_count:05d}"
+            cut["approved"] = False
+            cut["review_status"] = "pending"
 
     return {
         "schema": PLAN_SCHEMA,
