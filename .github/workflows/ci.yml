@@ -69,8 +69,15 @@ jobs:
           test -s dist/Cutter-Studio/INICIAR_CUTTER_STUDIO.bat
           test -s dist/Cutter-Studio/PREPARAR_REQUISITOS_WINDOWS.bat
           test -s dist/Cutter-Studio/review_server.py
-          (cd dist/Cutter-Studio && sha256sum *.py *.js *.html *.css *.bat *.md BUILD_INFO.txt > SHA256SUMS.txt)
+          (cd dist/Cutter-Studio && sha256sum *.py *.js *.html *.css *.bat *.md BUILD_INFO.txt > SHA256SUMS.txt && sha256sum --check SHA256SUMS.txt)
           test -s dist/Cutter-Studio/SHA256SUMS.txt
+          test -s dist/Cutter-Studio/cutter.py
+          test -s dist/Cutter-Studio/edit_plan.py
+          test -s dist/Cutter-Studio/render.py
+          test -s dist/Cutter-Studio/review_server.py
+          test -s dist/Cutter-Studio/review.html
+          test -s dist/Cutter-Studio/review.css
+          test -s dist/Cutter-Studio/review.js
       - name: Upload standalone Cutter Studio Windows package
         uses: actions/upload-artifact@v4
         with:
