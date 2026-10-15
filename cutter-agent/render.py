@@ -35,7 +35,7 @@ def command(args: list[str], *, capture: bool = False) -> str:
 def media_info(path: Path) -> dict:
     raw = command([
         "ffprobe", "-v", "error", "-show_entries",
-        "format=duration:stream=codec_type", "-of", "json", str(path),
+        "format=duration:stream=codec_type,width,height", "-of", "json", str(path),
     ], capture=True)
     data = json.loads(raw)
     try:
@@ -44,9 +44,14 @@ def media_info(path: Path) -> dict:
         raise ValueError(f"Duración no válida en el archivo: {path}") from exc
     if not math.isfinite(duration) or duration <= 0:
         raise ValueError(f"Duración no válida en el archivo: {path}")
+    streams = data.get("streams", [])
+    video_stream = next((stream for stream in streams if stream.get("codec_type") == "video"), {})
     return {
         "duration": duration,
-        "has_audio": any(s.get("codec_type") == "audio" for s in data.get("streams", [])),
+        "has_audio": any(stream.get("codec_type") == "audio" for stream in streams),
+        "has_video": bool(video_stream),
+        "width": video_stream.get("width"),
+        "height": video_stream.get("height"),
     }
 
 
@@ -74,6 +79,8 @@ def load_manifest(path: Path) -> list[dict]:
         info = media_info(source)
         if end > info["duration"] + 0.05:
             raise ValueError(f"Episodio #{index}: el final ({end}s) supera la duración ({info['duration']:.3f}s).")
+        if info.get("has_video") is False:
+            raise ValueError(f"Episodio #{index}: el archivo no contiene una pista de vídeo.")
         result.append({
             "path": source.resolve(),
             "start": start,
@@ -163,6 +170,19 @@ def render(manifest: Path, output: Path, watermark: Path | None = None, overwrit
             "-f", "concat", "-safe", "0", "-i", str(concat_file),
             "-c", "copy", "-movflags", "+faststart", str(staged_output),
         ])
+        # Validate the staged MP4 before publishing it. A failed validation leaves any old output intact.
+        staged_info = media_info(staged_output)
+        if staged_info.get("has_video") is not True:
+            raise RuntimeError("La validación final falló: el MP4 no contiene una pista de vídeo.")
+        expected_duration = sum(float(episode["duration"]) for episode in episodes)
+        duration_tolerance = max(0.35, len(episodes) * 0.05)
+        if abs(staged_info["duration"] - expected_duration) > duration_tolerance:
+            raise RuntimeError(
+                "La validación final falló: la duración del MP4 no coincide con los segmentos esperados "
+                f"({staged_info['duration']:.3f}s frente a {expected_duration:.3f}s)."
+            )
+        if not staged_output.is_file() or staged_output.stat().st_size <= 1024:
+            raise RuntimeError("La validación final falló: el MP4 generado está vacío o incompleto.")
         # Copy only after a complete successful render; preserve an existing output unless overwrite was explicit.
         if output.exists() and not overwrite:
             raise FileExistsError(f"La salida apareció durante el proceso: {output}")
