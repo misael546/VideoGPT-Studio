@@ -85,6 +85,7 @@ def create_plan(scan_path: Path) -> dict:
                     str(match.get("episode_b", "")),
                 ],
                 "alignment_shift_seconds": int(match.get("alignment_shift_seconds") or 0),
+                "match_quality": match.get("match_quality", {}),
                 "review_status": "pending",
                 "approved": False,
             })
