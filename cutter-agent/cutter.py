@@ -335,6 +335,7 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
     modalities = ("visual", "audio")
 
     for path in paths:
+        file_audio_warnings = []
         try:
             resolved = str(path.resolve())
             signature = file_signature(path)
@@ -353,6 +354,11 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
                             for modality in modalities
                         }
                         meta = possible_meta
+                        cached_audio_warnings = cached.get("audio_warnings", [])
+                        if isinstance(cached_audio_warnings, list):
+                            audio_warnings.extend(
+                                warning for warning in cached_audio_warnings if isinstance(warning, dict)
+                            )
                         cache_hits += 1
                     except (ValueError, TypeError, AttributeError):
                         meta = None
@@ -369,11 +375,13 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
                             try:
                                 hashes[path]["audio"][edge] = audio_frame_hashes(path, meta["duration_seconds"], edge)
                             except (RuntimeError, ValueError, OSError) as exc:
-                                audio_warnings.append({
+                                warning = {
                                     "filename": path.name,
                                     "edge": edge,
                                     "error": str(exc),
-                                })
+                                }
+                                file_audio_warnings.append(warning)
+                                audio_warnings.append(warning)
             entry = {
                 "filename": path.name,
                 "path": resolved,
@@ -385,6 +393,7 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
                 new_cache[resolved] = {
                     "signature": signature,
                     "metadata": meta,
+                    "audio_warnings": file_audio_warnings,
                     "hashes": {
                         modality: {
                             edge: [format(value, "x") for value in hashes[path][modality].get(edge, [])]
