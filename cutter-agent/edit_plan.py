@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -148,8 +149,11 @@ def create_plan(scan_path: Path) -> dict:
     for order, video in enumerate(videos, start=1):
         if not isinstance(video, dict) or not video.get("path"):
             raise ValueError(f"Entrada de vídeo inválida en la posición {order}.")
-        duration = float(video.get("duration_seconds") or 0)
-        if duration <= 0:
+        try:
+            duration = float(video.get("duration_seconds") or 0)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Duración inválida para {video.get('filename', video.get('path'))}.") from exc
+        if not math.isfinite(duration) or duration <= 0:
             raise ValueError(f"Duración inválida para {video.get('filename', video.get('path'))}.")
         episode = {
             "order": order,
@@ -186,8 +190,15 @@ def create_plan(scan_path: Path) -> dict:
         edge = match.get("edge")
         if edge not in ("start", "end"):
             continue
-        duration = float(match.get("duration_seconds") or 0)
-        if duration < 1:
+        try:
+            duration = float(match.get("duration_seconds") or 0)
+            offsets = [
+                float(match.get("episode_a_offset_seconds") or 0),
+                float(match.get("episode_b_offset_seconds") or 0),
+            ]
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(duration) or duration < 1 or any(not math.isfinite(offset) for offset in offsets):
             continue
         for side in ("a", "b"):
             filename = match.get(f"episode_{side}")
@@ -264,8 +275,11 @@ def build_render_manifest(plan: dict) -> dict:
     for episode_index, episode in enumerate(episodes, start=1):
         if not isinstance(episode, dict) or not episode.get("path"):
             raise ValueError(f"Episodio #{episode_index}: entrada inválida.")
-        duration = float(episode.get("duration_seconds") or 0)
-        if duration <= 0:
+        try:
+            duration = float(episode.get("duration_seconds") or 0)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Episodio #{episode_index}: duración inválida.") from exc
+        if not math.isfinite(duration) or duration <= 0:
             raise ValueError(f"Episodio #{episode_index}: duración inválida.")
         intervals = []
         for cut in episode.get("cuts", []):
@@ -278,7 +292,13 @@ def build_render_manifest(plan: dict) -> dict:
                 end = float(cut["end_seconds"])
             except (KeyError, TypeError, ValueError) as exc:
                 raise ValueError(f"Corte {cut.get('id', '?')}: intervalo inválido.") from exc
-            if start < 0 or end <= start or end > duration + 0.05:
+            if (
+                not math.isfinite(start)
+                or not math.isfinite(end)
+                or start < 0
+                or end <= start
+                or end > duration + 0.05
+            ):
                 raise ValueError(f"Corte {cut.get('id', '?')}: intervalo fuera de la duración del episodio.")
             intervals.append((max(0.0, start), min(duration, end)))
 
