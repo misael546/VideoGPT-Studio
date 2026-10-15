@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import shutil
 import subprocess
@@ -54,12 +55,21 @@ def probe(path: Path) -> dict:
     streams = data.get("streams") or []
     stream = next((item for item in streams if item.get("codec_type") == "video"), {})
     fmt = data.get("format") or {}
+    try:
+        duration = float(fmt.get("duration") or 0)
+        size_bytes = int(fmt.get("size") or path.stat().st_size)
+    except (TypeError, ValueError, OSError) as exc:
+        raise ValueError(f"Metadatos no válidos para {path.name}: {exc}") from exc
+    if not math.isfinite(duration) or duration <= 0:
+        raise ValueError(f"Duración no válida para {path.name}.")
+    if size_bytes <= 0 or not stream.get("width") or not stream.get("height"):
+        raise ValueError(f"Vídeo sin dimensiones o tamaño válidos: {path.name}.")
     return {
-        "duration_seconds": round(float(fmt.get("duration") or 0), 3),
+        "duration_seconds": round(duration, 3),
         "width": stream.get("width"),
         "height": stream.get("height"),
         "has_audio": any(item.get("codec_type") == "audio" for item in streams),
-        "size_bytes": int(fmt.get("size") or path.stat().st_size),
+        "size_bytes": size_bytes,
     }
 
 
