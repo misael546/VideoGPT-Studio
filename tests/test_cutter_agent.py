@@ -75,6 +75,42 @@ class PerceptualHashTests(unittest.TestCase):
             cutter.perceptual_hash(b"short")
 
 
+class AudioFingerprintTests(unittest.TestCase):
+    @staticmethod
+    def make_pcm(scale=1.0):
+        from array import array
+        import math
+        samples = array("f")
+        for subchunk in range(10):
+            amplitudes = [
+                scale * (0.06 + 0.035 * ((subchunk + band) % 4))
+                for band in range(cutter.AUDIO_CHANNELS)
+            ]
+            for frame in range(cutter.AUDIO_SAMPLE_RATE // cutter.AUDIO_SUBCHUNKS_PER_SECOND):
+                time_value = (subchunk * 800 + frame) / cutter.AUDIO_SAMPLE_RATE
+                for band, amplitude in enumerate(amplitudes):
+                    frequency = 90 + band * 170
+                    samples.append(amplitude * math.sin(2 * math.pi * frequency * time_value))
+        return samples.tobytes()
+
+    def test_fingerprint_is_stable_under_uniform_gain_change(self):
+        normal = cutter.audio_fingerprints(self.make_pcm())
+        quieter = cutter.audio_fingerprints(self.make_pcm(0.6))
+        self.assertEqual(len(normal), 1)
+        self.assertEqual(normal, quieter)
+        self.assertGreater(normal[0], 0)
+
+    def test_silence_is_marked_invalid(self):
+        silent_pcm = bytes(cutter.AUDIO_SAMPLE_RATE * cutter.AUDIO_CHANNELS * 4)
+        self.assertEqual(cutter.audio_fingerprints(silent_pcm), [-1])
+
+    def test_matching_does_not_treat_silence_as_reliable_sequence(self):
+        self.assertEqual(
+            cutter.matching_runs([-1] * 12, [-1] * 12, "start", max_hash_distance=cutter.AUDIO_HASH_DISTANCE),
+            [],
+        )
+
+
 class MatchQualityTests(unittest.TestCase):
     def test_high_quality_means_long_consistent_visual_match(self):
         self.assertEqual(cutter.quality_level(45, 0.98, 20), "high")
@@ -119,7 +155,37 @@ class ScannerIntegrationTests(unittest.TestCase):
             candidate = max(candidates, key=lambda item: item["duration_seconds"])
             self.assertEqual(candidate["episode_a_cut_start_seconds"], 0)
             self.assertEqual(candidate["episode_b_cut_start_seconds"], 0)
-            self.assertIn(candidate["match_quality"]["level"], {"low", "medium", "high"})
+            self.assertIn(candidate["match_quality"]["visual"]["level"], {"low", "medium", "high"})
+
+    def test_scanner_finds_shared_audio_when_opening_images_differ(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            first = folder / "Episode 01.mp4"
+            second = folder / "Episode 02.mp4"
+
+            def make_episode(path, video_source):
+                subprocess.run([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", f"{video_source}=size=320x240:rate=10:duration=18",
+                    "-f", "lavfi", "-i", "aevalsrc=0.35*sin(2*PI*(100*t+30*t*t)):s=48000:d=18",
+                    "-map", "0:v:0", "-map", "1:a:0",
+                    "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+                    "-c:a", "aac", "-b:a", "128k", "-shortest", str(path),
+                ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            make_episode(first, "testsrc2")
+            make_episode(second, "testsrc")
+            report = cutter.scan(folder, root / "scan-audio.json", use_cache=False)
+
+            audio_candidates = [
+                item for item in report["repeated_sequence_candidates"]
+                if "audio" in item["modalities"] and item["edge"] == "start"
+                and item["duration_seconds"] >= 8
+            ]
+            self.assertTrue(audio_candidates, f"No se detectó el audio compartido. Avisos: {report['audio_warnings']}")
+            self.assertTrue(all("audio" in item["match_quality"] for item in audio_candidates))
 
 
 class RepeatedSequenceTests(unittest.TestCase):
