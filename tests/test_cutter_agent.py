@@ -152,7 +152,7 @@ class OutputDirectoryTests(unittest.TestCase):
 
 
 class ScanCacheTests(unittest.TestCase):
-    def test_failed_partial_fingerprint_is_excluded_without_crashing_pair_scan(self):
+    def test_visual_decode_failure_keeps_episode_and_uses_shared_audio(self):
         with tempfile.TemporaryDirectory() as temp_name:
             root = Path(temp_name)
             folder = root / "episodes"
@@ -161,30 +161,40 @@ class ScanCacheTests(unittest.TestCase):
             second = folder / "Episode 02.mp4"
             first.write_bytes(b"synthetic 01")
             second.write_bytes(b"synthetic 02")
+            visual_a = int("A" * 64, 16)
+            visual_b = int("5" * 64, 16)
+            shared_audio = [int("A" * 20, 16)] * 20
 
             def fake_probe(path):
                 return {
                     "duration_seconds": 20.0,
                     "width": 640,
                     "height": 360,
-                    "has_audio": False,
+                    "has_audio": True,
                     "size_bytes": path.stat().st_size,
                 }
 
             def fake_frames(path, duration, edge):
                 if path.name == second.name and edge == "end":
                     raise RuntimeError("frame decode failed")
-                return [int("A" * 64, 16)] * 20
+                base = visual_a if path.name == first.name else visual_b
+                return [base] * 20
 
             with mock.patch.object(cutter, "probe", side_effect=fake_probe), \
-                 mock.patch.object(cutter, "frame_hashes", side_effect=fake_frames):
+                 mock.patch.object(cutter, "frame_hashes", side_effect=fake_frames), \
+                 mock.patch.object(cutter, "audio_frame_hashes", return_value=shared_audio):
                 report = cutter.scan(folder, root / "scan.json", use_cache=False)
 
-            self.assertEqual(report["video_count"], 1)
-            self.assertEqual(report["videos_in_proposed_order"][0]["filename"], first.name)
-            self.assertEqual(len(report["errors"]), 1)
-            self.assertIn("frame decode failed", report["errors"][0]["error"])
-            self.assertEqual(report["repeated_sequence_candidates"], [])
+            self.assertEqual(report["video_count"], 2)
+            self.assertEqual(report["errors"], [])
+            self.assertEqual(len(report["visual_warnings"]), 1)
+            self.assertIn("frame decode failed", report["visual_warnings"][0]["error"])
+            audio_candidates = [
+                candidate for candidate in report["repeated_sequence_candidates"]
+                if "audio" in candidate["modalities"] and candidate["edge"] == "start"
+            ]
+            self.assertTrue(audio_candidates)
+            self.assertTrue(all(candidate["modalities"] == ["audio"] for candidate in audio_candidates))
 
 
     def test_audio_extraction_warnings_survive_cache_hits(self):
@@ -210,6 +220,9 @@ class ScanCacheTests(unittest.TestCase):
             self.assertEqual(second["cache"]["hits"], 1)
             self.assertEqual(len(second["audio_warnings"]), 2)
             self.assertTrue(all("synthetic audio failure" in item["error"] for item in second["audio_warnings"]))
+            third = cutter.scan(folder, root / "third.json")
+            self.assertEqual(third["cache"]["hits"], 1)
+            self.assertEqual(len(third["audio_warnings"]), 2)
 
 
     def test_second_scan_reuses_metadata_and_frame_hashes(self):
