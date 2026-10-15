@@ -271,13 +271,26 @@ def matching_runs(
     for candidate in candidates:
         a_start = candidate["episode_a_offset_seconds"]
         b_start = candidate["episode_b_offset_seconds"]
-        duplicate = any(
-            existing["edge"] == candidate["edge"]
-            and abs(a_start - existing["episode_a_offset_seconds"]) <= 3
-            and abs(b_start - existing["episode_b_offset_seconds"]) <= 3
-            for existing in kept
-        )
-        if not duplicate:
+        a_end = a_start + candidate["duration_seconds"]
+        b_end = b_start + candidate["duration_seconds"]
+
+        def overlaps_same_run(existing: dict) -> bool:
+            if existing["edge"] != candidate["edge"]:
+                return False
+            if abs(a_start - existing["episode_a_offset_seconds"]) > MAX_ALIGNMENT_SHIFT_SECONDS:
+                return False
+            if abs(b_start - existing["episode_b_offset_seconds"]) > MAX_ALIGNMENT_SHIFT_SECONDS:
+                return False
+            existing_a_start = existing["episode_a_offset_seconds"]
+            existing_b_start = existing["episode_b_offset_seconds"]
+            existing_a_end = existing_a_start + existing["duration_seconds"]
+            existing_b_end = existing_b_start + existing["duration_seconds"]
+            overlap_a = max(0, min(a_end, existing_a_end) - max(a_start, existing_a_start))
+            overlap_b = max(0, min(b_end, existing_b_end) - max(b_start, existing_b_start))
+            shorter = min(candidate["duration_seconds"], existing["duration_seconds"])
+            return shorter > 0 and overlap_a / shorter >= 0.70 and overlap_b / shorter >= 0.70
+
+        if not any(overlaps_same_run(existing) for existing in kept):
             kept.append(candidate)
     return sorted(kept, key=lambda item: (item["episode_a_offset_seconds"], item["episode_b_offset_seconds"]))
 
