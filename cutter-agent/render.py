@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -152,7 +153,7 @@ def render(manifest: Path, output: Path, watermark: Path | None = None, overwrit
         # Copy only after a complete successful render; preserve an existing output unless overwrite was explicit.
         if output.exists() and not overwrite:
             raise FileExistsError(f"La salida apareció durante el proceso: {output}")
-        shutil.copy2(staged_output, output)
+        os.replace(staged_output, output)
     return output
 
 
