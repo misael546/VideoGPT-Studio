@@ -26,7 +26,7 @@ jobs:
         run: |
           python -m py_compile scripts/generate-free-isekai.py scripts/validate-resource-library.py
           python scripts/validate-resource-library.py
-          python -m py_compile cutter-agent/cutter.py cutter-agent/render.py
+          python -m py_compile cutter-agent/cutter.py cutter-agent/edit_plan.py cutter-agent/render.py
           python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Check server syntax
         run: node --check src/server.js
