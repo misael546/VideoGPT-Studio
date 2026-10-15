@@ -43,7 +43,7 @@ El escáner obtiene duración, resolución y tamaño, propone el orden por núme
 python edit_plan.py create scan-report.json --output edit-plan.json
 ```
 
-El plan incluye el orden propuesto y las coincidencias visuales y/o de audio como candidatos. Cada corte comienza con `"approved": false`; por tanto, **no se elimina nada por defecto**. Abre `review.html`, carga el plan y la carpeta de episodios, reproduce cada candidato, ajusta los tiempos y marca «Aprobar eliminación» solo cuando lo hayas confirmado. Si un nombre de archivo no es único, el generador no asigna candidatos ambiguos a una ruta.
+El plan incluye el orden propuesto y las coincidencias visuales y/o de audio como candidatos. Agrupa intervalos superpuestos descubiertos en varias comparaciones entre episodios y conserva las modalidades y pares que aportaron evidencia, evitando mostrar repetidamente el mismo corte. Cada corte comienza con `"approved": false`; por tanto, **no se elimina nada por defecto**. Abre `review.html`, carga el plan y la carpeta de episodios, reproduce cada candidato, ajusta los tiempos y marca «Aprobar eliminación» solo cuando lo hayas confirmado. Si un nombre de archivo no es único, el generador no asigna candidatos ambiguos a una ruta.
 
 Los tiempos sugeridos corresponden únicamente al tramo que el escáner logró emparejar. No se asume que ese tramo cubra el opening o ending completo; revisa y ajusta `start_seconds` y `end_seconds` según corresponda. Los intervalos aprobados se eliminarán del episodio; los no aprobados se conservarán.
 
