@@ -69,10 +69,11 @@ if errorlevel 1 (
   goto menu
 )
 echo.
-echo Se abrira el plan. Revisa los tiempos y marca approved como true
-echo solo en los opening/endings que hayas confirmado.
-start "" notepad "%VIDEO_FOLDER%\edit-plan.json"
-echo Cuando termines de revisar, vuelve aqui y elige la opcion 2.
+echo Se abrira el revisor local en el navegador.
+echo Carga edit-plan.json y la carpeta de episodios en la pantalla.
+echo Previsualiza los candidatos, corrige tiempos y aprueba solo cortes confirmados.
+echo Exporta edit-plan-reviewed.json en la carpeta de episodios.
+start "" "%~dp0review.html"
 pause
 goto menu
 
