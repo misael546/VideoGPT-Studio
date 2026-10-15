@@ -64,6 +64,22 @@ class ManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "originales"):
             renderer.ensure_output_not_source(episodes, self.video.resolve())
 
+    @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg/FFprobe no instalados")
+    def test_failed_overwrite_render_preserves_previous_output(self):
+        output = self.root / "final.mp4"
+        original_bytes = b"previous known-good output"
+        output.write_bytes(original_bytes)
+        self.write_manifest({
+            "schema": "cutter-studio-render/v1",
+            "episodes": [{"path": str(self.video), "start_seconds": 0, "end_seconds": 10}],
+        })
+        with patch.object(renderer, "media_info", return_value={"duration": 120.0, "has_audio": True}), \
+             patch.object(renderer, "command", side_effect=RuntimeError("synthetic ffmpeg failure")):
+            with self.assertRaisesRegex(RuntimeError, "synthetic ffmpeg failure"):
+                renderer.render(self.manifest, output, overwrite=True)
+        self.assertEqual(output.read_bytes(), original_bytes)
+
+
     def test_allows_output_in_separate_path(self):
         episodes = [{"path": self.video.resolve()}]
         renderer.ensure_output_not_source(episodes, self.root / "final.mp4")
