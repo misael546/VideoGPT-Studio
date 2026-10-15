@@ -39,10 +39,12 @@ jobs:
           node --check public/assistant-planner.js
           node --check public/advanced-tools.js
           node --check cutter-agent/review.js
+          node --check cutter-agent/episode-order.js
           test -s public/editor.html
           test -s public/editor.css
           test -s cutter-agent/review.html
           test -s cutter-agent/review.css
+          test -s cutter-agent/episode-order.js
       - name: Test edit plan validator
         run: npm test
       - name: Smoke test API
@@ -62,10 +64,11 @@ jobs:
         run: |
           mkdir -p dist/Cutter-Studio
           cp cutter-agent/cutter.py cutter-agent/edit_plan.py cutter-agent/render.py cutter-agent/review_server.py dist/Cutter-Studio/
-          cp cutter-agent/review.html cutter-agent/review.css cutter-agent/review.js cutter-agent/INICIAR_CUTTER_STUDIO.bat cutter-agent/PREPARAR_REQUISITOS_WINDOWS.bat cutter-agent/README.md dist/Cutter-Studio/
+          cp cutter-agent/review.html cutter-agent/review.css cutter-agent/review.js cutter-agent/episode-order.js cutter-agent/INICIAR_CUTTER_STUDIO.bat cutter-agent/PREPARAR_REQUISITOS_WINDOWS.bat cutter-agent/README.md dist/Cutter-Studio/
           printf 'Commit: %s\nBuilt (UTC): %s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/Cutter-Studio/BUILD_INFO.txt
           python -m py_compile dist/Cutter-Studio/cutter.py dist/Cutter-Studio/edit_plan.py dist/Cutter-Studio/render.py dist/Cutter-Studio/review_server.py
           node --check dist/Cutter-Studio/review.js
+          node --check dist/Cutter-Studio/episode-order.js
           test -s dist/Cutter-Studio/INICIAR_CUTTER_STUDIO.bat
           test -s dist/Cutter-Studio/PREPARAR_REQUISITOS_WINDOWS.bat
           test -s dist/Cutter-Studio/review_server.py
@@ -78,6 +81,7 @@ jobs:
           test -s dist/Cutter-Studio/review.html
           test -s dist/Cutter-Studio/review.css
           test -s dist/Cutter-Studio/review.js
+          test -s dist/Cutter-Studio/episode-order.js
       - name: Upload standalone Cutter Studio Windows package
         uses: actions/upload-artifact@v4
         with:
