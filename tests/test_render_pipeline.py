@@ -82,6 +82,36 @@ class ManifestTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg/FFprobe no instalados")
 class RenderIntegrationTests(unittest.TestCase):
+    def test_renders_with_optional_watermark(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            source = root / "episode.mkv"
+            watermark = root / "watermark.png"
+            manifest = root / "plan.json"
+            output = root / "watermarked.mp4"
+            subprocess.run([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", "color=c=blue:s=320x240:r=15:d=1",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(source),
+            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", "color=c=white:s=96x32:d=1",
+                "-frames:v", "1", str(watermark),
+            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            manifest.write_text(json.dumps({
+                "schema": "cutter-studio-render/v1",
+                "episodes": [{"path": str(source), "start_seconds": 0, "end_seconds": 1}],
+            }), encoding="utf-8")
+
+            result = renderer.render(manifest, output, watermark=watermark)
+            self.assertTrue(result.is_file())
+            self.assertGreater(result.stat().st_size, 0)
+            info = renderer.media_info(result)
+            self.assertAlmostEqual(info["duration"], 1.0, delta=0.25)
+            self.assertTrue(info["has_audio"])
+
+
     def test_renders_and_joins_clips_with_and_without_audio(self):
         with tempfile.TemporaryDirectory() as temp_name:
             root = Path(temp_name)
