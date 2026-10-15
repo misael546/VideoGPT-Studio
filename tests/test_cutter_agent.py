@@ -1,4 +1,6 @@
 import importlib.util
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -80,6 +82,44 @@ class MatchQualityTests(unittest.TestCase):
     def test_short_or_noisy_match_is_not_labeled_high(self):
         self.assertEqual(cutter.quality_level(10, 0.75, 70), "low")
         self.assertEqual(cutter.quality_level(20, 0.85, 50), "medium")
+
+
+@unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg/FFprobe no instalados")
+class ScannerIntegrationTests(unittest.TestCase):
+    def test_scanner_finds_shared_intro_in_synthetic_episodes(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            first = folder / "Episode 01.mp4"
+            second = folder / "Episode 02.mp4"
+
+            def make_episode(path, tail_source):
+                subprocess.run([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=10:duration=10",
+                    "-f", "lavfi", "-i", tail_source,
+                    "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0,format=yuv420p[v]",
+                    "-map", "[v]", "-c:v", "libx264", "-preset", "ultrafast",
+                    "-pix_fmt", "yuv420p", str(path),
+                ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            make_episode(first, "smptebars=size=320x240:rate=10:duration=8")
+            make_episode(second, "mandelbrot=size=320x240:rate=10:duration=8")
+            report = cutter.scan(folder, root / "scan.json", use_cache=False)
+
+            candidates = [
+                item for item in report["repeated_sequence_candidates"]
+                if item["edge"] == "start"
+                and item["episode_a_offset_seconds"] == 0
+                and item["episode_b_offset_seconds"] == 0
+                and item["duration_seconds"] >= 8
+            ]
+            self.assertTrue(candidates, "Se esperaba detectar los primeros 10 s repetidos")
+            candidate = max(candidates, key=lambda item: item["duration_seconds"])
+            self.assertEqual(candidate["episode_a_cut_start_seconds"], 0)
+            self.assertEqual(candidate["episode_b_cut_start_seconds"], 0)
+            self.assertIn(candidate["match_quality"]["level"], {"low", "medium", "high"})
 
 
 class RepeatedSequenceTests(unittest.TestCase):
