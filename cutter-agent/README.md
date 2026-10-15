@@ -25,7 +25,7 @@ python cutter.py scan "D:\\Anime\\Temporada 1" --output scan-report.json
 
 La primera ejecución crea una caché local oculta `.cutter-studio-cache.json` dentro de la carpeta analizada. Las siguientes reutilizan metadatos y huellas visuales si el tamaño y la fecha de modificación del archivo no cambiaron; así se evita volver a decodificar los mismos vídeos al ajustar el plan. Para forzar un análisis completo usa `--no-cache`; para guardar la caché en otra ruta usa `--cache-file "D:\\CutterCache\\anime.json"`.
 
-El escáner obtiene duración, resolución y tamaño, calcula huellas visuales de los primeros y últimos 180 segundos y compara secuencias con hasta 15 segundos de desfase, tolera hasta dos fotogramas aislados distintos y registra métricas de calidad (proporción de muestras coincidentes y distancia media de hash). Cuando la coincidencia toca el borde inicial/final del archivo, también propone ampliar el corte hasta el borde si queda a 10 segundos o menos; estos límites aparecen marcados para revisión. Propone el orden por número de episodio cuando puede inferirlo del nombre. Los tiempos reportados son segundos desde el inicio de cada episodio.
+El escáner obtiene duración, resolución y tamaño, calcula huellas visuales de los primeros y últimos 180 segundos y compara secuencias con hasta 15 segundos de desfase. Cada fotograma combina un hash de luminosidad media (aHash) y uno de gradientes horizontales (dHash), lo que ayuda a tolerar cambios uniformes de brillo y algunas diferencias de compresión. La comparación tolera hasta dos muestras visuales discordantes aisladas y registra proporción de coincidencias, distancia media y un nivel de calidad visual (alto/medio/bajo). Ese nivel describe la coincidencia visual, no confirma que el tramo sea opening o ending. Cuando la coincidencia toca el borde inicial/final del archivo, también propone ampliar el corte hasta el borde si queda a 10 segundos o menos; estos límites aparecen marcados para revisión. Propone el orden por número de episodio cuando puede inferirlo del nombre. Los tiempos reportados son segundos desde el inicio de cada episodio.
 
 ### 2. Crear el plan de edición revisable
 
@@ -57,7 +57,8 @@ La marca de agua es opcional. El renderizador normaliza segmentos a MP4 H.264/AA
 
 ## Límites y seguridad
 
-- Las coincidencias visuales son candidatas, no una garantía de que el tramo sea un opening o ending.
-- El análisis actual toma muestras visuales a un fotograma por segundo; todavía no analiza huellas de audio y puede fallar si cambian el montaje, el logo o el recorte.
+- Las coincidencias visuales son candidatas, no una garantía de que el tramo sea un opening o ending. Nunca se aprueban cortes automáticamente.
+- El análisis toma muestras visuales a un fotograma por segundo; todavía no analiza huellas de audio. Puede fallar si cambia el montaje, el recorte o la secuencia, aunque la música sea la misma.
+- La caché usa un esquema versionado para que los cambios en el formato de las huellas invalide datos antiguos automáticamente.
 - La herramienta funciona localmente por línea de comandos. No la ejecutes como servicio público ni abras puertos de red.
 - La CI instala FFmpeg y prueba la unión de clips sintéticos con y sin audio, además de validar el plan y sus intervalos.
