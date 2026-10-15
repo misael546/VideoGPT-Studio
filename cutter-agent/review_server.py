@@ -155,6 +155,7 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
                 "/": ("review.html", "text/html; charset=utf-8"),
                 "/review.html": ("review.html", "text/html; charset=utf-8"),
                 "/review.js": ("review.js", "text/javascript; charset=utf-8"),
+                "/episode-order.js": ("episode-order.js", "text/javascript; charset=utf-8"),
                 "/review.css": ("review.css", "text/css; charset=utf-8"),
             }
             if parsed.path not in static_files:
