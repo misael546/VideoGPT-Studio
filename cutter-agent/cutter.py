@@ -334,12 +334,13 @@ def matching_runs(
             kept.append(candidate)
     return sorted(kept, key=lambda item: (item["episode_a_offset_seconds"], item["episode_b_offset_seconds"]))
 
-def absolute_offset(offset: int, duration: float, edge: str) -> int:
+def absolute_offset(offset: int, duration: float, edge: str) -> float:
     """Convert a sampled-window offset into seconds from the episode's start."""
     if edge == "end":
         window_length = min(WINDOW_SECONDS, max(1, int(duration)))
-        return max(0, int(duration - window_length)) + offset
-    return offset
+        # The end window is sought at the exact fractional timestamp duration-window_length.
+        return round(max(0.0, duration - window_length) + offset, 3)
+    return float(offset)
 
 
 def file_signature(path: Path) -> dict:
