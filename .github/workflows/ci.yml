@@ -77,4 +77,4 @@ jobs:
           name: Cutter-Studio-Windows-Local
           path: dist/Cutter-Studio/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
