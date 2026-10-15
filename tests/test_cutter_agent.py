@@ -60,6 +60,31 @@ class AbsoluteOffsetTests(unittest.TestCase):
         self.assertEqual(cutter.absolute_offset(4, 20, "end"), 4)
 
 
+class OutputDirectoryTests(unittest.TestCase):
+    def test_recursive_scan_skips_cutter_studio_output_folder(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            source = root / "Episode 01.mkv"
+            source.write_bytes(b"source episode")
+            output_dir = root / "Cutter-Studio-Output"
+            output_dir.mkdir()
+            prior_output = output_dir / "previous-final.mp4"
+            prior_output.write_bytes(b"previous rendered video")
+            metadata = {
+                "duration_seconds": 20.0,
+                "width": 640,
+                "height": 360,
+                "has_audio": False,
+                "size_bytes": source.stat().st_size,
+            }
+            with mock.patch.object(cutter, "probe", return_value=metadata) as probe_mock, \
+                 mock.patch.object(cutter, "frame_hashes", return_value=[int("A" * 64, 16)] * 20):
+                report = cutter.scan(root, root / "scan.json", recursive=True, use_cache=False)
+            self.assertEqual(report["video_count"], 1)
+            self.assertEqual(report["videos_in_proposed_order"][0]["filename"], source.name)
+            self.assertEqual(probe_mock.call_count, 1)
+
+
 class ScanCacheTests(unittest.TestCase):
     def test_failed_partial_fingerprint_is_excluded_without_crashing_pair_scan(self):
         with tempfile.TemporaryDirectory() as temp_name:
