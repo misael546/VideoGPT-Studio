@@ -109,7 +109,7 @@ def _same_cut_candidate(left: dict, right: dict) -> bool:
     # Pairwise comparisons for one repeated intro/outro often produce slightly different
     # boundaries. Merge only close, strongly overlapping candidates, not separate scenes.
     same_edge = left.get("edge") == right.get("edge")
-    if start_delta <= 4.0 and end_delta <= 20.0 and overlap_ratio >= 0.75:
+    if same_edge and start_delta <= 4.0 and end_delta <= 20.0 and overlap_ratio >= 0.75:
         return True
     return same_edge and start_delta <= 12.0 and overlap_ratio >= 0.70
 
