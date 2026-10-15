@@ -88,6 +88,7 @@ def create_plan(scan_path: Path) -> dict:
                     str(match.get("episode_b", "")),
                 ],
                 "alignment_shift_seconds": int(match.get("alignment_shift_seconds") or 0),
+                "modalities": list(match.get("modalities", [])),
                 "match_quality": match.get("match_quality", {}),
                 "boundary_expanded": bool(match.get(f"episode_{side}_boundary_expanded", False)),
                 "review_status": "pending",
@@ -108,7 +109,9 @@ def create_plan(scan_path: Path) -> dict:
             "pending_review_count": candidate_count,
         },
         "review_instructions": [
-            "Cada intervalo es solo una coincidencia visual candidata, no una detección confirmada de opening o ending.",
+            "Cada intervalo es una coincidencia visual y/o de audio candidata, no una detección confirmada de opening o ending.",
+            "Una coincidencia solo de audio puede ser música de fondo; revisa el vídeo y el audio antes de aprobarla.",
+            "Cuando aparezcan ambas modalidades, son señales concordantes, pero el corte sigue requiriendo revisión manual.",
             "Reproduce el vídeo en esos tiempos antes de cambiar approved a true.",
             "Los intervalos aprobados se eliminarán; los no aprobados se conservarán.",
             "Guarda el archivo edit-plan.json revisado antes de generar el manifiesto de renderizado.",
