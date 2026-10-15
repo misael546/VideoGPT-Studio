@@ -314,7 +314,14 @@ def save_cache(path: Path, entries: dict) -> None:
     temporary.replace(path)
 
 
-def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = True, cache_path: Path | None = None) -> dict:
+def scan(
+    folder: Path,
+    output: Path,
+    recursive: bool = False,
+    use_cache: bool = True,
+    cache_path: Path | None = None,
+    progress: bool = False,
+) -> dict:
     if not folder.is_dir():
         raise ValueError(f"No existe la carpeta: {folder}")
     paths = sorted(
@@ -334,8 +341,11 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
     cache_hits = 0
     modalities = ("visual", "audio")
 
-    for path in paths:
+    for file_index, path in enumerate(paths, start=1):
         file_audio_warnings = []
+        was_cached = False
+        if progress:
+            print(f"[{file_index}/{len(paths)}] Analizando {path.name}...", flush=True)
         try:
             resolved = str(path.resolve())
             signature = file_signature(path)
@@ -354,6 +364,7 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
                             for modality in modalities
                         }
                         meta = possible_meta
+                        was_cached = True
                         cached_audio_warnings = cached.get("audio_warnings", [])
                         if isinstance(cached_audio_warnings, list):
                             audio_warnings.extend(
@@ -389,6 +400,9 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
                 **meta,
             }
             videos.append(entry)
+            if progress:
+                label = "caché reutilizada" if was_cached else "huellas calculadas"
+                print(f"    {label}", flush=True)
             if use_cache:
                 new_cache[resolved] = {
                     "signature": signature,
@@ -404,6 +418,8 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
                 }
         except (RuntimeError, ValueError, OSError, json.JSONDecodeError, TypeError) as exc:
             errors.append({"filename": path.name, "error": str(exc)})
+            if progress:
+                print(f"    ERROR: {exc}", flush=True)
 
     if use_cache:
         save_cache(selected_cache_path, new_cache)
@@ -411,8 +427,15 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
     videos.sort(key=lambda v: (v["episode_number"] is None, v["episode_number"] or 0, v["filename"].lower()))
     candidates = []
     valid_paths = list(hashes)
+    pair_total = len(valid_paths) * (len(valid_paths) - 1) // 2
+    pair_index = 0
+    progress_step = max(1, pair_total // 20)
     for i, left_path in enumerate(valid_paths):
         for right_path in valid_paths[i + 1:]:
+            pair_index += 1
+            if progress and (pair_index % progress_step == 0 or pair_index == pair_total):
+                percentage = round(100 * pair_index / max(1, pair_total))
+                print(f"Comparando secuencias: {pair_index}/{pair_total} pares ({percentage}%)", flush=True)
             left_meta = next(v for v in videos if v["path"] == str(left_path.resolve()))
             right_meta = next(v for v in videos if v["path"] == str(right_path.resolve()))
             for edge in ("start", "end"):
@@ -554,7 +577,14 @@ def main() -> int:
         print("Faltan dependencias en PATH: " + ", ".join(missing), file=sys.stderr)
         return 2
     try:
-        report = scan(args.folder.expanduser(), args.output.expanduser(), args.recursive, not args.no_cache, args.cache_file)
+        report = scan(
+            args.folder.expanduser(),
+            args.output.expanduser(),
+            args.recursive,
+            not args.no_cache,
+            args.cache_file,
+            progress=True,
+        )
     except (ValueError, RuntimeError, OSError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
