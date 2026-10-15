@@ -106,6 +106,16 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
             self.send_header("Content-Length", str(len(payload)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+            self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+            self.send_header(
+                "Content-Security-Policy",
+                "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+                "media-src 'self' blob:; img-src 'self' data: blob:; object-src 'none'; "
+                "base-uri 'none'; frame-ancestors 'none'",
+            )
             self.end_headers()
             self.wfile.write(payload)
 
@@ -233,6 +243,9 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
             self.send_header("Content-Type", "video/mp4")
             self.send_header("Content-Length", str(payload_size))
             self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("Cross-Origin-Resource-Policy", "same-origin")
             self.send_header("X-Preview-Start", f"{preview_start:.3f}")
             self.end_headers()
             try:
