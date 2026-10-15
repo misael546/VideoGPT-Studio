@@ -13,6 +13,34 @@ cutter = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(cutter)
 
 
+class SeasonNumberTests(unittest.TestCase):
+    def test_detects_common_season_labels(self):
+        self.assertEqual(cutter.season_number(Path("Anime_S01E12.mkv")), 1)
+        self.assertEqual(cutter.season_number(Path("Temporada 2 Capitulo 03.mp4")), 2)
+        self.assertEqual(cutter.season_number(Path("Season_03_Episode_07.webm")), 3)
+        self.assertIsNone(cutter.season_number(Path("Episode_07.mkv")))
+
+    def test_recursive_scan_orders_by_season_then_episode(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            folder = Path(temp_name)
+            names = ["S02E01.mkv", "S01E02.mkv", "S01E01.mkv"]
+            for name in names:
+                (folder / name).write_bytes(name.encode("utf-8"))
+            metadata = {
+                "duration_seconds": 5.0,
+                "width": 320,
+                "height": 240,
+                "has_audio": False,
+                "size_bytes": 20,
+            }
+            with mock.patch.object(cutter, "probe", return_value=metadata):
+                report = cutter.scan(folder, folder / "scan.json", use_cache=False)
+            self.assertEqual(
+                [video["filename"] for video in report["videos_in_proposed_order"]],
+                ["S01E01.mkv", "S01E02.mkv", "S02E01.mkv"],
+            )
+
+
 class ProbeValidationTests(unittest.TestCase):
     def test_rejects_non_finite_duration_from_ffprobe(self):
         with tempfile.TemporaryDirectory() as temp_name:
