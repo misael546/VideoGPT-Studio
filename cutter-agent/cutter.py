@@ -214,6 +214,19 @@ def scan(folder: Path, output: Path, recursive: bool = False) -> dict:
                     match["episode_b_offset_seconds"] = absolute_offset(
                         match["episode_b_offset_seconds"], right_meta["duration_seconds"], edge
                     )
+                    for side, meta in (("a", left_meta), ("b", right_meta)):
+                        match_start = float(match[f"episode_{side}_offset_seconds"])
+                        match_end = match_start + float(match["duration_seconds"])
+                        episode_duration = float(meta["duration_seconds"])
+                        # If a repeated sequence touches an episode edge, propose the full edge-to-match interval.
+                        # This expands only near the file boundary; internal matches remain untouched for review.
+                        cut_start = 0.0 if edge == "start" and match_start <= 10 else match_start
+                        cut_end = episode_duration if edge == "end" and episode_duration - match_end <= 10 else min(episode_duration, match_end)
+                        match[f"episode_{side}_cut_start_seconds"] = round(cut_start, 3)
+                        match[f"episode_{side}_cut_end_seconds"] = round(cut_end, 3)
+                        match[f"episode_{side}_boundary_expanded"] = (
+                            cut_start < match_start or cut_end > match_end
+                        )
                     candidates.append({
                         "episode_a": left_path.name,
                         "episode_b": right_path.name,
