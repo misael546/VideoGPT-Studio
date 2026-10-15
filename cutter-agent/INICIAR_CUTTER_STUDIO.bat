@@ -70,10 +70,10 @@ if errorlevel 1 (
 )
 echo.
 echo Se abrira el revisor local en el navegador.
-echo Carga edit-plan.json y la carpeta de episodios en la pantalla.
-echo Previsualiza los candidatos, corrige tiempos y aprueba solo cortes confirmados.
-echo Exporta edit-plan-reviewed.json y selecciona ese archivo al renderizar.
-start "" "%~dp0review.html"
+echo FFmpeg generara vistas previas compatibles incluso para archivos MKV.
+echo Los videos permanecen en tu PC; el servidor escucha solo en 127.0.0.1.
+echo Cuando termines, guarda el plan revisado y cierra la ventana del servidor.
+start "Cutter Studio Revisor" /min python "%~dp0review_server.py" --folder "%VIDEO_FOLDER%" --plan "%VIDEO_FOLDER%\edit-plan.json"
 pause
 goto menu
 
