@@ -336,9 +336,12 @@ function renderPlan() {
     const card = el("section", "episode-card");
     const header = el("div", "episode-header");
     const titleGroup = el("div");
+    const seasonLabel = episode.season_number !== null && episode.season_number !== undefined
+      ? "Temporada " + episode.season_number + " · "
+      : "";
     titleGroup.append(
       el("h3", "", episode.filename || basename(episode.path)),
-      el("p", "", "Episodio " + (episode.episode_number ?? "sin número") + " · " + formatSeconds(episode.duration_seconds) + " · " + filteredCuts.length + " cortes mostrados")
+      el("p", "", seasonLabel + "Episodio " + (episode.episode_number ?? "sin número") + " · " + formatSeconds(episode.duration_seconds) + " · " + filteredCuts.length + " cortes mostrados")
     );
     header.append(titleGroup);
     const list = el("div", "cut-list");
