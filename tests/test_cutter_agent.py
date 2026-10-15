@@ -220,6 +220,14 @@ class RepeatedSequenceTests(unittest.TestCase):
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0]["duration_seconds"], 10)
 
+    def test_collapses_nearby_alignment_shifts_for_one_long_sequence(self):
+        frames = [int("A" * 64, 16)] * 60
+        matches = cutter.matching_runs(frames, frames.copy(), "start")
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["duration_seconds"], 60)
+        self.assertEqual(matches[0]["episode_a_offset_seconds"], 0)
+        self.assertEqual(matches[0]["episode_b_offset_seconds"], 0)
+
     def test_ignores_short_matches(self):
         frames = [int('A' * 64, 16) for _ in range(7)]
         self.assertEqual(cutter.matching_runs(frames, frames.copy(), "end"), [])
