@@ -52,6 +52,23 @@ def create_plan(scan_path: Path) -> dict:
         episodes.append(episode)
         by_filename.setdefault(episode["filename"], []).append(episode)
 
+    scan_warnings = []
+    for error in scan.get("errors", []):
+        if isinstance(error, dict):
+            scan_warnings.append({
+                "type": "video_error",
+                "filename": str(error.get("filename", "")),
+                "message": str(error.get("error", "No se pudo analizar el vídeo.")),
+            })
+    for warning in scan.get("audio_warnings", []):
+        if isinstance(warning, dict):
+            scan_warnings.append({
+                "type": "audio_warning",
+                "filename": str(warning.get("filename", "")),
+                "edge": str(warning.get("edge", "")),
+                "message": str(warning.get("error", "No se pudo extraer la huella de audio.")),
+            })
+
     candidate_count = 0
     for match in candidates:
         if not isinstance(match, dict):
@@ -101,6 +118,7 @@ def create_plan(scan_path: Path) -> dict:
     return {
         "schema": PLAN_SCHEMA,
         "source_report": str(scan_path.expanduser().resolve()),
+        "scan_warnings": scan_warnings,
         "episodes": episodes,
         "summary": {
             "episode_count": len(episodes),
