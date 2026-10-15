@@ -56,6 +56,32 @@ class ScanCacheTests(unittest.TestCase):
             self.assertEqual(second["videos_in_proposed_order"][0]["duration_seconds"], 20.0)
 
 
+class PerceptualHashTests(unittest.TestCase):
+    def test_combined_hash_encodes_average_pattern_and_gradients(self):
+        pixels = bytes(50 + ((index * 13) % 80) for index in range(256))
+        fingerprint = cutter.perceptual_hash(pixels)
+        self.assertGreater(fingerprint.bit_length(), cutter.AHASH_BITS)
+        self.assertNotEqual(fingerprint & ((1 << cutter.DHASH_BITS) - 1), 0)
+
+    def test_uniform_brightness_shift_preserves_fingerprint(self):
+        pixels = bytes(40 + ((index * 13) % 80) for index in range(256))
+        brighter = bytes(value + 45 for value in pixels)
+        self.assertEqual(cutter.perceptual_hash(pixels), cutter.perceptual_hash(brighter))
+
+    def test_rejects_wrong_pixel_count(self):
+        with self.assertRaisesRegex(ValueError, "píxeles"):
+            cutter.perceptual_hash(b"short")
+
+
+class MatchQualityTests(unittest.TestCase):
+    def test_high_quality_means_long_consistent_visual_match(self):
+        self.assertEqual(cutter.quality_level(45, 0.98, 20), "high")
+
+    def test_short_or_noisy_match_is_not_labeled_high(self):
+        self.assertEqual(cutter.quality_level(10, 0.75, 70), "low")
+        self.assertEqual(cutter.quality_level(20, 0.85, 50), "medium")
+
+
 class RepeatedSequenceTests(unittest.TestCase):
     def test_detects_eight_or_more_similar_samples(self):
         frames = [int('A' * 64, 16) for _ in range(10)]
