@@ -322,8 +322,10 @@ ui.planFile.addEventListener("change", async function () {
         throw new Error("El plan contiene un episodio con campos inválidos.");
       }
       for (const cut of episode.cuts) {
-        if (typeof cut.approved !== "boolean") cut.approved = false;
-        if (!["pending", "approved", "rejected"].includes(cut.review_status)) cut.review_status = cut.approved ? "approved" : "pending";
+        const isApproved = cut.approved === true || cut.review_status === "approved";
+        const isRejected = !isApproved && cut.review_status === "rejected";
+        cut.approved = isApproved;
+        cut.review_status = isApproved ? "approved" : isRejected ? "rejected" : "pending";
       }
     }
     state.plan = parsed;
