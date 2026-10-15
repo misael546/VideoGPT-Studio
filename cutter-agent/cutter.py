@@ -13,10 +13,14 @@ from pathlib import Path
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v"}
 WINDOW_SECONDS = 180
 MIN_MATCH_SECONDS = 8
-MAX_HASH_DISTANCE = 42  # 16.4% of a 16x16 average hash
+HASH_WIDTH = 16
+HASH_HEIGHT = 16
+AHASH_BITS = HASH_WIDTH * HASH_HEIGHT
+DHASH_BITS = HASH_HEIGHT * (HASH_WIDTH - 1)
+MAX_HASH_DISTANCE = 88  # ~17.7% of the combined 496-bit aHash + dHash signature
 MAX_CONSECUTIVE_MISSES = 2
 MAX_ALIGNMENT_SHIFT_SECONDS = 15
-CACHE_SCHEMA = "cutter-studio-cache/v1"
+CACHE_SCHEMA = "cutter-studio-cache/v2"
 
 
 def run(command: list[str], *, binary: bool = False):
@@ -53,32 +57,49 @@ def probe(path: Path) -> dict:
     }
 
 
+def perceptual_hash(pixels: bytes) -> int:
+    """Combine average luminance (aHash) and horizontal gradients (dHash)."""
+    if len(pixels) != HASH_WIDTH * HASH_HEIGHT:
+        raise ValueError(f"Se esperaban {HASH_WIDTH * HASH_HEIGHT} píxeles en escala de grises.")
+    average = sum(pixels) / len(pixels)
+    ahash = 0
+    for pixel in pixels:
+        ahash = (ahash << 1) | int(pixel >= average)
+
+    dhash = 0
+    for y in range(HASH_HEIGHT):
+        row = y * HASH_WIDTH
+        for x in range(HASH_WIDTH - 1):
+            dhash = (dhash << 1) | int(pixels[row + x] >= pixels[row + x + 1])
+    return (ahash << DHASH_BITS) | dhash
+
+
+def quality_level(duration_seconds: int, match_ratio: float, mean_hash_distance: float) -> str:
+    """Grade the visual match only; this is not a claim that it is an OP/ED."""
+    if duration_seconds >= 30 and match_ratio >= 0.90 and mean_hash_distance <= 36:
+        return "high"
+    if duration_seconds >= 15 and match_ratio >= 0.80 and mean_hash_distance <= 66:
+        return "medium"
+    return "low"
+
+
 def frame_hashes(path: Path, duration: float, edge: str) -> list[int]:
     if duration <= 0:
         return []
     count = min(WINDOW_SECONDS, max(1, int(duration)))
-    # Extract one small grayscale frame per second. Raw frames never leave this process.
-    if edge == "start":
-        seek = 0
-        vf = f"fps=1,scale=16:16:flags=area,format=gray"
-    else:
-        seek = max(0, duration - count)
-        vf = f"fps=1,scale=16:16:flags=area,format=gray"
+    # One tiny grayscale frame per second. Pixels and fingerprints stay local.
+    seek = 0 if edge == "start" else max(0, duration - count)
+    vf = f"fps=1,scale={HASH_WIDTH}:{HASH_HEIGHT}:flags=area,format=gray"
     raw = run([
         "ffmpeg", "-v", "error", "-ss", str(seek), "-i", str(path),
         "-t", str(count), "-vf", vf, "-an", "-sn", "-f", "rawvideo",
         "-pix_fmt", "gray", "pipe:1",
     ], binary=True)
-    frame_size = 16 * 16
-    hashes = []
-    for offset in range(0, len(raw) - frame_size + 1, frame_size):
-        pixels = raw[offset:offset + frame_size]
-        avg = sum(pixels) / frame_size
-        value = 0
-        for pixel in pixels:
-            value = (value << 1) | int(pixel >= avg)
-        hashes.append(value)
-    return hashes
+    frame_size = HASH_WIDTH * HASH_HEIGHT
+    return [
+        perceptual_hash(raw[offset:offset + frame_size])
+        for offset in range(0, len(raw) - frame_size + 1, frame_size)
+    ]
 
 
 def matching_runs(left: list[int], right: list[int], edge: str) -> list[dict]:
@@ -294,7 +315,12 @@ def scan(folder: Path, output: Path, recursive: bool = False, use_cache: bool = 
                         "match_quality": {
                             "matched_samples": match.get("matched_samples", 0),
                             "match_ratio": match.get("match_ratio", 0),
-                            "mean_hash_distance": match.get("mean_hash_distance", 256),
+                            "mean_hash_distance": match.get("mean_hash_distance", AHASH_BITS + DHASH_BITS),
+                            "level": quality_level(
+                                int(match.get("duration_seconds", 0)),
+                                float(match.get("match_ratio", 0)),
+                                float(match.get("mean_hash_distance", AHASH_BITS + DHASH_BITS)),
+                            ),
                         },
                         **match,
                     })
