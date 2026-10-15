@@ -77,6 +77,11 @@ def load_manifest(path: Path) -> list[dict]:
     return result
 
 
+def ensure_output_not_source(episodes: list[dict], output: Path) -> None:
+    if any(Path(episode["path"]).resolve() == output.resolve() for episode in episodes):
+        raise ValueError("La salida no puede reemplazar uno de los vídeos originales.")
+
+
 def render(manifest: Path, output: Path, watermark: Path | None = None, overwrite: bool = False) -> Path:
     missing = [tool for tool in ("ffmpeg", "ffprobe") if shutil.which(tool) is None]
     if missing:
@@ -93,8 +98,7 @@ def render(manifest: Path, output: Path, watermark: Path | None = None, overwrit
         if not watermark.is_file() or watermark.suffix.lower() not in WATERMARK_EXTENSIONS:
             raise ValueError("La marca de agua debe ser un archivo PNG, JPG o WebP existente.")
     episodes = load_manifest(manifest.expanduser())
-    if any(episode["path"] == output for episode in episodes):
-        raise ValueError("La salida no puede reemplazar uno de los vídeos originales.")
+    ensure_output_not_source(episodes, output)
     output.parent.mkdir(parents=True, exist_ok=True)
 
     # All work is staged in a temporary directory. Originals are read-only and never edited.
