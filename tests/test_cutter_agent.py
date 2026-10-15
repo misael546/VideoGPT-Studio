@@ -29,12 +29,20 @@ class RepeatedSequenceTests(unittest.TestCase):
         frames = [int('A' * 64, 16) for _ in range(7)]
         self.assertEqual(cutter.matching_runs(frames, frames.copy(), "end"), [])
 
-    def test_splits_matches_when_a_frame_differs(self):
-        a = [int('A' * 64, 16) for _ in range(20)]
-        b = a.copy()
-        b[10] = 0
+    def test_finds_sequence_with_small_timing_offset(self):
+        high = int("F" * 64, 16)
+        a = [0 if i % 2 == 0 else high for i in range(20)]
+        b = [high, high, *a]
         matches = cutter.matching_runs(a, b, "start")
-        self.assertEqual([m["duration_seconds"] for m in matches], [10, 9])
+        self.assertTrue(any(
+            m["episode_a_offset_seconds"] == 0
+            and m["episode_b_offset_seconds"] == 2
+            and m["duration_seconds"] == 20
+            for m in matches
+        ))
+
+    def test_empty_sequences_do_not_match(self):
+        self.assertEqual(cutter.matching_runs([], [1] * 20, "end"), [])
 
 
 if __name__ == "__main__":
