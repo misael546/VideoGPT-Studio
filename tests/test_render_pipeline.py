@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -76,6 +78,51 @@ class ManifestTests(unittest.TestCase):
             with self.subTest(start=start, end=end):
                 with self.assertRaisesRegex(ValueError, "intervalo"):
                     renderer.load_manifest(self.manifest)
+
+
+@unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg/FFprobe no instalados")
+class RenderIntegrationTests(unittest.TestCase):
+    def test_renders_and_joins_clips_with_and_without_audio(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            with_audio = root / "with-audio.mp4"
+            silent = root / "silent.mp4"
+            manifest = root / "reviewed-plan.json"
+            output = root / "joined.mp4"
+
+            subprocess.run([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", "color=c=red:s=320x240:d=1",
+                "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+                "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                "-c:a", "aac", str(with_audio),
+            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", "color=c=blue:s=320x240:d=1",
+                "-t", "1", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(silent),
+            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            manifest.write_text(json.dumps({
+                "schema": "cutter-studio-render/v1",
+                "episodes": [
+                    {"path": str(with_audio), "start_seconds": 0, "end_seconds": 0.8},
+                    {"path": str(silent), "start_seconds": 0, "end_seconds": 0.8},
+                ],
+            }), encoding="utf-8")
+
+            result = renderer.render(manifest, output)
+            self.assertTrue(result.is_file())
+            self.assertGreater(result.stat().st_size, 0)
+            info = renderer.media_info(result)
+            self.assertGreaterEqual(info["duration"], 1.5)
+            self.assertTrue(info["has_audio"])
+            probe = subprocess.run([
+                "ffprobe", "-v", "error", "-select_streams", "v:0",
+                "-show_entries", "stream=width,height", "-of", "json", str(result),
+            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            video_stream = json.loads(probe.stdout)["streams"][0]
+            self.assertEqual((video_stream["width"], video_stream["height"]), (1920, 1080))
 
 
 if __name__ == "__main__":
