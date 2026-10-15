@@ -207,17 +207,27 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
                     return
 
             try:
-                payload = output.read_bytes()
+                payload_size = output.stat().st_size
+                handle = output.open("rb")
             except OSError as exc:
                 self.send_json(500, {"error": "No se pudo leer la vista previa: " + str(exc)})
                 return
             self.send_response(200)
             self.send_header("Content-Type", "video/mp4")
-            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Content-Length", str(payload_size))
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Preview-Start", f"{preview_start:.3f}")
             self.end_headers()
-            self.wfile.write(payload)
+            try:
+                with handle:
+                    while True:
+                        chunk = handle.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+            except (BrokenPipeError, ConnectionResetError):
+                # Browser navigation/stop is normal; let the HTTP server continue serving other requests.
+                return
 
         def do_POST(self):
             if urlparse(self.path).path != "/api/plan":
