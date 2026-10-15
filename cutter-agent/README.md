@@ -6,7 +6,7 @@ Este componente se ejecuta en el PC del usuario. Los vídeos y los archivos de t
 
 Abre `INICIAR_CUTTER_STUDIO.bat`. El menú permite analizar episodios, revisar cortes en una interfaz local del navegador y renderizar el plan aprobado. En el menú, la opción 3 abre `PREPARAR_REQUISITOS_WINDOWS.bat`, que comprueba Python y FFmpeg/FFprobe y ofrece instalarlos con winget (o abrir las páginas oficiales). Si instalas requisitos, cierra y vuelve a abrir Cutter Studio para actualizar PATH. Los informes, la caché y el vídeo final se guardan localmente.
 
-El lanzador abre `review_server.py`, que enlaza solo a `127.0.0.1` en un puerto local. La interfaz `review.html` carga el plan automáticamente; FFmpeg convierte las vistas previas a MP4 para admitir MKV y otros formatos. Ajusta los límites y elige «Aprobar eliminación», «Conservar» o «Pendiente de revisión». El botón de guardar crea `edit-plan-reviewed.json` en la carpeta local. Los vídeos no se suben a Internet y el servidor se detiene al cerrar su ventana.
+El lanzador abre `review_server.py`, que enlaza solo a `127.0.0.1` en un puerto local. La interfaz `review.html` carga el plan automáticamente; FFmpeg convierte las vistas previas a MP4 para admitir MKV y otros formatos. Ajusta los límites y elige «Aprobar eliminación», «Conservar» o «Pendiente de revisión». El botón de guardar crea `edit-plan-reviewed.json` en la carpeta local. Los vídeos no se suben a Internet. Para borrar las vistas previas temporales de forma limpia, pulsa Ctrl+C en la ventana del servidor al terminar.
 
 Para iniciar el revisor manualmente desde una terminal:
 
