@@ -51,6 +51,55 @@ class EditPlanTests(unittest.TestCase):
         self.assertTrue(all(cut["review_status"] == "pending" for ep in plan["episodes"] for cut in ep["cuts"]))
         self.assertEqual(plan["episodes"][0]["cuts"][0]["start_seconds"], 82)
 
+    def test_deduplicates_same_cut_found_against_multiple_episode_pairs(self):
+        video_c = self.root / "Episode 03.mkv"
+        scan = json.loads(json.dumps(self.scan))
+        scan["videos_in_proposed_order"].append({
+            "filename": video_c.name,
+            "path": str(video_c),
+            "episode_number": 3,
+            "duration_seconds": 1195,
+        })
+
+        def candidate(a, b, a_number, b_number, a_start, b_start, duration, modality, level, ratio):
+            return {
+                "episode_a": a,
+                "episode_b": b,
+                "episode_a_number": a_number,
+                "episode_b_number": b_number,
+                "edge": "start",
+                "episode_a_offset_seconds": a_start,
+                "episode_b_offset_seconds": b_start,
+                "duration_seconds": duration,
+                "alignment_shift_seconds": b_start - a_start,
+                "modalities": [modality],
+                "match_quality": {
+                    modality: {"level": level, "match_ratio": ratio, "mean_hash_distance": 10}
+                },
+            }
+
+        scan["repeated_sequence_candidates"] = [
+            candidate(self.video_a.name, self.video_b.name, 1, 2, 82, 80, 90, "visual", "high", 0.98),
+            candidate(self.video_a.name, video_c.name, 1, 3, 83, 82, 89, "audio", "medium", 0.94),
+            candidate(self.video_b.name, video_c.name, 2, 3, 81, 83, 90, "visual", "medium", 0.90),
+        ]
+        self.scan_path.write_text(json.dumps(scan), encoding="utf-8")
+        plan = planner.create_plan(self.scan_path)
+
+        self.assertEqual(plan["summary"]["episode_count"], 3)
+        self.assertEqual(plan["summary"]["cut_candidates"], 3)
+        self.assertTrue(all(len(episode["cuts"]) == 1 for episode in plan["episodes"]))
+        for episode in plan["episodes"]:
+            cut = episode["cuts"][0]
+            self.assertEqual(len(cut["source_pairs"]), 2)
+            self.assertFalse(cut["approved"])
+            self.assertEqual(cut["review_status"], "pending")
+        first_cut = plan["episodes"][0]["cuts"][0]
+        self.assertEqual(set(first_cut["modalities"]), {"audio", "visual"})
+        self.assertEqual(first_cut["match_quality"]["visual"]["level"], "high")
+        self.assertEqual(first_cut["match_quality"]["audio"]["level"], "medium")
+
+
     def test_surfaces_scan_and_audio_warnings_in_review_plan(self):
         self.scan["audio_warnings"] = [{
             "filename": self.video_a.name,
