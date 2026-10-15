@@ -102,6 +102,26 @@ class ReviewServerTests(unittest.TestCase):
         self.assertTrue(loaded["episodes"][0]["cuts"][0]["approved"])
         self.assertFalse(json.loads(self.plan_path.read_text(encoding="utf-8"))["episodes"][0]["cuts"][0]["approved"])
 
+    def test_rejects_non_finite_episode_duration(self):
+        for invalid_duration in [float("nan"), float("inf"), float("-inf")]:
+            plan = json.loads(json.dumps(self.plan))
+            plan["episodes"][0]["duration_seconds"] = invalid_duration
+            with self.subTest(duration=invalid_duration):
+                with self.assertRaisesRegex(ValueError, "duración"):
+                    review_server.validate_plan(plan, self.root)
+
+    def test_rejects_non_finite_cut_times(self):
+        for field, invalid_value in [
+            ("start_seconds", float("nan")),
+            ("end_seconds", float("inf")),
+        ]:
+            plan = json.loads(json.dumps(self.plan))
+            plan["episodes"][0]["cuts"][0][field] = invalid_value
+            with self.subTest(field=field, value=invalid_value):
+                with self.assertRaisesRegex(ValueError, "intervalo"):
+                    review_server.validate_plan(plan, self.root)
+
+
     def test_rejects_a_plan_that_references_outside_the_selected_folder(self):
         outside = self.root.parent / "external-episode.mp4"
         bad = json.loads(json.dumps(self.plan))
