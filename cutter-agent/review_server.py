@@ -106,12 +106,21 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
             self.send_bytes(status, json.dumps(value, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
 
         def origin_allowed(self) -> bool:
+            expected_authority = f"127.0.0.1:{self.server.server_port}"
+            if self.headers.get("Host") != expected_authority:
+                return False
+            fetch_site = self.headers.get("Sec-Fetch-Site")
+            if fetch_site and fetch_site not in ("same-origin", "none"):
+                return False
             origin = self.headers.get("Origin")
-            expected = f"http://127.0.0.1:{self.server.server_port}"
-            return origin in (None, expected)
+            expected_origin = f"http://{expected_authority}"
+            return origin in (None, expected_origin)
 
         def do_GET(self):
             parsed = urlparse(self.path)
+            if parsed.path.startswith("/api/") and not self.origin_allowed():
+                self.send_json(403, {"error": "Origen no autorizado."})
+                return
             if parsed.path == "/api/plan":
                 try:
                     plan = load_plan(plan_path, root)
