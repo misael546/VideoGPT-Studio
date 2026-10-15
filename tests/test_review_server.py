@@ -22,7 +22,7 @@ class ReviewServerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name).resolve()
-        self.source = self.root / "Episode 01.mp4"
+        self.source = self.root / "Episode 01.mkv"
         subprocess.run([
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
             "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=15:duration=3",
