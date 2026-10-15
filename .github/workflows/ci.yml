@@ -38,8 +38,11 @@ jobs:
           node --check public/natural-language.js
           node --check public/assistant-planner.js
           node --check public/advanced-tools.js
+          node --check cutter-agent/review.js
           test -s public/editor.html
           test -s public/editor.css
+          test -s cutter-agent/review.html
+          test -s cutter-agent/review.css
       - name: Test edit plan validator
         run: npm test
       - name: Smoke test API
