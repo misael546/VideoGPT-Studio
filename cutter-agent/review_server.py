@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import math
 import json
 import os
 import shutil
@@ -66,7 +67,7 @@ def validate_plan(data: object, root: Path) -> dict:
             duration = float(episode.get("duration_seconds"))
         except (TypeError, ValueError):
             raise ValueError(f"Episodio #{index}: duración no válida.") from None
-        if not (duration > 0):
+        if not math.isfinite(duration) or duration <= 0:
             raise ValueError(f"Episodio #{index}: duración no válida.")
         cuts = episode.get("cuts")
         if not isinstance(cuts, list):
@@ -79,7 +80,13 @@ def validate_plan(data: object, root: Path) -> dict:
                 end = float(cut["end_seconds"])
             except (KeyError, TypeError, ValueError):
                 raise ValueError(f"Episodio #{index}, corte #{cut_index}: tiempos no válidos.") from None
-            if start < 0 or end <= start or end > duration + 0.05:
+            if (
+                not math.isfinite(start)
+                or not math.isfinite(end)
+                or start < 0
+                or end <= start
+                or end > duration + 0.05
+            ):
                 raise ValueError(f"Episodio #{index}, corte #{cut_index}: intervalo fuera de la duración.")
             if cut.get("approved") is True and cut.get("review_status") == "rejected":
                 raise ValueError(f"Episodio #{index}, corte #{cut_index}: estado de aprobación contradictorio.")
