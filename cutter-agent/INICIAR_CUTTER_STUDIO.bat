@@ -78,7 +78,7 @@ echo.
 echo Se abrira el revisor local en el navegador.
 echo FFmpeg generara vistas previas compatibles incluso para archivos MKV.
 echo Los videos permanecen en tu PC; el servidor escucha solo en 127.0.0.1.
-echo Cuando termines, guarda el plan revisado y cierra la ventana del servidor.
+echo Cuando termines, guarda el plan y pulsa Ctrl+C en la ventana del revisor para limpiar temporales.
 start "Cutter Studio Revisor" /min python "%~dp0review_server.py" --folder "%VIDEO_FOLDER%" --plan "%VIDEO_FOLDER%\edit-plan.json"
 pause
 goto menu
