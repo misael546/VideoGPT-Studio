@@ -20,17 +20,17 @@ class EpisodeNumberTests(unittest.TestCase):
 
 class RepeatedSequenceTests(unittest.TestCase):
     def test_detects_eight_or_more_similar_samples(self):
-        frames = [0xAAAAAAAAAAAAAAAA for _ in range(10)]
+        frames = [int('A' * 64, 16) for _ in range(10)]
         matches = cutter.matching_runs(frames, frames.copy(), "start")
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0]["duration_seconds"], 10)
 
     def test_ignores_short_matches(self):
-        frames = [0xAAAAAAAAAAAAAAAA for _ in range(7)]
+        frames = [int('A' * 64, 16) for _ in range(7)]
         self.assertEqual(cutter.matching_runs(frames, frames.copy(), "end"), [])
 
     def test_splits_matches_when_a_frame_differs(self):
-        a = [0xAAAAAAAAAAAAAAAA for _ in range(12)]
+        a = [int('A' * 64, 16) for _ in range(12)]
         b = a.copy()
         b[5] = 0
         matches = cutter.matching_runs(a, b, "start")
