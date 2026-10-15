@@ -52,6 +52,20 @@ class RepeatedSequenceTests(unittest.TestCase):
             for m in matches
         ))
 
+    def test_tolerates_two_isolated_visual_mismatches_and_reports_quality(self):
+        frame = int("A" * 64, 16)
+        other = int("5" * 64, 16)
+        left = [frame] * 20
+        right = [frame] * 20
+        right[5] = other
+        right[13] = other
+        matches = cutter.matching_runs(left, right, "start")
+        self.assertTrue(matches)
+        best = max(matches, key=lambda item: item["duration_seconds"])
+        self.assertEqual(best["duration_seconds"], 20)
+        self.assertLess(best["match_ratio"], 1.0)
+        self.assertEqual(best["matched_samples"], 18)
+
     def test_empty_sequences_do_not_match(self):
         self.assertEqual(cutter.matching_runs([], [1] * 20, "end"), [])
 
