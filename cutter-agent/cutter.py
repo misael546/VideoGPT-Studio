@@ -40,7 +40,8 @@ def run(command: list[str], *, binary: bool = False):
 def season_number(path: Path) -> int | None:
     name = path.stem.lower()
     labeled = re.search(
-        r"(?:season|temporada|temp|s)[ ._-]*0*(\d{1,3})(?:[ ._-]*e[ ._-]*0*\d{1,4})?\b",
+        r"(?:season|temporada|temp|s)[ ._-]*0*(\d{1,3})"
+        r"(?:[ ._-]*(?:episode|episodio|chapter|capitulo|ep|cap|e)[ ._-]*0*\d{1,4})?\b",
         name,
     )
     return int(labeled.group(1)) if labeled else None
