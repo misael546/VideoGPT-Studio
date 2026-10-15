@@ -79,6 +79,36 @@ class ReviewServerTests(unittest.TestCase):
             payload = response.read().decode("utf-8")
         self.assertIn("moveEpisodeToPosition", payload)
 
+    def test_preview_episode_is_resolved_by_source_path_after_client_reordering(self):
+        episodes = [
+            {"path": str(self.root / "Episode 02.mkv")},
+            {"path": str(self.source)},
+        ]
+        selected = review_server.preview_episode_index(
+            episodes,
+            requested_index=0,
+            requested_path=str(self.source),
+            root=self.root,
+        )
+        self.assertEqual(selected, 1)
+
+    def test_preview_episode_path_must_belong_to_plan_and_authorized_folder(self):
+        with self.assertRaisesRegex(ValueError, "no corresponde a un episodio"):
+            review_server.preview_episode_index(
+                [{"path": str(self.source)}],
+                requested_index=0,
+                requested_path=str(self.root / "Episode 99.mkv"),
+                root=self.root,
+            )
+        outside = self.root.parent / "outside.mp4"
+        with self.assertRaisesRegex(ValueError, "fuera de la carpeta autorizada"):
+            review_server.preview_episode_index(
+                [{"path": str(self.source)}],
+                requested_index=0,
+                requested_path=str(outside),
+                root=self.root,
+            )
+
     def test_plan_api_reads_configured_plan(self):
         with urlopen(self.base_url + "/api/plan", timeout=5) as response:
             data = json.loads(response.read().decode("utf-8"))
