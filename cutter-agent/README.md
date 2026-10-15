@@ -2,6 +2,11 @@
 
 Este componente se ejecuta en el PC del usuario. Los vídeos y los archivos de trabajo permanecen en carpetas locales; no se suben a GitHub ni a servicios externos.
 
+## Inicio rápido en Windows
+
+Abre `INICIAR_CUTTER_STUDIO.bat`. El menú permite analizar la carpeta de episodios y crear el plan revisable, o renderizar después de revisar y aprobar los cortes. El lanzador necesita Python 3.10+ y FFmpeg/FFprobe instalados en PATH. Los informes, la caché y el vídeo final se guardan localmente en las rutas elegidas.
+
+
 ## Requisitos
 
 - Python 3.10 o superior
