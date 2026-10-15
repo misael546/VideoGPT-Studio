@@ -146,6 +146,7 @@ def create_plan(scan_path: Path) -> dict:
 
     episodes = []
     by_filename = {}
+    by_path = {}
     for order, video in enumerate(videos, start=1):
         if not isinstance(video, dict) or not video.get("path"):
             raise ValueError(f"Entrada de vídeo inválida en la posición {order}.")
@@ -159,12 +160,14 @@ def create_plan(scan_path: Path) -> dict:
             "order": order,
             "path": str(Path(video["path"]).expanduser().resolve()),
             "filename": str(video.get("filename") or Path(video["path"]).name),
+            "season_number": video.get("season_number"),
             "episode_number": video.get("episode_number"),
             "duration_seconds": duration,
             "cuts": [],
         }
         episodes.append(episode)
         by_filename.setdefault(episode["filename"], []).append(episode)
+        by_path.setdefault(episode["path"], []).append(episode)
 
     scan_warnings = []
     for error in scan.get("errors", []):
@@ -202,10 +205,19 @@ def create_plan(scan_path: Path) -> dict:
             continue
         for side in ("a", "b"):
             filename = match.get(f"episode_{side}")
+            source_path = match.get(f"episode_{side}_path")
             offset = float(match.get(f"episode_{side}_offset_seconds") or 0)
-            possible = by_filename.get(str(filename), [])
+            possible = []
+            if source_path:
+                try:
+                    normalized_source = str(Path(str(source_path)).expanduser().resolve())
+                except (OSError, RuntimeError):
+                    normalized_source = ""
+                possible = by_path.get(normalized_source, [])
+            if not possible:
+                possible = by_filename.get(str(filename), [])
             if len(possible) != 1:
-                # Ambiguous duplicate filenames should never silently target a wrong source.
+                # Ambiguous duplicate filenames without a unique source path are not silently assigned.
                 continue
             episode = possible[0]
             start = max(0.0, float(match.get(f"episode_{side}_cut_start_seconds", offset)))
@@ -224,6 +236,10 @@ def create_plan(scan_path: Path) -> dict:
                 "source_pair": [
                     str(match.get("episode_a", "")),
                     str(match.get("episode_b", "")),
+                ],
+                "source_path_pair": [
+                    str(match.get("episode_a_path", "")),
+                    str(match.get("episode_b_path", "")),
                 ],
                 "alignment_shift_seconds": int(match.get("alignment_shift_seconds") or 0),
                 "modalities": list(match.get("modalities", [])),
