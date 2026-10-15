@@ -346,7 +346,7 @@ def main() -> int:
     url = f"http://127.0.0.1:{server.server_port}/"
     print(f"Cutter Studio revisor local: {url}")
     print("Servidor enlazado solo a 127.0.0.1. Los vídeos no se envían por Internet.")
-    print("Cierra esta ventana para detener el revisor y eliminar las vistas previas temporales.")
+    print("Pulsa Ctrl+C en esta ventana para detener el revisor y eliminar las vistas previas temporales.")
     threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     try:
         server.serve_forever(poll_interval=0.25)
