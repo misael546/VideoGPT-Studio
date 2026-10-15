@@ -60,6 +60,6 @@ Los intervalos son los segmentos que quieres conservar. Los episodios se unirán
 python render.py plan.json --output "D:\\Anime\\Temporada 1\\temporada-final.mp4" --watermark "D:\\Anime\\marca.png"
 ```
 
-La marca de agua es opcional. El renderizador normaliza los segmentos a MP4 H.264/AAC de 1920×1080, 30 fps y audio estéreo de 48 kHz para poder unirlos de forma consistente; esto puede aumentar el tiempo de procesamiento y cambiar la resolución de origen. Revisa que haya espacio libre suficiente. No sobrescribe la salida existente salvo que añadas `--overwrite`. Los originales se leen, no se editan. Los archivos temporales se eliminan tras el proceso.
+La marca de agua es opcional. El renderizador normaliza los segmentos a MP4 H.264/AAC de 1920×1080, 30 fps y audio estéreo de 48 kHz para poder unirlos de forma consistente; esto puede aumentar el tiempo de procesamiento y cambiar la resolución de origen. Revisa que haya espacio libre suficiente. No sobrescribe la salida existente salvo que añadas `--overwrite`. Los originales se leen, no se editan. Los archivos temporales se eliminan tras el proceso. La CI incluye una prueba de integración con vídeos sintéticos para verificar la unión de clips con y sin audio.
 
 El JSON es una lista de cortes explícitos: no uses un informe automático sin revisar los tiempos, porque un opening parecido no siempre significa que deba eliminarse.
