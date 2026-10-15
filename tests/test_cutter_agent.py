@@ -121,6 +121,10 @@ class AbsoluteOffsetTests(unittest.TestCase):
     def test_short_episode_end_offset_stays_inside_episode(self):
         self.assertEqual(cutter.absolute_offset(4, 20, "end"), 4)
 
+    def test_end_offset_preserves_fractional_seek_position(self):
+        self.assertEqual(cutter.absolute_offset(0, 181.8, "end"), 1.8)
+        self.assertEqual(cutter.absolute_offset(12, 181.8, "end"), 13.8)
+
 
 class OutputDirectoryTests(unittest.TestCase):
     def test_recursive_scan_skips_cutter_studio_output_folder(self):
