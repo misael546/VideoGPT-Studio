@@ -30,8 +30,20 @@ def is_within(path: Path, root: Path) -> bool:
         return False
 
 
+def active_plan_path(plan_path: Path) -> Path:
+    reviewed = plan_path.with_name("edit-plan-reviewed.json")
+    if reviewed.resolve() != plan_path.resolve() and reviewed.is_file():
+        try:
+            if reviewed.stat().st_mtime_ns >= plan_path.stat().st_mtime_ns:
+                return reviewed
+        except OSError:
+            pass
+    return plan_path
+
+
 def load_plan(plan_path: Path, root: Path) -> dict:
-    data = json.loads(plan_path.read_text(encoding="utf-8"))
+    selected = active_plan_path(plan_path)
+    data = json.loads(selected.read_text(encoding="utf-8"))
     validate_plan(data, root)
     return data
 
