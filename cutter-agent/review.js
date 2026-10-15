@@ -1,5 +1,7 @@
 "use strict";
 
+import { moveEpisodeToPosition } from "./episode-order.js";
+
 const state = { plan: null, filesByName: new Map(), previewUrl: null };
 const ui = {
   planFile: document.getElementById("planFile"),
@@ -336,7 +338,7 @@ function renderPlan() {
 
     const card = el("section", "episode-card");
     const header = el("div", "episode-header");
-    const titleGroup = el("div");
+    const titleGroup = el("div", "episode-title-group");
     const seasonLabel = episode.season_number !== null && episode.season_number !== undefined
       ? "Temporada " + episode.season_number + " · "
       : "";
@@ -344,7 +346,40 @@ function renderPlan() {
       el("h3", "", episode.filename || basename(episode.path)),
       el("p", "", seasonLabel + "Episodio " + (episode.episode_number ?? "sin número") + " · " + formatSeconds(episode.duration_seconds) + " · " + filteredCuts.length + " cortes mostrados")
     );
-    header.append(titleGroup);
+
+    const orderLabel = el("label", "episode-order");
+    orderLabel.append(el("span", "field-title", "Orden de salida"));
+    const orderSelect = el("select");
+    const episodeCount = state.plan.episodes.length;
+    orderSelect.setAttribute("aria-label", "Orden final para " + (episode.filename || basename(episode.path)));
+    for (let position = 1; position <= episodeCount; position += 1) {
+      const option = el("option", "", position + " de " + episodeCount);
+      option.value = String(position);
+      orderSelect.append(option);
+    }
+    orderSelect.value = String(episodeIndex + 1);
+    orderSelect.addEventListener("change", function () {
+      const requestedPosition = Number(orderSelect.value);
+      try {
+        moveEpisodeToPosition(state.plan.episodes, episodeIndex, requestedPosition);
+      } catch (error) {
+        setStatus(error.message || "No se pudo cambiar el orden de los episodios.", "error");
+        renderPlan();
+        return;
+      }
+      state.plan.episodes.forEach(function (item, index) { item.order = index + 1; });
+      if (ui.filterStatus.value !== "all") ui.filterStatus.value = "all";
+      renderPlan();
+      const movedEpisode = state.plan.episodes[requestedPosition - 1];
+      setStatus(
+        "Orden actualizado: " + (movedEpisode.filename || basename(movedEpisode.path)) +
+          " está en la posición " + requestedPosition + " de " + episodeCount +
+          ". Exporta o guarda el plan revisado para conservar el cambio.",
+        "success"
+      );
+    });
+    orderLabel.append(orderSelect);
+    header.append(titleGroup, orderLabel);
     const list = el("div", "cut-list");
     for (const item of filteredCuts) {
       visibleCuts += 1;
