@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Cutter Studio · Revisión local</title>
+  <link rel="stylesheet" href="review.css">
+  <script src="review.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark" aria-hidden="true">CS</div>
+    <div>
+      <p class="eyebrow">PROCESAMIENTO LOCAL</p>
+      <h1>Cutter Studio</h1>
+      <p class="subtitle">Revisa los candidatos antes de eliminar cualquier tramo.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel import-panel" aria-labelledby="import-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">PASO 1</p>
+          <h2 id="import-title">Carga tu plan y tus vídeos</h2>
+        </div>
+        <span class="privacy-note"><span class="dot"></span> Los archivos permanecen en tu PC</span>
+      </div>
+      <div class="input-grid">
+        <label class="file-picker">
+          <span class="field-title">Plan de edición (.json)</span>
+          <input id="planFile" type="file" accept=".json,application/json">
+          <span class="field-help">Selecciona el edit-plan.json creado por el escáner.</span>
+        </label>
+        <label class="file-picker">
+          <span class="field-title">Carpeta de episodios</span>
+          <input id="videoFolder" type="file" webkitdirectory directory multiple>
+          <span class="field-help">Necesaria para previsualizar los candidatos. No carga vídeos a internet.</span>
+        </label>
+      </div>
+      <div id="status" class="status" role="status" aria-live="polite">Carga un plan para empezar la revisión.</div>
+    </section>
+
+    <section id="summary" class="stats-grid" hidden aria-label="Resumen de revisión">
+      <div class="stat"><span class="stat-label">Episodios</span><strong id="episodeCount">0</strong></div>
+      <div class="stat"><span class="stat-label">Candidatos</span><strong id="cutCount">0</strong></div>
+      <div class="stat"><span class="stat-label">Aprobados para eliminar</span><strong id="approvedCount">0</strong></div>
+      <div class="stat"><span class="stat-label">Pendientes</span><strong id="pendingCount">0</strong></div>
+    </section>
+
+    <section class="panel preview-panel" aria-labelledby="preview-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">PASO 2</p>
+          <h2 id="preview-title">Previsualización</h2>
+        </div>
+        <span id="previewFilename" class="muted">Selecciona «Ver candidato» en una tarjeta.</span>
+      </div>
+      <video id="previewVideo" controls preload="metadata" playsinline></video>
+      <p id="previewHelp" class="field-help">El reproductor salta unos segundos antes del inicio propuesto para que puedas comprobar los límites.</p>
+    </section>
+
+    <section class="candidates-section" aria-labelledby="candidate-title">
+      <div class="section-heading candidate-heading">
+        <div>
+          <p class="eyebrow">PASO 3</p>
+          <h2 id="candidate-title">Revisión de candidatos</h2>
+          <p class="field-help">Un corte solo se aplicará cuando su estado sea «Aprobar eliminación».</p>
+        </div>
+        <label class="filter-control">
+          <span class="field-title">Mostrar</span>
+          <select id="filterStatus" disabled>
+            <option value="all">Todos</option>
+            <option value="pending">Pendientes</option>
+            <option value="approved">Aprobados</option>
+            <option value="rejected">Conservar</option>
+          </select>
+        </label>
+      </div>
+      <div id="episodeList" class="episode-list">
+        <div class="empty-state">Carga un plan para ver los episodios y las coincidencias detectadas.</div>
+      </div>
+    </section>
+
+    <section class="panel export-panel" aria-labelledby="export-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">PASO 4</p>
+          <h2 id="export-title">Exporta el plan revisado</h2>
+          <p class="field-help">Los candidatos pendientes o marcados como «Conservar» no se eliminarán.</p>
+        </div>
+        <button id="exportPlan" class="primary-button" disabled>Exportar plan revisado (.json)</button>
+      </div>
+      <p class="small-print">Después, usa ese JSON al renderizar. El archivo final se crea en el PC y los vídeos originales no se modifican.</p>
+    </section>
+  </main>
+
+  <footer>
+    Cutter Studio · Revisión sin conexión · No se envían vídeos, audio ni planes a servicios externos.
+  </footer>
+</body>
+</html>
