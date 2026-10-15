@@ -128,6 +128,16 @@ class ReviewServerTests(unittest.TestCase):
         error = json.loads(context.exception.read().decode("utf-8"))
         self.assertIn("Intervalo", error["error"])
 
+    def test_rejects_cross_site_plan_reads(self):
+        request = Request(
+            self.base_url + "/api/plan",
+            headers={"Origin": "http://example.invalid"},
+        )
+        with self.assertRaises(HTTPError) as context:
+            urlopen(request, timeout=5)
+        self.assertEqual(context.exception.code, 403)
+
+
     def test_rejects_plan_posts_from_an_untrusted_origin(self):
         request = Request(
             self.base_url + "/api/plan",
