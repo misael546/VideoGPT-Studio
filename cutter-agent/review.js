@@ -120,6 +120,22 @@ function updateCounters() {
   ui.exportPlan.disabled = false;
 }
 
+function compactPath(path) {
+  const parts = String(path || "").split(/[\\/]/).filter(Boolean);
+  return parts.slice(-2).join("/");
+}
+
+function sourceDescription(cut) {
+  const pathPairs = Array.isArray(cut.source_path_pairs) ? cut.source_path_pairs :
+    Array.isArray(cut.source_path_pair) ? [cut.source_path_pair] : [];
+  if (pathPairs.length) {
+    return pathPairs.map(function (pair) {
+      return Array.isArray(pair) ? pair.map(compactPath).join(" ↔ ") : "";
+    }).filter(Boolean).join(" · ");
+  }
+  return (cut.source_pair || []).join(" ↔ ") || "no indicado";
+}
+
 function evidenceLabels(cut) {
   const quality = cut.match_quality && typeof cut.match_quality === "object" ? cut.match_quality : {};
   const nested = ["visual", "audio"].filter(function (key) {
@@ -216,7 +232,7 @@ function makeCutCard(episode, cut, index, episodeIndex) {
   const head = el("div", "cut-head");
   const titleBlock = el("div");
   titleBlock.append(el("h4", "", (cut.id || ("Candidato " + (index + 1))) + " · " + (cut.edge === "end" ? "Zona final" : "Zona inicial")));
-  const subtitle = el("p", "cut-subtitle", "Tramo propuesto: " + formatSeconds(cut.start_seconds) + "–" + formatSeconds(cut.end_seconds) + " · Origen comparado: " + ((cut.source_pair || []).join(" ↔ ") || "no indicado"));
+  const subtitle = el("p", "cut-subtitle", "Tramo propuesto: " + formatSeconds(cut.start_seconds) + "–" + formatSeconds(cut.end_seconds) + " · Origen comparado: " + sourceDescription(cut));
   titleBlock.append(subtitle);
   const pill = el("span", "status-pill", stateLabel(getCutState(cut)));
   pill.dataset.state = getCutState(cut);
