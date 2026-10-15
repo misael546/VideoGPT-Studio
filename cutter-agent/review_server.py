@@ -178,7 +178,8 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
             cache_key = hashlib.sha256(signature.encode("utf-8")).hexdigest()
             output = preview_dir / (cache_key + ".mp4")
             if not output.is_file():
-                staged = preview_dir / (cache_key + ".tmp.mp4")
+                # Separate temporary outputs let concurrent browser requests render safely.
+                staged = preview_dir / (cache_key + "." + str(threading.get_ident()) + ".tmp.mp4")
                 args = [
                     "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
                     "-ss", f"{preview_start:.3f}", "-i", str(source),
