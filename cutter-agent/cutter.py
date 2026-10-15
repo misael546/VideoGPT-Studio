@@ -131,6 +131,8 @@ def audio_fingerprints(raw: bytes) -> list[int]:
             powers = [value / subchunk_frames for value in powers]
             total = sum(powers)
             if total <= 1e-12 or math.sqrt(total / AUDIO_CHANNELS) < 0.002:
+                # Reserve this subchunk's bits so temporal positions remain aligned.
+                fingerprint <<= AUDIO_CHANNELS * 2
                 continue
             valid_bins += 1
             for power in powers:
@@ -163,7 +165,12 @@ def audio_frame_hashes(path: Path, duration: float, edge: str) -> list[int]:
         "-vn", "-sn", "-f", "f32le", "-ac", str(AUDIO_CHANNELS),
         "-ar", str(AUDIO_SAMPLE_RATE), "pipe:1",
     ], binary=True)
-    return audio_fingerprints(raw)
+    fingerprints = audio_fingerprints(raw)
+    active = [value for value in fingerprints if value >= 0]
+    # Constant tones/music-free beds have too little timing information and cause false positives.
+    if len(active) >= MIN_MATCH_SECONDS and len(set(active)) / len(active) < 0.15:
+        return [-1 for _ in fingerprints]
+    return fingerprints
 
 
 def frame_hashes(path: Path, duration: float, edge: str) -> list[int]:
