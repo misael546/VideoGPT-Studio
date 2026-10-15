@@ -217,7 +217,7 @@ async function preview(episode, cut, episodeIndex) {
   ui.previewVideo.load();
   ui.previewVideo.onloadedmetadata = function () {
     const start = Number(cut.start_seconds) || 0;
-    const target = isServerMode() ? start - playbackStart - 4 : start - 5;
+    const target = isServerMode() ? start - playbackStart : start - 5;
     ui.previewVideo.currentTime = Math.max(0, Math.min(target, Math.max(0, ui.previewVideo.duration - 0.1)));
     setStatus("Vista previa lista. Comprueba el inicio y el final del intervalo.", "success");
   };
