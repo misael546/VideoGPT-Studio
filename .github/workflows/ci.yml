@@ -97,3 +97,32 @@ jobs:
           path: dist/Cutter-Studio/
           if-no-files-found: error
           retention-days: 90
+
+  validate-windows-launcher:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Parse the native Windows picker with PowerShell
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          $pickerPath = (Resolve-Path "cutter-agent/seleccionar-ruta.ps1").Path
+          [void][System.Management.Automation.Language.Parser]::ParseFile($pickerPath, [ref]$tokens, [ref]$parseErrors)
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | Format-List
+            throw "PowerShell syntax validation failed."
+          }
+          $picker = Get-Content $pickerPath -Raw
+          foreach ($required in @("FolderBrowserDialog", "OpenFileDialog", "SaveFileDialog", "OverwritePrompt")) {
+            if (-not $picker.Contains($required)) { throw "Missing expected Windows picker capability: $required" }
+          }
+      - name: Check launcher calls all native pickers
+        shell: pwsh
+        run: |
+          $launcher = Get-Content "cutter-agent/INICIAR_CUTTER_STUDIO.bat" -Raw
+          foreach ($mode in @("Folder", "Plan", "OutputFolder", "OutputVideo", "Watermark")) {
+            if (-not $launcher.Contains("-Mode $mode")) { throw "Launcher does not provide picker mode: $mode" }
+          }
+          if (-not $launcher.Contains("edit-plan-reviewed.json")) { throw "Reviewed plan selection is missing." }
