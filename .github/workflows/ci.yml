@@ -45,6 +45,11 @@ jobs:
           node --check public/advanced-tools.js
           node --check cutter-agent/review.js
           node --check cutter-agent/episode-order.js
+          node --check cutter-agent/android/app.js
+          python -c "import json; json.load(open('cutter-agent/android/manifest.webmanifest', encoding='utf-8'))"
+          test -s cutter-agent/android/index.html
+          test -s cutter-agent/android/app.css
+          test -s cutter-agent/android/sw.js
           test -s public/editor.html
           test -s public/editor.css
           test -s cutter-agent/review.html
