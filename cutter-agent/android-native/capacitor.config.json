@@ -1,0 +1,12 @@
+{
+  "appId": "com.misael546.cutterstudio",
+  "appName": "Cutter Studio",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  }
+}

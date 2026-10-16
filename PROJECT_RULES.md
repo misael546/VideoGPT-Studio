@@ -83,3 +83,11 @@
 64. No reutilizar los endpoints heredados de Agnes ni el archivo OpenAPI de generación pagada como si fueran el flujo de edición solicitado. No enviar videos del usuario a esos endpoints.
 65. La edición automática solo puede usar operaciones implementadas, seguras y probadas. Si una petición requiere capacidades que no están disponibles sin pago, explicar la limitación y no fingir que el archivo se modificó.
 66. Mantener el original intacto, validar el archivo de salida y comprobar el flujo en móvil y escritorio antes de declarar una función terminada.
+
+
+67. Cutter Studio opera sobre archivos locales del usuario. Nunca subir episodios, audio, subtítulos ni vídeos terminados a GitHub, GitHub Pages, Vercel ni servicios externos como parte del flujo local.
+68. Las coincidencias de opening/ending son candidatas: ningún corte se aprueba automáticamente. Solo eliminar intervalos con aprobación explícita en el plan revisado; conservar los intervalos pendientes o rechazados y mantener intactos los originales.
+69. El servidor de revisión debe escuchar exclusivamente en `127.0.0.1`, validar que las rutas estén dentro de la carpeta elegida y no exponer endpoints de archivos o vistas previas a la red.
+70. Los paquetes de Cutter Studio pueden incluir únicamente código, documentación y recursos de prueba sintéticos; nunca incluir vídeos del usuario, cachés con rutas privadas ni planes de sus proyectos.
+71. Mantener Cutter Studio en su rama/PR de desarrollo mientras se valida. No fusionar a `main`, publicar la web ni crear una versión pública como parte del desarrollo sin una autorización explícita.
+72. Un artefacto descargable de Windows solo se publica desde una ejecución de CI que haya completado correctamente las pruebas; el paquete debe incluir el SHA de origen y no debe afirmar que se probó con episodios reales si no se han proporcionado.
