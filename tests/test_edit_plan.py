@@ -51,6 +51,22 @@ class EditPlanTests(unittest.TestCase):
         self.assertTrue(all(cut["review_status"] == "pending" for ep in plan["episodes"] for cut in ep["cuts"]))
         self.assertEqual(plan["episodes"][0]["cuts"][0]["start_seconds"], 82)
 
+    def test_manual_episode_reordering_is_preserved_in_render_manifest(self):
+        plan = planner.create_plan(self.scan_path)
+        # The local review UI changes the episode array order before saving.
+        plan["episodes"].reverse()
+
+        manifest = planner.build_render_manifest(plan)
+
+        self.assertEqual(
+            [episode["path"] for episode in manifest["episodes"]],
+            [str(self.video_b.resolve()), str(self.video_a.resolve())],
+        )
+        self.assertEqual(
+            [(episode["start_seconds"], episode["end_seconds"]) for episode in manifest["episodes"]],
+            [(0.0, 1190.0), (0.0, 1200.0)],
+        )
+
     def test_does_not_merge_overlapping_candidates_from_different_edges(self):
         ending = {
             "episode_a": self.video_a.name,
