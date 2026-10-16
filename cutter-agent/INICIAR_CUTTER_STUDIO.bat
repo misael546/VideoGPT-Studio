@@ -1,5 +1,6 @@
 @echo off
 setlocal EnableExtensions
+chcp 65001 >nul
 cd /d "%~dp0"
 title Cutter Studio - procesamiento local
 
@@ -10,7 +11,7 @@ echo           CUTTER STUDIO
 echo   Los videos permanecen en tu PC
 echo ========================================
 echo.
-echo 1. Analizar episodios y crear plan
+echo 1. Analizar episodios y revisar cortes
 echo 2. Renderizar un plan ya revisado
 echo 3. Preparar/verificar requisitos de Windows
 echo 4. Salir
@@ -55,13 +56,20 @@ exit /b 0
 call :check
 if errorlevel 1 goto menu
 echo.
+echo Selecciona la carpeta que contiene los episodios.
 set "VIDEO_FOLDER="
-set /p "VIDEO_FOLDER=Ruta de la carpeta con episodios (sin comillas): "
+for /f "usebackq delims=" %%I in (`powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File "%~dp0seleccionar-ruta.ps1" -Mode Folder`) do set "VIDEO_FOLDER=%%I"
+if not defined VIDEO_FOLDER (
+  echo No se selecciono una carpeta. Puedes escribir su ruta manualmente.
+  set /p "VIDEO_FOLDER=Ruta de la carpeta (sin comillas): "
+)
 if not exist "%VIDEO_FOLDER%\" (
   echo ERROR: La carpeta no existe.
   pause
   goto menu
 )
+echo.
+echo Analizando videos en "%VIDEO_FOLDER%"...
 python "%~dp0cutter.py" scan "%VIDEO_FOLDER%" --recursive --output "%VIDEO_FOLDER%\cutter-scan-report.json"
 if errorlevel 1 (
   echo El analisis fallo. No se creo ningun video final.
@@ -76,9 +84,9 @@ if errorlevel 1 (
 )
 echo.
 echo Se abrira el revisor local en el navegador.
-echo FFmpeg generara vistas previas compatibles incluso para archivos MKV.
+echo Los candidatos se revisan antes de eliminar cualquier tramo.
 echo Los videos permanecen en tu PC; el servidor escucha solo en 127.0.0.1.
-echo Cuando termines, guarda el plan y pulsa Ctrl+C en la ventana del revisor para limpiar temporales.
+echo Cuando termines de revisar, exporta el plan y cierra el revisor con Ctrl+C en su ventana.
 start "Cutter Studio Revisor" /min python "%~dp0review_server.py" --folder "%VIDEO_FOLDER%" --plan "%VIDEO_FOLDER%\edit-plan.json"
 pause
 goto menu
@@ -87,47 +95,86 @@ goto menu
 call :check
 if errorlevel 1 goto menu
 echo.
+echo Selecciona el archivo edit-plan-reviewed.json que exportaste del revisor.
 set "PLAN="
-set /p "PLAN=Ruta completa a edit-plan-reviewed.json (sin comillas): "
+for /f "usebackq delims=" %%I in (`powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File "%~dp0seleccionar-ruta.ps1" -Mode Plan`) do set "PLAN=%%I"
+if not defined PLAN (
+  echo No se selecciono un plan. Puedes escribir su ruta manualmente.
+  set /p "PLAN=Ruta completa a edit-plan-reviewed.json (sin comillas): "
+)
 if not exist "%PLAN%" (
   echo ERROR: No encuentro ese archivo.
   pause
   goto menu
 )
-set "OUTPUT_FOLDER="
-if defined VIDEO_FOLDER set "OUTPUT_FOLDER=%VIDEO_FOLDER%\Cutter-Studio-Output"
-set /p "OUTPUT_FOLDER=Carpeta para guardar resultado/manifiesto (Enter usa %OUTPUT_FOLDER%; sin comillas): "
-if not defined OUTPUT_FOLDER (
-  echo ERROR: Indica una carpeta de salida o primero analiza una temporada.
-  pause
-  goto menu
-)
+for %%I in ("%PLAN%") do set "PLAN_DIR=%%~dpI"
+set "OUTPUT_FOLDER=%PLAN_DIR%Cutter-Studio-Output"
+set "CHANGE_OUTPUT="
+echo.
+echo Carpeta de salida predeterminada: "%OUTPUT_FOLDER%"
+set /p "CHANGE_OUTPUT=Quieres elegir otra carpeta de salida? [s/N]: "
+if /I "%CHANGE_OUTPUT%"=="S" goto choose_output_folder
+goto configure_output
+
+:choose_output_folder
+set "PICKED_FOLDER="
+for /f "usebackq delims=" %%I in (`powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File "%~dp0seleccionar-ruta.ps1" -Mode OutputFolder -InitialDirectory "%OUTPUT_FOLDER%"`) do set "PICKED_FOLDER=%%I"
+if defined PICKED_FOLDER set "OUTPUT_FOLDER=%PICKED_FOLDER%"
+
+:configure_output
 if not exist "%OUTPUT_FOLDER%\" mkdir "%OUTPUT_FOLDER%"
 if not exist "%OUTPUT_FOLDER%\" (
   echo ERROR: No se pudo crear la carpeta de salida.
   pause
   goto menu
 )
-set "OUTPUT_VIDEO=%OUTPUT_FOLDER%\temporada-final.mp4"
-set /p "OUTPUT_VIDEO=Ruta MP4 final (Enter usa %OUTPUT_VIDEO%; sin comillas): "
+set "OUTPUT_VIDEO="
+for /f "usebackq delims=" %%I in (`powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File "%~dp0seleccionar-ruta.ps1" -Mode OutputVideo -InitialDirectory "%OUTPUT_FOLDER%"`) do set "OUTPUT_VIDEO=%%I"
+if not defined OUTPUT_VIDEO set "OUTPUT_VIDEO=%OUTPUT_FOLDER%\temporada-final.mp4"
+if exist "%OUTPUT_VIDEO%" (
+  echo.
+  echo El archivo ya existe: "%OUTPUT_VIDEO%"
+  set "CONFIRM_OVERWRITE="
+  set /p "CONFIRM_OVERWRITE=Escribe S para reemplazarlo solo si el nuevo render termina y pasa la validacion [N]: "
+  if /I "%CONFIRM_OVERWRITE%"=="S" goto allow_overwrite
+  goto configure_output
+)
+set "RENDER_OVERWRITE="
+goto choose_watermark
+
+:allow_overwrite
+set "RENDER_OVERWRITE=--overwrite"
+
+:choose_watermark
 set "WATERMARK="
-set /p "WATERMARK=Ruta de marca de agua PNG/JPG/WebP (Enter para omitir; sin comillas): "
+echo.
+echo Selecciona una imagen PNG/JPG/WebP para la marca de agua.
+echo Si no quieres marca de agua, cancela el cuadro de dialogo.
+for /f "usebackq delims=" %%I in (`powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File "%~dp0seleccionar-ruta.ps1" -Mode Watermark -InitialDirectory "%PLAN_DIR%"`) do set "WATERMARK=%%I"
 python "%~dp0edit_plan.py" render-manifest "%PLAN%" --output "%OUTPUT_FOLDER%\render-manifest.json"
 if errorlevel 1 (
   echo No se pudo validar el plan; no se renderizo nada.
   pause
   goto menu
 )
-if "%WATERMARK%"=="" (
-  python "%~dp0render.py" "%OUTPUT_FOLDER%\render-manifest.json" --output "%OUTPUT_VIDEO%"
+if not defined WATERMARK (
+  if defined RENDER_OVERWRITE (
+    python "%~dp0render.py" "%OUTPUT_FOLDER%\render-manifest.json" --output "%OUTPUT_VIDEO%" --overwrite
+  ) else (
+    python "%~dp0render.py" "%OUTPUT_FOLDER%\render-manifest.json" --output "%OUTPUT_VIDEO%"
+  )
 ) else (
-  python "%~dp0render.py" "%OUTPUT_FOLDER%\render-manifest.json" --output "%OUTPUT_VIDEO%" --watermark "%WATERMARK%"
+  if defined RENDER_OVERWRITE (
+    python "%~dp0render.py" "%OUTPUT_FOLDER%\render-manifest.json" --output "%OUTPUT_VIDEO%" --watermark "%WATERMARK%" --overwrite
+  ) else (
+    python "%~dp0render.py" "%OUTPUT_FOLDER%\render-manifest.json" --output "%OUTPUT_VIDEO%" --watermark "%WATERMARK%"
+  )
 )
 if errorlevel 1 (
-  echo El render fallo. Los videos originales no fueron modificados.
+  echo El render fallo. Los videos originales no fueron modificados y una salida previa se conserva si la validacion falla.
 ) else (
   echo.
-  echo Render terminado: "%OUTPUT_VIDEO%"
+  echo Render terminado y validado: "%OUTPUT_VIDEO%"
 )
 pause
 goto menu
