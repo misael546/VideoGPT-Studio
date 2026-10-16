@@ -103,7 +103,7 @@ jobs:
       - name: Assemble Android companion web package
         run: |
           mkdir -p dist/Cutter-Studio-Android
-          cp cutter-agent/android/index.html cutter-agent/android/app.css cutter-agent/android/app.js cutter-agent/android/episode-order.js cutter-agent/android/manifest.webmanifest cutter-agent/android/icon.svg cutter-agent/android/sw.js cutter-agent/android/README.md dist/Cutter-Studio-Android/
+          cp cutter-agent/android/index.html cutter-agent/android/app.css cutter-agent/android/app.js cutter-agent/android/episode-order.js cutter-agent/android/project-autosave.js cutter-agent/android/manifest.webmanifest cutter-agent/android/icon.svg cutter-agent/android/sw.js cutter-agent/android/README.md dist/Cutter-Studio-Android/
           printf 'Commit: %s\nBuilt (UTC): %s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/Cutter-Studio-Android/BUILD_INFO.txt
           (cd dist/Cutter-Studio-Android && sha256sum *.html *.css *.js *.webmanifest *.md *.svg BUILD_INFO.txt > SHA256SUMS.txt && sha256sum --check SHA256SUMS.txt)
           test -s dist/Cutter-Studio-Android/index.html
