@@ -5,7 +5,7 @@ Esta carpeta contiene una interfaz móvil instalable tipo PWA, separada del moto
 ## Funciones actuales
 
 - Seleccionar varios videos desde el selector de archivos de Android.
-- Inferir una posible numeración a partir del nombre y proponer el orden.
+- Inferir una posible numeración a partir de nombres habituales como `S01E02`, `Episode 02` o `Episodio 02`, y proponer el orden.\n- Mantener el orden manual después de mover capítulos; el orden inicial por nombre solo es una sugerencia.
 - Cambiar manualmente el orden de salida.
 - Definir texto de marca de agua y elegir una imagen como referencia.
 - Exportar un JSON con el orden y los ajustes, sin incluir ni subir los videos.
