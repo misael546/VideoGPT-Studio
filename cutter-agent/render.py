@@ -56,7 +56,12 @@ def media_info(path: Path) -> dict:
 
 
 def load_manifest(path: Path) -> list[dict]:
-    data = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"El manifiesto no contiene JSON válido: {path}") from exc
+    if not isinstance(data, dict):
+        raise ValueError("El manifiesto debe ser un objeto JSON.")
     if data.get("schema") != "cutter-studio-render/v1":
         raise ValueError("El manifiesto debe usar schema cutter-studio-render/v1.")
     episodes = data.get("episodes")
