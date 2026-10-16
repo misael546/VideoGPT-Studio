@@ -4,9 +4,9 @@ Esta carpeta contiene la interfaz móvil de Cutter Studio, separada del motor lo
 
 ## Funciones actuales
 
-- Preparar y ordenar episodios mediante metadatos del proyecto.
-- Inferir una posible numeración a partir de nombres habituales como `S01E02`, `Episode 02` o `Episodio 02`.
-- Cambiar manualmente el orden de salida.
+- Mostrar el panel para conectar con el agente de Windows y listar episodios alojados en la PC (la conexión aún no está implementada).
+- Presentar el reproductor de previsualización por transmisión y el botón «Crear video en mi PC»; ambos permanecen deshabilitados funcionalmente hasta que exista y se valide el agente remoto.
+- Guardar la configuración ligera del proyecto y preparar la interfaz para ordenar episodios que devuelva la PC.
 - Definir texto de marca de agua y elegir una imagen como referencia.
 - **Guardar automáticamente el orden y la configuración ligera del proyecto.** No hace falta exportar ni importar JSON manualmente.
 - Recuperar los datos guardados al volver a abrir la aplicación.
@@ -26,7 +26,7 @@ El guardado se mantiene en el mismo dispositivo y navegador/app. Borrar los dato
 
 ## Límites explícitos
 
-La APK actual todavía es una base de preparación del proyecto; **la visualización remota desde la PC y la integración segura con el motor local aún deben implementarse y probarse**. No debe simularse esa función seleccionando o copiando vídeos al Android. La detección de openings/endings y el renderizado se ejecutarán en la PC con Python y FFmpeg. No se deben enviar vídeos a servicios remotos.
+La interfaz Android ya presenta los paneles de conexión a la PC, previsualización y creación del vídeo, y elimina el selector de vídeos del teléfono. **La conexión remota, la reproducción real por streaming, el envío de órdenes de renderizado y la actualización del progreso aún deben implementarse y probarse**. El botón de creación se mantiene deshabilitado y no simula un montaje mientras el agente no exista. La detección de openings/endings y el renderizado se ejecutarán en la PC con Python y FFmpeg. No se deben enviar vídeos a servicios remotos.
 
 ## Pruebas
 
