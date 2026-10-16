@@ -118,7 +118,7 @@ goto configure_output
 
 :choose_output_folder
 set "PICKED_FOLDER="
-for /f "usebackq delims=" %%I in (`powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File "%~dp0seleccionar-ruta.ps1" -Mode OutputFolder -InitialDirectory "%OUTPUT_FOLDER%"`) do set "PICKED_FOLDER=%%I"
+for /f "usebackq delims=" %%I in (`powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File "%~dp0seleccionar-ruta.ps1" -Mode OutputFolder -InitialDirectory "%PLAN_DIR%"`) do set "PICKED_FOLDER=%%I"
 if defined PICKED_FOLDER set "OUTPUT_FOLDER=%PICKED_FOLDER%"
 
 :configure_output
@@ -130,7 +130,15 @@ if not exist "%OUTPUT_FOLDER%\" (
 )
 set "OUTPUT_VIDEO="
 for /f "usebackq delims=" %%I in (`powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File "%~dp0seleccionar-ruta.ps1" -Mode OutputVideo -InitialDirectory "%OUTPUT_FOLDER%"`) do set "OUTPUT_VIDEO=%%I"
-if not defined OUTPUT_VIDEO set "OUTPUT_VIDEO=%OUTPUT_FOLDER%\temporada-final.mp4"
+if defined OUTPUT_VIDEO goto output_chosen
+echo.
+echo No seleccionaste un nombre para el archivo final.
+set "USE_DEFAULT="
+set /p "USE_DEFAULT=Usar "%OUTPUT_FOLDER%\temporada-final.mp4"? [S/n]: "
+if /I "%USE_DEFAULT%"=="N" goto configure_output
+set "OUTPUT_VIDEO=%OUTPUT_FOLDER%\temporada-final.mp4"
+
+:output_chosen
 if not exist "%OUTPUT_VIDEO%" goto output_is_clear
 echo.
 echo El archivo ya existe: "%OUTPUT_VIDEO%"
