@@ -40,14 +40,16 @@ import { loadProjectState, saveProjectState } from "./project-autosave.js";
     if (!hasProject && episodes.length === 0 && !watermarkText.value.trim()) return;
     try {
       saveProjectState(window.localStorage, {
-        episodes: episodes.length
-          ? episodes.map((episode, index) => ({
+        // Keep the original snapshot until every saved episode has been reselected.
+        // Otherwise choosing files in multiple batches would erase not-yet-selected entries.
+        episodes: pendingRestore?.episodes?.length
+          ? pendingRestore.episodes
+          : episodes.map((episode, index) => ({
               order: index + 1,
               name: episode.file.name,
               size_bytes: episode.file.size,
               last_modified: episode.file.lastModified
-            }))
-          : (pendingRestore?.episodes || []),
+            })),
         watermark: {
           text: watermarkText.value.trim(),
           image_name: watermark?.name || savedWatermarkImageName || pendingRestore?.watermark?.image_name || null
@@ -134,9 +136,11 @@ import { loadProjectState, saveProjectState } from "./project-autosave.js";
       const restored = restoreEpisodeOrder(episodes, pendingRestore.episodes);
       episodes = restored.episodes;
       const unmatched = restored.unmatched;
-      pendingRestore = null;
+      if (unmatched === 0) pendingRestore = null;
       render();
-      exportStatus.textContent = "Proyecto recuperado automáticamente." + (unmatched ? " No coincidieron " + unmatched + " episodio(s); revisa el orden." : "");
+      exportStatus.textContent = unmatched
+        ? "Restauración parcial: faltan " + unmatched + " episodio(s). Selecciona los demás videos para recuperar todo el orden."
+        : "Proyecto recuperado automáticamente.";
     } else {
       episodes = sortEpisodeFiles(episodes);
       render();
