@@ -38,12 +38,14 @@ import { loadProjectState, saveProjectState } from "./project-autosave.js";
     if (!hasProject && episodes.length === 0 && !watermarkText.value.trim()) return;
     try {
       saveProjectState(window.localStorage, {
-        episodes: episodes.map((episode, index) => ({
-          order: index + 1,
-          name: episode.file.name,
-          size_bytes: episode.file.size,
-          last_modified: episode.file.lastModified
-        })),
+        episodes: episodes.length
+          ? episodes.map((episode, index) => ({
+              order: index + 1,
+              name: episode.file.name,
+              size_bytes: episode.file.size,
+              last_modified: episode.file.lastModified
+            }))
+          : (pendingRestore?.episodes || []),
         watermark: {
           text: watermarkText.value.trim(),
           image_name: watermark?.name || pendingRestore?.watermark?.image_name || null
