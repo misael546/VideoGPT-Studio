@@ -131,14 +131,15 @@ if not exist "%OUTPUT_FOLDER%\" (
 set "OUTPUT_VIDEO="
 for /f "usebackq delims=" %%I in (`powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File "%~dp0seleccionar-ruta.ps1" -Mode OutputVideo -InitialDirectory "%OUTPUT_FOLDER%"`) do set "OUTPUT_VIDEO=%%I"
 if not defined OUTPUT_VIDEO set "OUTPUT_VIDEO=%OUTPUT_FOLDER%\temporada-final.mp4"
-if exist "%OUTPUT_VIDEO%" (
-  echo.
-  echo El archivo ya existe: "%OUTPUT_VIDEO%"
-  set "CONFIRM_OVERWRITE="
-  set /p "CONFIRM_OVERWRITE=Escribe S para reemplazarlo solo si el nuevo render termina y pasa la validacion [N]: "
-  if /I "%CONFIRM_OVERWRITE%"=="S" goto allow_overwrite
-  goto configure_output
-)
+if not exist "%OUTPUT_VIDEO%" goto output_is_clear
+echo.
+echo El archivo ya existe: "%OUTPUT_VIDEO%"
+set "CONFIRM_OVERWRITE="
+set /p "CONFIRM_OVERWRITE=Escribe S para reemplazarlo solo si el nuevo render termina y pasa la validacion [N]: "
+if /I "%CONFIRM_OVERWRITE%"=="S" goto allow_overwrite
+goto configure_output
+
+:output_is_clear
 set "RENDER_OVERWRITE="
 goto choose_watermark
 
