@@ -45,6 +45,18 @@ class ManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "schema"):
             renderer.load_manifest(self.manifest)
 
+    def test_rejects_non_object_json_manifest_without_traceback(self):
+        for value in [[], None, "not a manifest"]:
+            self.manifest.write_text(json.dumps(value), encoding="utf-8")
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "objeto JSON"):
+                    renderer.load_manifest(self.manifest)
+
+    def test_rejects_malformed_json_manifest_with_actionable_error(self):
+        self.manifest.write_text('{"schema":', encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "JSON válido"):
+            renderer.load_manifest(self.manifest)
+
     def test_rejects_empty_episode_list(self):
         self.write_manifest({"schema": "cutter-studio-render/v1", "episodes": []})
         with self.assertRaisesRegex(ValueError, "no vacía"):
