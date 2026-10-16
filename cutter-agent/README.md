@@ -4,7 +4,7 @@ Este componente se ejecuta en el PC del usuario. Los vídeos y los archivos de t
 
 ## Inicio rápido en Windows
 
-Abre `INICIAR_CUTTER_STUDIO.bat`. El menú permite analizar episodios, revisar cortes en una interfaz local del navegador y renderizar el plan aprobado. En el menú, la opción 3 abre `PREPARAR_REQUISITOS_WINDOWS.bat`, que comprueba Python y FFmpeg/FFprobe y ofrece instalarlos con winget (o abrir las páginas oficiales). Si instalas requisitos, cierra y vuelve a abrir Cutter Studio para actualizar PATH. Los informes, la caché y el vídeo final se guardan localmente.
+Abre `INICIAR_CUTTER_STUDIO.bat`. El menú permite analizar episodios, revisar cortes en una interfaz local del navegador y renderizar el plan aprobado. El lanzador usa cuadros de diálogo de Windows para elegir la carpeta de episodios, el plan revisado, la carpeta y nombre de salida, y opcionalmente la imagen de marca de agua; si cancelas la selección inicial de carpeta o de plan, también admite escribir la ruta manualmente. Los resultados se guardan localmente, en una carpeta `Cutter-Studio-Output` junto al plan por defecto. En el menú, la opción 3 abre `PREPARAR_REQUISITOS_WINDOWS.bat`, que comprueba Python y FFmpeg/FFprobe y ofrece instalarlos con winget (o abrir las páginas oficiales). Si instalas requisitos, cierra y vuelve a abrir Cutter Studio para actualizar PATH. Los informes, la caché y el vídeo final se guardan localmente.
 
 El lanzador abre `review_server.py`, que enlaza solo a `127.0.0.1` en un puerto local. La interfaz `review.html` carga el plan automáticamente; FFmpeg convierte las vistas previas a MP4 para admitir MKV y otros formatos. Ajusta los límites y elige «Aprobar eliminación», «Conservar» o «Pendiente de revisión». El botón de guardar crea `edit-plan-reviewed.json` en la carpeta local. Los vídeos no se suben a Internet. Para borrar las vistas previas temporales de forma limpia, pulsa Ctrl+C en la ventana del servidor al terminar.
 
@@ -16,6 +16,9 @@ python review_server.py --folder "D:\\Anime\\Temporada 1" --plan "D:\\Anime\\Tem
 
 El servidor elige un puerto disponible automáticamente y abre el navegador. Solo escucha en `127.0.0.1`; no lo publiques ni lo expongas a la red.
 
+
+
+El lanzador utiliza `seleccionar-ruta.ps1` para mostrar diálogos nativos de Windows. El script solo devuelve la ruta elegida al proceso local; no envía archivos ni rutas a GitHub o a servicios externos. La salida existente nunca se reemplaza sin confirmación explícita y el renderizador valida el resultado antes de colocar el MP4 final.
 
 ## Requisitos
 
