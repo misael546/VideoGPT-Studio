@@ -9,7 +9,7 @@ export function guessEpisodeNumber(name) {
     const match = normalized.match(pattern);
     if (match) return Number(match[1]);
   }
-  const numbers = normalized.match(/\d{1,3}/g);
+  const numbers = normalized.match(/(?<!\d)\d{1,3}(?!\d)/g);
   return numbers ? Number(numbers[numbers.length - 1]) : null;
 }
 
