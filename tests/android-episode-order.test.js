@@ -11,7 +11,8 @@ test("detects season/episode naming patterns", () => {
 
 test("uses a final numeric token when no episode label exists", () => {
   assert.equal(guessEpisodeNumber("Anime - 1080p - 016.mkv"), 16);
-  assert.equal(guessEpisodeNumber("opening-final.mkv"), null);\n  assert.equal(guessEpisodeNumber("Anime 1080p BluRay.mkv"), null);
+  assert.equal(guessEpisodeNumber("opening-final.mkv"), null);
+  assert.equal(guessEpisodeNumber("Anime 1080p BluRay.mkv"), null);
 });
 
 test("sorts numbered episodes naturally and keeps unnumbered files last", () => {
