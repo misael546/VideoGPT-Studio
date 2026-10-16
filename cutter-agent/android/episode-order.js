@@ -36,7 +36,17 @@ export function restoreEpisodeOrder(currentEpisodes, savedEpisodes) {
     }
     let index = -1;
     if (Number.isFinite(Number(saved.size_bytes))) {
-      index = remaining.findIndex(item => item.file?.name === saved.name && item.file?.size === Number(saved.size_bytes));
+      index = remaining.findIndex(item =>
+        item.file?.name === saved.name &&
+        item.file?.size === Number(saved.size_bytes) &&
+        Number.isFinite(Number(saved.last_modified)) &&
+        item.file?.lastModified === Number(saved.last_modified)
+      );
+      if (index < 0) {
+        index = remaining.findIndex(item =>
+          item.file?.name === saved.name && item.file?.size === Number(saved.size_bytes)
+        );
+      }
     }
     if (index < 0) {
       const sameName = remaining.map((item, i) => item.file?.name === saved.name ? i : -1).filter(i => i >= 0);
