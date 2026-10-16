@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -391,6 +393,34 @@ def build_render_manifest(plan: dict) -> dict:
     }
 
 
+
+def write_json_atomic(path: Path, value: dict) -> Path:
+    """Write JSON beside the destination, then atomically replace it on success."""
+    destination = path.expanduser()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            prefix=f".{destination.name}.",
+            suffix=".tmp",
+            dir=destination.parent,
+            delete=False,
+        ) as handle:
+            temp_path = Path(handle.name)
+            json.dump(value, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, destination)
+        return destination
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Cutter Studio: plan de edición con aprobación manual.")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -406,8 +436,7 @@ def main() -> int:
             result = create_plan(args.scan_report)
         else:
             result = build_render_manifest(read_json(args.edit_plan))
-        args.output.expanduser().parent.mkdir(parents=True, exist_ok=True)
-        args.output.expanduser().write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        write_json_atomic(args.output, result)
     except (ValueError, OSError, TypeError, json.JSONDecodeError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
