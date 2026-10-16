@@ -67,7 +67,7 @@ switch ($Mode) {
         $dialog.Filter = 'Video MP4 (*.mp4)|*.mp4'
         $dialog.DefaultExt = 'mp4'
         $dialog.AddExtension = $true
-        $dialog.OverwritePrompt = $true
+        $dialog.OverwritePrompt = $false
         $dialog.InitialDirectory = $startDirectory
         $dialog.FileName = 'temporada-final.mp4'
         if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
