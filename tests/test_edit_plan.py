@@ -335,5 +335,29 @@ class EditPlanTests(unittest.TestCase):
             planner.build_render_manifest(plan)
 
 
+    def test_atomic_json_write_replaces_destination_with_complete_document(self):
+        destination = self.root / "saved-plan.json"
+        destination.write_text("old content", encoding="utf-8")
+
+        result = planner.write_json_atomic(destination, {"schema": "test/v1", "episodes": [1, 2]})
+
+        self.assertEqual(result, destination)
+        self.assertEqual(json.loads(destination.read_text(encoding="utf-8")), {
+            "schema": "test/v1", "episodes": [1, 2]
+        })
+        self.assertEqual(list(self.root.glob(".saved-plan.json.*.tmp")), [])
+
+    def test_atomic_json_write_preserves_existing_file_if_serialization_fails(self):
+        destination = self.root / "saved-plan.json"
+        original = '{"schema":"previous/v1"}'
+        destination.write_text(original, encoding="utf-8")
+
+        with self.assertRaises(TypeError):
+            planner.write_json_atomic(destination, {"not_serializable": object()})
+
+        self.assertEqual(destination.read_text(encoding="utf-8"), original)
+        self.assertEqual(list(self.root.glob(".saved-plan.json.*.tmp")), [])
+
+
 if __name__ == "__main__":
     unittest.main()
