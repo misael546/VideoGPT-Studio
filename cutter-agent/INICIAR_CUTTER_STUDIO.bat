@@ -134,7 +134,7 @@ if defined OUTPUT_VIDEO goto output_chosen
 echo.
 echo No seleccionaste un nombre para el archivo final.
 set "USE_DEFAULT="
-set /p "USE_DEFAULT=Usar "%OUTPUT_FOLDER%\temporada-final.mp4"? [S/n]: "
+set /p "USE_DEFAULT=Usar la ruta predeterminada en %OUTPUT_FOLDER% (temporada-final.mp4)? [S/n]: "
 if /I "%USE_DEFAULT%"=="N" goto configure_output
 set "OUTPUT_VIDEO=%OUTPUT_FOLDER%\temporada-final.mp4"
 
