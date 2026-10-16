@@ -7,6 +7,7 @@ import hashlib
 import math
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -21,6 +22,35 @@ VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v"}
 MAX_PLAN_BYTES = 10 * 1024 * 1024
 MAX_PREVIEW_SECONDS = 180.0
 PREVIEW_CONTEXT_SECONDS = 4.0
+
+
+def parse_byte_range(range_header: str | None, total_size: int) -> tuple[int, int] | None:
+    """Parse one RFC 7233 byte range; reject malformed or multiple ranges."""
+    if range_header is None or not range_header.strip():
+        return None
+    if total_size <= 0:
+        raise ValueError("El vídeo no contiene bytes para servir.")
+    value = range_header.strip()
+    if not value.startswith("bytes="):
+        raise ValueError("Unidad de rango no admitida.")
+    ranges = value[6:].split(",")
+    if len(ranges) != 1:
+        raise ValueError("Solo se admite un rango de bytes por solicitud.")
+    match = re.fullmatch(r"(\d*)-(\d*)", ranges[0].strip())
+    if not match or not (match.group(1) or match.group(2)):
+        raise ValueError("Formato de rango de bytes no válido.")
+
+    if match.group(1):
+        start = int(match.group(1))
+        end = int(match.group(2)) if match.group(2) else total_size - 1
+        if start >= total_size or end < start:
+            raise ValueError("Rango de bytes fuera del vídeo.")
+        return start, min(end, total_size - 1)
+
+    suffix_length = int(match.group(2))
+    if suffix_length <= 0:
+        raise ValueError("La longitud del rango de bytes debe ser positiva.")
+    return max(0, total_size - suffix_length), total_size - 1
 
 
 def is_within(path: Path, root: Path) -> bool:
@@ -269,13 +299,40 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
 
             try:
                 payload_size = output.stat().st_size
-                handle = output.open("rb")
             except OSError as exc:
                 self.send_json(500, {"error": "No se pudo leer la vista previa: " + str(exc)})
                 return
-            self.send_response(200)
+            try:
+                byte_range = parse_byte_range(self.headers.get("Range"), payload_size)
+            except ValueError:
+                self.send_response(416)
+                self.send_header("Accept-Ranges", "bytes")
+                self.send_header("Content-Range", f"bytes */{payload_size}")
+                self.send_header("Content-Length", "0")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
+
+            if byte_range is None:
+                byte_start, byte_end = 0, payload_size - 1
+                status_code = 200
+            else:
+                byte_start, byte_end = byte_range
+                status_code = 206
+            content_length = max(0, byte_end - byte_start + 1)
+            try:
+                handle = output.open("rb")
+                handle.seek(byte_start)
+            except OSError as exc:
+                self.send_json(500, {"error": "No se pudo abrir la vista previa: " + str(exc)})
+                return
+
+            self.send_response(status_code)
             self.send_header("Content-Type", "video/mp4")
-            self.send_header("Content-Length", str(payload_size))
+            self.send_header("Content-Length", str(content_length))
+            self.send_header("Accept-Ranges", "bytes")
+            if status_code == 206:
+                self.send_header("Content-Range", f"bytes {byte_start}-{byte_end}/{payload_size}")
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
@@ -284,14 +341,15 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
             self.end_headers()
             try:
                 with handle:
-                    while True:
-                        chunk = handle.read(1024 * 1024)
+                    remaining = content_length
+                    while remaining > 0:
+                        chunk = handle.read(min(64 * 1024, remaining))
                         if not chunk:
                             break
                         self.wfile.write(chunk)
+                        remaining -= len(chunk)
             except (BrokenPipeError, ConnectionResetError):
-                # Browser navigation/stop is normal; let the HTTP server continue serving other requests.
-                return
+                # Browser seeking/stopping is normal; continue serving other requests.
 
         def do_POST(self):
             if urlparse(self.path).path != "/api/plan":

@@ -180,26 +180,19 @@ async function preview(episode, cut, episodeIndex) {
   let playbackStart = 0;
 
   if (isServerMode()) {
-    setStatus("Generando vista previa local con FFmpeg…", "warning");
+    setStatus("Preparando vista previa local en streaming…", "warning");
     const params = new URLSearchParams({
       episode: String(episodeIndex),
       episode_path: String(episode.path || ""),
       start: String(cut.start_seconds),
       end: String(cut.end_seconds),
     });
-    try {
-      const response = await fetch("/api/preview?" + params.toString(), { cache: "no-store" });
-      if (!response.ok) {
-        let detail = "No se pudo generar la vista previa.";
-        try { detail = (await response.json()).error || detail; } catch (_) {}
-        throw new Error(detail);
-      }
-      playbackStart = Number(response.headers.get("X-Preview-Start")) || 0;
-      nextUrl = URL.createObjectURL(await response.blob());
-    } catch (error) {
-      setStatus(error.message || "Falló la vista previa local.", "error");
-      return;
-    }
+    // The server includes four seconds of context before the candidate. Point the
+    // media element at the endpoint directly so it requests byte ranges instead
+    // of downloading the entire preview into a JavaScript Blob first.
+    const cutStart = Number(cut.start_seconds) || 0;
+    playbackStart = Math.max(0, cutStart - 4);
+    nextUrl = "/api/preview?" + params.toString();
   } else {
     const filename = String(episode.filename || basename(episode.path)).toLowerCase();
     const choices = state.filesByName.get(filename);
@@ -228,7 +221,7 @@ async function preview(episode, cut, episodeIndex) {
   ui.previewVideo.onerror = function () {
     setStatus("El navegador no pudo reproducir la vista previa.", "warning");
   };
-  if (oldUrl) URL.revokeObjectURL(oldUrl);
+  if (oldUrl && oldUrl.startsWith("blob:")) URL.revokeObjectURL(oldUrl);
 }
 
 function makeCutCard(episode, cut, index, episodeIndex) {

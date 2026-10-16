@@ -17,6 +17,25 @@ review_server = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(review_server)
 
 
+class ByteRangeParserTests(unittest.TestCase):
+    def test_parses_closed_open_and_suffix_ranges(self):
+        self.assertEqual(review_server.parse_byte_range(None, 100), None)
+        self.assertEqual(review_server.parse_byte_range("bytes=10-19", 100), (10, 19))
+        self.assertEqual(review_server.parse_byte_range("bytes=20-", 100), (20, 99))
+        self.assertEqual(review_server.parse_byte_range("bytes=-10", 100), (90, 99))
+        self.assertEqual(review_server.parse_byte_range("bytes=0-999", 100), (0, 99))
+
+    def test_rejects_invalid_or_multiple_ranges(self):
+        for header in ["items=0-10", "bytes=-0", "bytes=100-", "bytes=10-5", "bytes=0-1,4-5", "bytes=-"]:
+            with self.subTest(header=header):
+                with self.assertRaises(ValueError):
+                    review_server.parse_byte_range(header, 100)
+
+    def test_rejects_ranges_for_empty_media(self):
+        with self.assertRaises(ValueError):
+            review_server.parse_byte_range("bytes=0-0", 0)
+
+
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg/FFprobe no instalados")
 class ReviewServerTests(unittest.TestCase):
     def setUp(self):
@@ -181,6 +200,25 @@ class ReviewServerTests(unittest.TestCase):
         self.assertEqual(preview_start, 0.0)
         self.assertGreater(len(payload), 1000)
         self.assertTrue(list(self.preview_dir.glob("*.mp4")))
+
+    def test_preview_endpoint_supports_byte_range_streaming(self):
+        query = urlencode({"episode": 0, "start": 0.5, "end": 1.5})
+        request = Request(self.base_url + "/api/preview?" + query, headers={"Range": "bytes=0-127"})
+        with urlopen(request, timeout=30) as response:
+            payload = response.read()
+            self.assertEqual(response.status, 206)
+            self.assertEqual(response.headers.get("Accept-Ranges"), "bytes")
+            self.assertTrue(response.headers.get("Content-Range", "").startswith("bytes 0-127/"))
+            self.assertEqual(response.headers.get("Content-Length"), "128")
+        self.assertEqual(len(payload), 128)
+
+    def test_preview_endpoint_rejects_invalid_byte_range(self):
+        query = urlencode({"episode": 0, "start": 0.5, "end": 1.5})
+        request = Request(self.base_url + "/api/preview?" + query, headers={"Range": "bytes=999999999-"})
+        with self.assertRaises(HTTPError) as context:
+            urlopen(request, timeout=30)
+        self.assertEqual(context.exception.code, 416)
+        self.assertTrue(context.exception.headers.get("Content-Range", "").startswith("bytes */"))
 
     def test_rejects_non_finite_preview_query_times(self):
         for start, end in [("nan", "1.5"), ("0.5", "inf"), ("-inf", "1.5")]:
