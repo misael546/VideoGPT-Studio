@@ -99,3 +99,19 @@ jobs:
           path: dist/Cutter-Studio/
           if-no-files-found: error
           retention-days: 90
+      - name: Assemble Android companion web package
+        run: |
+          mkdir -p dist/Cutter-Studio-Android
+          cp cutter-agent/android/index.html cutter-agent/android/app.css cutter-agent/android/app.js cutter-agent/android/episode-order.js cutter-agent/android/manifest.webmanifest cutter-agent/android/sw.js cutter-agent/android/README.md dist/Cutter-Studio-Android/
+          printf 'Commit: %s\nBuilt (UTC): %s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/Cutter-Studio-Android/BUILD_INFO.txt
+          (cd dist/Cutter-Studio-Android && sha256sum *.html *.css *.js *.webmanifest *.md BUILD_INFO.txt > SHA256SUMS.txt && sha256sum --check SHA256SUMS.txt)
+          test -s dist/Cutter-Studio-Android/index.html
+          test -s dist/Cutter-Studio-Android/episode-order.js
+          test -s dist/Cutter-Studio-Android/SHA256SUMS.txt
+      - name: Upload Cutter Studio Android companion package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cutter-Studio-Android-Web
+          path: dist/Cutter-Studio-Android/
+          if-no-files-found: error
+          retention-days: 90
