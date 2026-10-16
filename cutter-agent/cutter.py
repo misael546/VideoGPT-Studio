@@ -51,10 +51,33 @@ def season_number(path: Path) -> int | None:
 
 def episode_number(path: Path) -> int | None:
     name = path.stem.lower()
-    labeled = re.search(r"(?:episode|episodio|chapter|capitulo|cap|ep|e)[ ._-]*0*(\d{1,4})\b", name)
-    if labeled:
-        return int(labeled.group(1))
-    numbers = re.findall(r"(?<!\d)(\d{1,4})(?!\d)", name)
+
+    # Prefer explicit episode labels before considering generic numbers. This handles
+    # S01E12, 2x12, "Episode 12", "Capitulo 12", and fansub-style " - 12".
+    explicit_patterns = (
+        r"\bs\s*0*\d{1,3}\s*[._ -]*e\s*0*(\d{1,4})\b",
+        r"\b\d{1,3}\s*x\s*0*(\d{1,4})\b",
+        r"\b(?:episode|episodio|chapter|capitulo|cap|ep|e)[ ._-]*0*(\d{1,4})\b",
+    )
+    for pattern in explicit_patterns:
+        labeled = re.search(pattern, name)
+        if labeled:
+            return int(labeled.group(1))
+
+    # Strip common release metadata before the fallback. Otherwise filenames such
+    # as "Anime - 01 [1080p x265]" would incorrectly sort as episode 1080 or 265.
+    fallback_name = re.sub(
+        r"\b(?:360|480|540|576|720|1080|1440|2160|4320)\s*p\b",
+        " ",
+        name,
+    )
+    fallback_name = re.sub(r"\b\d{3,4}\s*[x×]\s*\d{3,4}\b", " ", fallback_name)
+    fallback_name = re.sub(
+        r"\b(?:x264|x265|h264|h265|hevc|av1|10bit|8bit|aac2?\.0|aac|flac)\b",
+        " ",
+        fallback_name,
+    )
+    numbers = re.findall(r"(?<!\d)(\d{1,4})(?!\d)", fallback_name)
     return int(numbers[-1]) if numbers else None
 
 
