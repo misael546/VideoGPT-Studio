@@ -1,10 +1,8 @@
-import { guessEpisodeNumber, sortEpisodeFiles, restoreEpisodeOrder } from "./episode-order.js";
 import { loadProjectState, saveProjectState } from "./project-autosave.js";
 
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
-  const filesInput = $("video-files");
   const episodeList = $("episode-list");
   const fileCount = $("file-count");
   const clearButton = $("clear-files");
@@ -12,24 +10,23 @@ import { loadProjectState, saveProjectState } from "./project-autosave.js";
   const watermarkInput = $("watermark-file");
   const watermarkName = $("watermark-name");
   const exportStatus = $("export-status");
-  let episodes = [];
-  let watermark = null;
-  let savedWatermarkImageName = null;
-  let pendingRestore = null;
-  let hasProject = false;
+  const connectButton = $("connect-pc");
+  const createButton = $("create-video");
+  const pcAddress = $("pc-address");
+  let project = null;
+  let watermarkImageName = null;
 
   const bytesLabel = bytes => bytes < 1048576
     ? (bytes / 1024).toFixed(0) + " KB"
     : (bytes / 1048576).toFixed(1) + " MB";
 
   try {
-    pendingRestore = loadProjectState(window.localStorage);
-    if (pendingRestore) {
-      hasProject = true;
-      watermarkText.value = pendingRestore.watermark?.text || "";
-      savedWatermarkImageName = pendingRestore.watermark?.image_name || null;
-      if (savedWatermarkImageName) {
-        watermarkName.textContent = "Imagen anterior: " + pendingRestore.watermark.image_name + ". Vuelve a seleccionarla al reabrir la aplicación.";
+    project = loadProjectState(window.localStorage);
+    if (project) {
+      watermarkText.value = project.watermark?.text || "";
+      watermarkImageName = project.watermark?.image_name || null;
+      if (watermarkImageName) {
+        watermarkName.textContent = "Imagen guardada: " + watermarkImageName + ". Vuelve a seleccionarla en la PC para usarla.";
       }
     }
   } catch {
@@ -37,50 +34,38 @@ import { loadProjectState, saveProjectState } from "./project-autosave.js";
   }
 
   function persistProject() {
-    if (!hasProject && episodes.length === 0 && !watermarkText.value.trim()) return;
     try {
       saveProjectState(window.localStorage, {
-        // Keep the original snapshot until every saved episode has been reselected.
-        // Otherwise choosing files in multiple batches would erase not-yet-selected entries.
-        episodes: pendingRestore?.episodes?.length
-          ? pendingRestore.episodes
-          : episodes.map((episode, index) => ({
-              order: index + 1,
-              name: episode.file.name,
-              size_bytes: episode.file.size,
-              last_modified: episode.file.lastModified
-            })),
+        episodes: (project?.episodes || []).map((item, index) => ({
+          order: index + 1,
+          name: item.name,
+          size_bytes: item.size_bytes,
+          last_modified: item.last_modified
+        })),
         watermark: {
           text: watermarkText.value.trim(),
-          image_name: watermark?.name || savedWatermarkImageName || pendingRestore?.watermark?.image_name || null
+          image_name: watermarkImageName
         }
       });
-      hasProject = true;
-      exportStatus.textContent = "Guardado automáticamente en este dispositivo.";
+      exportStatus.textContent = "Configuración ligera guardada automáticamente en este dispositivo.";
     } catch {
-      exportStatus.textContent = "No se pudo guardar automáticamente. Comprueba el espacio disponible del navegador.";
+      exportStatus.textContent = "No se pudo guardar la configuración automáticamente.";
     }
   }
 
-  function render() {
+  function renderEpisodes() {
+    const episodes = project?.episodes || [];
     episodeList.replaceChildren();
-    fileCount.textContent = episodes.length + (episodes.length === 1 ? " archivo" : " archivos");
+    fileCount.textContent = episodes.length + (episodes.length === 1 ? " episodio" : " episodios");
     clearButton.disabled = episodes.length === 0;
     if (!episodes.length) {
       const empty = document.createElement("li");
       empty.className = "empty";
-      empty.textContent = pendingRestore?.episodes?.length
-        ? "Proyecto recuperado. Vuelve a seleccionar los videos originales para restaurar el orden."
-        : "Aún no has seleccionado episodios.";
+      empty.textContent = "Conecta la PC para cargar la lista de episodios. No selecciones vídeos desde Android.";
       episodeList.append(empty);
-      $("order-summary").textContent = pendingRestore?.episodes?.length
-        ? pendingRestore.episodes.map((item, i) => (i + 1) + ". " + item.name).join("\n")
-        : "Añade episodios para preparar el orden.";
-      $("order-summary").style.whiteSpace = "pre-line";
-      if (!pendingRestore?.episodes?.length) persistProject();
+      $("order-summary").textContent = "El orden de salida aparecerá cuando la PC comparta el proyecto.";
       return;
     }
-
     episodes.forEach((episode, index) => {
       const li = document.createElement("li");
       li.className = "episode-row";
@@ -91,79 +76,66 @@ import { loadProjectState, saveProjectState } from "./project-autosave.js";
       info.className = "episode-info";
       const name = document.createElement("span");
       name.className = "episode-name";
-      name.textContent = episode.file.name;
+      name.textContent = episode.name;
       const size = document.createElement("span");
       size.className = "episode-size";
-      size.textContent = bytesLabel(episode.file.size);
+      size.textContent = bytesLabel(episode.size_bytes || 0) + " · archivo en PC";
       info.append(name, size);
       const controls = document.createElement("span");
       controls.className = "move-buttons";
-      [["↑", "Subir episodio", index - 1], ["↓", "Bajar episodio", index + 1]].forEach(([label, title, target]) => {
+      [[ "↑", index - 1, "Subir episodio" ], [ "↓", index + 1, "Bajar episodio" ]].forEach(([label, target, title]) => {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "icon-button";
         button.textContent = label;
         button.title = title;
-        button.setAttribute("aria-label", title + ": " + episode.file.name);
+        button.setAttribute("aria-label", title + ": " + episode.name);
         button.disabled = target < 0 || target >= episodes.length;
         button.addEventListener("click", () => {
-          const [moved] = episodes.splice(index, 1);
-          episodes.splice(target, 0, moved);
-          render();
+          const [moved] = project.episodes.splice(index, 1);
+          project.episodes.splice(target, 0, moved);
+          renderEpisodes();
+          persistProject();
         });
         controls.append(button);
       });
       li.append(number, info, controls);
       episodeList.append(li);
     });
-
-    $("order-summary").textContent = episodes.map((item, i) => (i + 1) + ". " + item.file.name).join("\n");
+    $("order-summary").textContent = episodes.map((item, index) => (index + 1) + ". " + item.name).join("\n");
     $("order-summary").style.whiteSpace = "pre-line";
-    persistProject();
   }
 
-  filesInput.addEventListener("change", () => {
-    const existing = new Set(episodes.map(episode => episode.key));
-    for (const file of Array.from(filesInput.files || [])) {
-      const key = [file.name, file.size, file.lastModified].join("|");
-      if (!existing.has(key) && file.size > 0) {
-        episodes.push({ key, file, detectedEpisode: guessEpisodeNumber(file.name) });
-        existing.add(key);
-      }
-    }
-    filesInput.value = "";
-    if (pendingRestore?.episodes?.length) {
-      const restored = restoreEpisodeOrder(episodes, pendingRestore.episodes);
-      episodes = restored.episodes;
-      const unmatched = restored.unmatched;
-      if (unmatched === 0) pendingRestore = null;
-      render();
-      exportStatus.textContent = unmatched
-        ? "Restauración parcial: faltan " + unmatched + " episodio(s). Selecciona los demás videos para recuperar todo el orden."
-        : "Proyecto recuperado automáticamente.";
-    } else {
-      episodes = sortEpisodeFiles(episodes);
-      render();
-    }
+  connectButton.addEventListener("click", () => {
+    $("pc-status").textContent = "No conectada";
+    $("connection-status").textContent = "El agente remoto seguro de Windows todavía no está disponible. No se ha intentado una conexión ni se ha enviado ningún archivo.";
+    $("preview-status").textContent = "La previsualización por transmisión se habilitará cuando el agente de la PC esté implementado.";
+    $("render-status").textContent = "La creación está deshabilitada hasta verificar la conexión segura con la PC.";
+    createButton.disabled = true;
+  });
+
+  createButton.addEventListener("click", () => {
+    $("render-status").textContent = "No se inició ningún renderizado: el agente remoto de la PC aún no está conectado.";
   });
 
   clearButton.addEventListener("click", () => {
-    episodes = [];
-    pendingRestore = null;
-    hasProject = true;
-    render();
+    if (!project) return;
+    project.episodes = [];
+    renderEpisodes();
     persistProject();
   });
 
   watermarkText.addEventListener("input", persistProject);
   watermarkInput.addEventListener("change", () => {
-    watermark = watermarkInput.files && watermarkInput.files[0] ? watermarkInput.files[0] : null;
-    savedWatermarkImageName = watermark?.name || null;
-    watermarkName.textContent = watermark ? watermark.name + " · " + bytesLabel(watermark.size) : "No se ha seleccionado una imagen.";
+    const file = watermarkInput.files?.[0];
+    watermarkImageName = file?.name || watermarkImageName;
+    watermarkName.textContent = file
+      ? file.name + " · " + bytesLabel(file.size) + " · seleccionada en este dispositivo; selecciona la imagen original en la PC para renderizar."
+      : "No se ha seleccionado una imagen.";
     persistProject();
   });
 
-  render();
+  renderEpisodes();
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
