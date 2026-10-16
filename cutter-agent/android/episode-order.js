@@ -23,3 +23,30 @@ export function sortEpisodeFiles(files) {
     return String(a.name || a.file?.name || "").localeCompare(String(b.name || b.file?.name || ""), "es", { numeric: true, sensitivity: "base" });
   });
 }
+
+export function restoreEpisodeOrder(currentEpisodes, savedEpisodes) {
+  const remaining = Array.from(currentEpisodes || []);
+  const ordered = [];
+  let unmatched = 0;
+  const requested = Array.isArray(savedEpisodes) ? [...savedEpisodes].sort((a, b) => Number(a?.order) - Number(b?.order)) : [];
+  for (const saved of requested) {
+    if (!saved || typeof saved.name !== "string") {
+      unmatched++;
+      continue;
+    }
+    let index = -1;
+    if (Number.isFinite(Number(saved.size_bytes))) {
+      index = remaining.findIndex(item => item.file?.name === saved.name && item.file?.size === Number(saved.size_bytes));
+    }
+    if (index < 0) {
+      const sameName = remaining.map((item, i) => item.file?.name === saved.name ? i : -1).filter(i => i >= 0);
+      if (sameName.length === 1) index = sameName[0];
+    }
+    if (index < 0) {
+      unmatched++;
+      continue;
+    }
+    ordered.push(remaining.splice(index, 1)[0]);
+  }
+  return { episodes: [...ordered, ...remaining], unmatched };
+}
