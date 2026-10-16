@@ -58,3 +58,17 @@ El servidor Express contiene rutas heredadas para proveedores externos. No son n
 ## Biblioteca de recursos
 
 La biblioteca reutilizable está en [`recursos/`](recursos/). Para comprobar rutas, duplicados, licencias declaradas, SVG, tamaños y entradas de galería ejecuta `python scripts/validate-resource-library.py`. La comparación periódica de referencias visuales se registra en [`recursos/REVISION_VISUAL.md`](recursos/REVISION_VISUAL.md).
+
+## Cutter Studio — agente local para temporadas de anime
+
+El componente `cutter-agent/` analiza los episodios directamente en Windows/Linux con Python y FFmpeg. Compara huellas visuales y de audio para detectar openings/endings repetidos, ordena temporadas cuando identifica etiquetas como `S01E02`, agrupa candidatos duplicados y prepara un plan de revisión. No aprueba ni elimina cortes automáticamente.
+
+En Windows, descarga el artefacto `Cutter-Studio-Windows-Local` desde la ejecución de [VideoGPT Studio checks](https://github.com/misael546/VideoGPT-Studio/actions/workflows/ci.yml), extrae el paquete y abre `INICIAR_CUTTER_STUDIO.bat`. La opción 3 revisa/instala requisitos con `winget` o abre páginas oficiales. El menú analiza, abre el revisor local y renderiza el plan que hayas aprobado.
+
+- Los vídeos originales permanecen en tu PC; no se suben a GitHub ni a APIs de IA.
+- El revisor usa `127.0.0.1` y genera previsualizaciones MP4 locales con FFmpeg, incluso desde MKV.
+- El renderizador comprueba el MP4 antes de guardar y no sobrescribe el original.
+- Los artefactos de CI contienen solo código, documentación, hashes y metadatos de compilación; no incluyen vídeos del usuario.
+
+Cutter Studio está en desarrollo dentro del PR de borrador [#17](https://github.com/misael546/VideoGPT-Studio/pull/17). No se debe fusionar ni publicar mientras no se haya probado con episodios reales y revisado su precisión.
+
