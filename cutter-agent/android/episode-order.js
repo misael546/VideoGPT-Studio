@@ -15,11 +15,11 @@ export function guessEpisodeNumber(name) {
 
 export function sortEpisodeFiles(files) {
   return Array.from(files || []).sort((a, b) => {
-    const aNumber = guessEpisodeNumber(a.name);
-    const bNumber = guessEpisodeNumber(b.name);
+    const aNumber = guessEpisodeNumber(a.name || a.file?.name);
+    const bNumber = guessEpisodeNumber(b.name || b.file?.name);
     if (aNumber !== null && bNumber === null) return -1;
     if (aNumber === null && bNumber !== null) return 1;
     if (aNumber !== null && bNumber !== null && aNumber !== bNumber) return aNumber - bNumber;
-    return String(a.name).localeCompare(String(b.name), "es", { numeric: true, sensitivity: "base" });
+    return String(a.name || a.file?.name || "").localeCompare(String(b.name || b.file?.name || ""), "es", { numeric: true, sensitivity: "base" });
   });
 }
