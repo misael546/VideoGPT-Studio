@@ -107,6 +107,12 @@ class EpisodeNumberTests(unittest.TestCase):
         self.assertEqual(cutter.episode_number(Path("Temporada S01E12.mp4")), 12)
         self.assertEqual(cutter.episode_number(Path("Capitulo 03.webm")), 3)
 
+    def test_ignores_resolution_and_codec_tags_when_finding_episode_number(self):
+        self.assertEqual(cutter.episode_number(Path("Anime - 01 [1080p].mkv")), 1)
+        self.assertEqual(cutter.episode_number(Path("[SubsPlease] Anime - 02 (720p HEVC).mkv")), 2)
+        self.assertEqual(cutter.episode_number(Path("Anime 2x11 [1280x720 x265].mkv")), 11)
+        self.assertEqual(cutter.episode_number(Path("Anime - 04 [1080p 10bit AAC].mkv")), 4)
+
     def test_no_episode_number(self):
         self.assertIsNone(cutter.episode_number(Path("opening-final.mkv")))
 
