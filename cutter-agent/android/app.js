@@ -1,17 +1,161 @@
 import { guessEpisodeNumber, sortEpisodeFiles, restoreEpisodeOrder } from "./episode-order.js";
-(() => {
-"use strict";
-const $=id=>document.getElementById(id), filesInput=$("video-files"), episodeList=$("episode-list"), fileCount=$("file-count"), clearButton=$("clear-files"), exportButton=$("export-project"), exportStatus=$("export-status"), watermarkText=$("watermark-text"), watermarkInput=$("watermark-file"), watermarkName=$("watermark-name"), importInput=$("import-project");
-let episodes=[],watermark=null;
-const bytesLabel=bytes=>bytes<1048576?(bytes/1024).toFixed(0)+" KB":(bytes/1048576).toFixed(1)+" MB";
+import { loadProjectState, saveProjectState } from "./project-autosave.js";
 
-function render(){episodeList.replaceChildren();fileCount.textContent=episodes.length+(episodes.length===1?" archivo":" archivos");clearButton.disabled=episodes.length===0;exportButton.disabled=episodes.length===0;if(!episodes.length){const empty=document.createElement("li");empty.className="empty";empty.textContent="Aún no has seleccionado episodios.";episodeList.append(empty);$("order-summary").textContent="Añade episodios para preparar el orden.";exportStatus.textContent="Selecciona al menos un video para empezar.";return}
-episodes.forEach((episode,index)=>{const li=document.createElement("li");li.className="episode-row";const number=document.createElement("span");number.className="episode-number";number.textContent=String(index+1).padStart(2,"0");const info=document.createElement("span");info.className="episode-info";const name=document.createElement("span");name.className="episode-name";name.textContent=episode.file.name;const size=document.createElement("span");size.className="episode-size";size.textContent=bytesLabel(episode.file.size);info.append(name,size);const controls=document.createElement("span");controls.className="move-buttons";[["↑","Subir episodio",index-1],["↓","Bajar episodio",index+1]].forEach(([label,title,target])=>{const button=document.createElement("button");button.type="button";button.className="icon-button";button.textContent=label;button.title=title;button.setAttribute("aria-label",title+": "+episode.file.name);button.disabled=target<0||target>=episodes.length;button.addEventListener("click",()=>{const [moved]=episodes.splice(index,1);episodes.splice(target,0,moved);render()});controls.append(button)});li.append(number,info,controls);episodeList.append(li)});
-$("order-summary").textContent=episodes.map((item,i)=>(i+1)+". "+item.file.name).join("\n");$("order-summary").style.whiteSpace="pre-line";exportStatus.textContent="Listo para exportar orden y ajustes. El análisis y montaje aún requieren el motor de escritorio."}
-filesInput.addEventListener("change",()=>{const existing=new Set(episodes.map(episode=>episode.key));for(const file of Array.from(filesInput.files||[])){const key=[file.name,file.size,file.lastModified].join("|");if(!existing.has(key)&&file.size>0){episodes.push({key,file,detectedEpisode:guessEpisodeNumber(file.name)});existing.add(key)}}episodes=sortEpisodeFiles(episodes);filesInput.value="";render()});
-clearButton.addEventListener("click",()=>{episodes=[];render()});
-watermarkInput.addEventListener("change",()=>{watermark=watermarkInput.files&&watermarkInput.files[0]?watermarkInput.files[0]:null;watermarkName.textContent=watermark?watermark.name+" · "+bytesLabel(watermark.size):"No se ha seleccionado una imagen."});
-importInput.addEventListener("change",async()=>{const file=importInput.files&&importInput.files[0];importInput.value="";if(!file)return;try{const project=JSON.parse(await file.text());if(!project||project.schema!=="cutter-studio-android-project/v1"||!Array.isArray(project.episodes))throw new Error("El archivo no es un proyecto compatible de Cutter Studio.");if(!episodes.length){throw new Error("Primero selecciona los videos originales y después importa el proyecto para recuperar el orden.");}const restored=restoreEpisodeOrder(episodes,project.episodes);episodes=restored.episodes;if(project.watermark&&typeof project.watermark.text==="string")watermarkText.value=project.watermark.text;render();exportStatus.textContent="Orden importado. "+(restored.unmatched?restored.unmatched+" episodio(s) del proyecto no coincidieron con los archivos seleccionados. ":"")+"Si el proyecto usaba una imagen de marca de agua, vuelve a seleccionarla."; }catch(error){exportStatus.textContent=error instanceof Error?error.message:"No se pudo leer el proyecto JSON.";}});
-exportButton.addEventListener("click",()=>{const project={schema:"cutter-studio-android-project/v1",created_at:new Date().toISOString(),platform:"android-companion",processing_status:"preparation-only",episodes:episodes.map((episode,index)=>({order:index+1,name:episode.file.name,size_bytes:episode.file.size,last_modified:episode.file.lastModified})),watermark:{text:watermarkText.value.trim(),image_name:watermark?watermark.name:null},notes:"Este archivo contiene el orden y ajustes, no los videos. La versión Android todavía no analiza ni renderiza medios."};const blob=new Blob([JSON.stringify(project,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download="cutter-studio-android-project.json";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);exportStatus.textContent="Proyecto JSON exportado. Los videos originales no se incluyeron."});
-render();if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const filesInput = $("video-files");
+  const episodeList = $("episode-list");
+  const fileCount = $("file-count");
+  const clearButton = $("clear-files");
+  const watermarkText = $("watermark-text");
+  const watermarkInput = $("watermark-file");
+  const watermarkName = $("watermark-name");
+  const exportStatus = $("export-status");
+  let episodes = [];
+  let watermark = null;
+  let pendingRestore = null;
+  let hasProject = false;
+
+  const bytesLabel = bytes => bytes < 1048576
+    ? (bytes / 1024).toFixed(0) + " KB"
+    : (bytes / 1048576).toFixed(1) + " MB";
+
+  try {
+    pendingRestore = loadProjectState(window.localStorage);
+    if (pendingRestore) {
+      hasProject = true;
+      watermarkText.value = pendingRestore.watermark?.text || "";
+      if (pendingRestore.watermark?.image_name) {
+        watermarkName.textContent = "Imagen anterior: " + pendingRestore.watermark.image_name + ". Vuelve a seleccionarla al reabrir la aplicación.";
+      }
+    }
+  } catch {
+    exportStatus.textContent = "El guardado automático no está disponible en este navegador.";
+  }
+
+  function persistProject() {
+    if (!hasProject && episodes.length === 0 && !watermarkText.value.trim()) return;
+    try {
+      saveProjectState(window.localStorage, {
+        episodes: episodes.map((episode, index) => ({
+          order: index + 1,
+          name: episode.file.name,
+          size_bytes: episode.file.size,
+          last_modified: episode.file.lastModified
+        })),
+        watermark: {
+          text: watermarkText.value.trim(),
+          image_name: watermark?.name || pendingRestore?.watermark?.image_name || null
+        }
+      });
+      hasProject = true;
+      exportStatus.textContent = "Guardado automáticamente en este dispositivo.";
+    } catch {
+      exportStatus.textContent = "No se pudo guardar automáticamente. Comprueba el espacio disponible del navegador.";
+    }
+  }
+
+  function render() {
+    episodeList.replaceChildren();
+    fileCount.textContent = episodes.length + (episodes.length === 1 ? " archivo" : " archivos");
+    clearButton.disabled = episodes.length === 0;
+    if (!episodes.length) {
+      const empty = document.createElement("li");
+      empty.className = "empty";
+      empty.textContent = pendingRestore?.episodes?.length
+        ? "Proyecto recuperado. Vuelve a seleccionar los videos originales para restaurar el orden."
+        : "Aún no has seleccionado episodios.";
+      episodeList.append(empty);
+      $("order-summary").textContent = pendingRestore?.episodes?.length
+        ? pendingRestore.episodes.map((item, i) => (i + 1) + ". " + item.name).join("\n")
+        : "Añade episodios para preparar el orden.";
+      $("order-summary").style.whiteSpace = "pre-line";
+      if (!pendingRestore?.episodes?.length) persistProject();
+      return;
+    }
+
+    episodes.forEach((episode, index) => {
+      const li = document.createElement("li");
+      li.className = "episode-row";
+      const number = document.createElement("span");
+      number.className = "episode-number";
+      number.textContent = String(index + 1).padStart(2, "0");
+      const info = document.createElement("span");
+      info.className = "episode-info";
+      const name = document.createElement("span");
+      name.className = "episode-name";
+      name.textContent = episode.file.name;
+      const size = document.createElement("span");
+      size.className = "episode-size";
+      size.textContent = bytesLabel(episode.file.size);
+      info.append(name, size);
+      const controls = document.createElement("span");
+      controls.className = "move-buttons";
+      [["↑", "Subir episodio", index - 1], ["↓", "Bajar episodio", index + 1]].forEach(([label, title, target]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "icon-button";
+        button.textContent = label;
+        button.title = title;
+        button.setAttribute("aria-label", title + ": " + episode.file.name);
+        button.disabled = target < 0 || target >= episodes.length;
+        button.addEventListener("click", () => {
+          const [moved] = episodes.splice(index, 1);
+          episodes.splice(target, 0, moved);
+          render();
+        });
+        controls.append(button);
+      });
+      li.append(number, info, controls);
+      episodeList.append(li);
+    });
+
+    $("order-summary").textContent = episodes.map((item, i) => (i + 1) + ". " + item.file.name).join("\n");
+    $("order-summary").style.whiteSpace = "pre-line";
+    persistProject();
+  }
+
+  filesInput.addEventListener("change", () => {
+    const existing = new Set(episodes.map(episode => episode.key));
+    for (const file of Array.from(filesInput.files || [])) {
+      const key = [file.name, file.size, file.lastModified].join("|");
+      if (!existing.has(key) && file.size > 0) {
+        episodes.push({ key, file, detectedEpisode: guessEpisodeNumber(file.name) });
+        existing.add(key);
+      }
+    }
+    filesInput.value = "";
+    if (pendingRestore?.episodes?.length) {
+      const restored = restoreEpisodeOrder(episodes, pendingRestore.episodes);
+      episodes = restored.episodes;
+      const unmatched = restored.unmatched;
+      pendingRestore = null;
+      render();
+      exportStatus.textContent = "Proyecto recuperado automáticamente." + (unmatched ? " No coincidieron " + unmatched + " episodio(s); revisa el orden." : "");
+    } else {
+      episodes = sortEpisodeFiles(episodes);
+      render();
+    }
+  });
+
+  clearButton.addEventListener("click", () => {
+    episodes = [];
+    pendingRestore = null;
+    hasProject = true;
+    render();
+    persistProject();
+  });
+
+  watermarkText.addEventListener("input", persistProject);
+  watermarkInput.addEventListener("change", () => {
+    watermark = watermarkInput.files && watermarkInput.files[0] ? watermarkInput.files[0] : null;
+    watermarkName.textContent = watermark ? watermark.name + " · " + bytesLabel(watermark.size) : "No se ha seleccionado una imagen.";
+    persistProject();
+  });
+
+  render();
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
 })();
