@@ -18,6 +18,7 @@ test("Android interface exposes PC connection, streamed preview and create-video
   assert.match(html, /<video id="video-preview" controls playsinline preload="none"/);
   assert.match(html, /se guarda automáticamente/i);
   assert.match(html, /Crear video en mi PC/i);
+  assert.match(html, /id="create-video"[^>]*disabled/, "render must stay disabled until the secure PC agent exists");
   assert.doesNotMatch(html, /id="video-files"|type="file" accept="video\//i);
   assert.doesNotMatch(html, /import-project|export-project|JSON/i);
 });
