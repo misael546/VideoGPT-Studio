@@ -14,6 +14,7 @@ import { loadProjectState, saveProjectState } from "./project-autosave.js";
   const exportStatus = $("export-status");
   let episodes = [];
   let watermark = null;
+  let savedWatermarkImageName = null;
   let pendingRestore = null;
   let hasProject = false;
 
@@ -26,7 +27,8 @@ import { loadProjectState, saveProjectState } from "./project-autosave.js";
     if (pendingRestore) {
       hasProject = true;
       watermarkText.value = pendingRestore.watermark?.text || "";
-      if (pendingRestore.watermark?.image_name) {
+      savedWatermarkImageName = pendingRestore.watermark?.image_name || null;
+      if (savedWatermarkImageName) {
         watermarkName.textContent = "Imagen anterior: " + pendingRestore.watermark.image_name + ". Vuelve a seleccionarla al reabrir la aplicación.";
       }
     }
@@ -48,7 +50,7 @@ import { loadProjectState, saveProjectState } from "./project-autosave.js";
           : (pendingRestore?.episodes || []),
         watermark: {
           text: watermarkText.value.trim(),
-          image_name: watermark?.name || pendingRestore?.watermark?.image_name || null
+          image_name: watermark?.name || savedWatermarkImageName || pendingRestore?.watermark?.image_name || null
         }
       });
       hasProject = true;
@@ -152,6 +154,7 @@ import { loadProjectState, saveProjectState } from "./project-autosave.js";
   watermarkText.addEventListener("input", persistProject);
   watermarkInput.addEventListener("change", () => {
     watermark = watermarkInput.files && watermarkInput.files[0] ? watermarkInput.files[0] : null;
+    savedWatermarkImageName = watermark?.name || null;
     watermarkName.textContent = watermark ? watermark.name + " · " + bytesLabel(watermark.size) : "No se ha seleccionado una imagen.";
     persistProject();
   });
