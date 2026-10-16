@@ -1,7 +1,7 @@
 import { guessEpisodeNumber, sortEpisodeFiles } from "./episode-order.js";
 (() => {
 "use strict";
-const $=id=>document.getElementById(id), filesInput=$("video-files"), episodeList=$("episode-list"), fileCount=$("file-count"), clearButton=$("clear-files"), exportButton=$("export-project"), exportStatus=$("export-status"), watermarkText=$("watermark-text"), watermarkInput=$("watermark-file"), watermarkName=$("watermark-name");
+const $=id=>document.getElementById(id), filesInput=$("video-files"), episodeList=$("episode-list"), fileCount=$("file-count"), clearButton=$("clear-files"), exportButton=$("export-project"), exportStatus=$("export-status"), watermarkText=$("watermark-text"), watermarkInput=$("watermark-file"), watermarkName=$("watermark-name"), importInput=$("import-project");
 let episodes=[],watermark=null;
 const bytesLabel=bytes=>bytes<1048576?(bytes/1024).toFixed(0)+" KB":(bytes/1048576).toFixed(1)+" MB";
 
