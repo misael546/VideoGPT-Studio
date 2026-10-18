@@ -350,6 +350,7 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
                         remaining -= len(chunk)
             except (BrokenPipeError, ConnectionResetError):
                 # Browser seeking/stopping is normal; continue serving other requests.
+                return
 
         def do_POST(self):
             if urlparse(self.path).path != "/api/plan":
