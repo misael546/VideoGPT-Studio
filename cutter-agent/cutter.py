@@ -56,7 +56,7 @@ def episode_number(path: Path) -> int | None:
     # S01E12, 2x12, "Episode 12", "Capitulo 12", and fansub-style " - 12".
     explicit_patterns = (
         r"\bs\s*0*\d{1,3}\s*[._ -]*e\s*0*(\d{1,4})\b",
-        r"\b\d{1,3}\s*x\s*0*(\d{1,4})\b",
+        r"(?<![.\d])\b\d{1,3}\s*x\s*0*(\d{1,4})\b",
         r"\b(?:episode|episodio|chapter|capitulo|cap|ep)[ ._-]*0*(\d{1,4})\b",
         r"(?:^|[ ._-])e[ ._-]*0*(\d{1,4})\b",
     )
