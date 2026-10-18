@@ -113,6 +113,8 @@ class EpisodeNumberTests(unittest.TestCase):
         self.assertEqual(cutter.episode_number(Path("Chainsaw Man 2x11 [1280x720 x265].mkv")), 11)
         self.assertEqual(cutter.episode_number(Path("Dorohedoro - 04 [1080p 10bit AAC].mkv")), 4)
         self.assertEqual(cutter.episode_number(Path("Frieren - E03 [1080p].mkv")), 3)
+        self.assertEqual(cutter.episode_number(Path("[SubsPlease] Kaiju No. 8 - 12 [1080p WEB-DL DDP5.1 x265].mkv")), 12)
+        self.assertEqual(cutter.episode_number(Path("Solo Leveling - 11 [1080p AAC2.0].mkv")), 11)
         self.assertIsNone(cutter.episode_number(Path("Anime 1080p.mkv")))
 
     def test_no_episode_number(self):

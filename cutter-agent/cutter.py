@@ -74,9 +74,16 @@ def episode_number(path: Path) -> int | None:
     )
     fallback_name = re.sub(r"\b\d{3,4}\s*[x×]\s*\d{3,4}\b", " ", fallback_name)
     fallback_name = re.sub(
-        r"\b(?:x264|x265|h264|h265|hevc|av1|10bit|8bit|aac2?\.0|aac|flac)\b",
+        r"\b(?:ddp|dd|dts|truehd|atmos|eac3|ac3|aac|flac|opus|mp3)[ ._-]*\d(?:\.\d)?\b",
         " ",
         fallback_name,
+        flags=re.IGNORECASE,
+    )
+    fallback_name = re.sub(
+        r"\b(?:x264|x265|h264|h265|hevc|av1|10bit|8bit|web[- .]?dl|webrip|bluray|bdrip|aac|flac|opus|mp3)\b",
+        " ",
+        fallback_name,
+        flags=re.IGNORECASE,
     )
     numbers = re.findall(r"(?<!\d)(\d{1,4})(?!\d)", fallback_name)
     return int(numbers[-1]) if numbers else None
