@@ -94,7 +94,10 @@
           <h2 id="export-title">Exporta el plan revisado</h2>
           <p class="field-help">Los candidatos pendientes o marcados como «Conservar» no se eliminarán.</p>
         </div>
-        <button id="exportPlan" class="primary-button" disabled>Exportar plan revisado (.json)</button>
+        <div class="export-actions">
+          <button id="exportPlan" class="primary-button" disabled>Exportar plan revisado (.json)</button>
+          <button id="stopReview" class="secondary-button" type="button" hidden>Guardar y finalizar revisión</button>
+        </div>
       </div>
       <p class="small-print">Después, usa ese JSON al renderizar. El archivo final se crea en el PC y los vídeos originales no se modifican.</p>
     </section>

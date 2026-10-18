@@ -20,6 +20,7 @@ const ui = {
   filterStatus: document.getElementById("filterStatus"),
   episodeList: document.getElementById("episodeList"),
   exportPlan: document.getElementById("exportPlan"),
+  stopReview: document.getElementById("stopReview"),
 };
 
 function setStatus(message, kind) {
@@ -474,11 +475,11 @@ ui.videoFolder.addEventListener("change", function () {
 ui.filterStatus.addEventListener("change", renderPlan);
 
 async function exportPlan() {
-  if (!state.plan) return;
+  if (!state.plan) return false;
   const errors = validatePlanForExport();
   if (errors.length) {
     setStatus("No se puede exportar todavía: " + errors.slice(0, 3).join(" "), "error");
-    return;
+    return false;
   }
   const approved = state.plan.episodes.reduce(function (sum, episode) {
     return sum + episode.cuts.filter(function (cut) { return cut.approved === true; }).length;
@@ -494,10 +495,10 @@ async function exportPlan() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "No se pudo guardar el plan.");
       setStatus("Plan guardado en tu PC: " + result.filename + ". " + approved + " cortes aprobados; los demás se conservarán.", "success");
-      return;
+      return true;
     } catch (error) {
       setStatus(error.message || "No se pudo guardar el plan local.", "error");
-      return;
+      return false;
     }
   }
   const blob = new Blob([JSON.stringify(state.plan, null, 2)], { type: "application/json;charset=utf-8" });
@@ -510,13 +511,43 @@ async function exportPlan() {
   anchor.remove();
   URL.revokeObjectURL(url);
   setStatus("Plan exportado. " + approved + " cortes quedaron aprobados; los demás se conservarán. Usa edit-plan-reviewed.json para generar el manifiesto.", "success");
+  return true;
 }
 ui.exportPlan.addEventListener("click", exportPlan);
+
+async function stopReviewServer() {
+  if (!isServerMode() || !state.plan) return;
+  if (!window.confirm("Cutter Studio guardará el plan revisado en tu PC y cerrará el revisor local. Los cortes pendientes o marcados para conservar no se eliminarán. ¿Continuar?")) return;
+
+  ui.stopReview.disabled = true;
+  const saved = await exportPlan();
+  if (!saved) {
+    ui.stopReview.disabled = false;
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "No se pudo cerrar el revisor local.");
+    ui.exportPlan.disabled = true;
+    setStatus("Plan guardado. El revisor local está cerrado; puedes cerrar esta pestaña y volver al lanzador.", "success");
+  } catch (error) {
+    ui.stopReview.disabled = false;
+    setStatus(error.message || "No se pudo cerrar el revisor local. Puedes detenerlo con Ctrl+C en su ventana.", "error");
+  }
+}
+ui.stopReview.addEventListener("click", stopReviewServer);
 
 if (isServerMode()) {
   document.querySelector(".input-grid").hidden = true;
   document.getElementById("import-title").textContent = "Plan cargado desde tu PC";
   ui.exportPlan.textContent = "Guardar plan revisado en el PC";
+  ui.stopReview.hidden = false;
   ui.videoFolder.closest("label").hidden = true;
   fetch("/api/plan", { cache: "no-store" })
     .then(async function (response) {
@@ -534,5 +565,5 @@ if (isServerMode()) {
 }
 
 window.addEventListener("beforeunload", function () {
-  if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
+  if (state.previewUrl && state.previewUrl.startsWith("blob:")) URL.revokeObjectURL(state.previewUrl);
 });

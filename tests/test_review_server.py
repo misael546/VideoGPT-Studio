@@ -87,7 +87,8 @@ class ReviewServerTests(unittest.TestCase):
         self.base_url = "http://127.0.0.1:" + str(self.server.server_port)
 
     def tearDown(self):
-        self.server.shutdown()
+        if self.thread.is_alive():
+            self.server.shutdown()
         self.server.server_close()
         self.thread.join(timeout=2)
         self.temp.cleanup()
@@ -137,6 +138,32 @@ class ReviewServerTests(unittest.TestCase):
             self.assertEqual(response.headers.get("Referrer-Policy"), "no-referrer")
         self.assertEqual(data["schema"], "cutter-studio-edit-plan/v1")
         self.assertEqual(data["episodes"][0]["cuts"][0]["id"], "C00001")
+
+    def test_stop_endpoint_rejects_untrusted_origins(self):
+        request = Request(
+            self.base_url + "/api/stop",
+            data=b"{}",
+            headers={"Content-Type": "application/json", "Origin": "http://example.invalid"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as context:
+            urlopen(request, timeout=5)
+        self.assertEqual(context.exception.code, 403)
+        self.assertTrue(self.thread.is_alive())
+
+    def test_stop_endpoint_shuts_down_the_local_reviewer(self):
+        request = Request(
+            self.base_url + "/api/stop",
+            data=b"{}",
+            headers={"Content-Type": "application/json", "Origin": self.base_url},
+            method="POST",
+        )
+        with urlopen(request, timeout=5) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            self.assertEqual(response.status, 200)
+            self.assertTrue(data["ok"])
+        self.thread.join(timeout=3)
+        self.assertFalse(self.thread.is_alive())
 
     def test_post_saves_reviewed_plan_separately_and_resumes_it(self):
         changed = json.loads(json.dumps(self.plan))

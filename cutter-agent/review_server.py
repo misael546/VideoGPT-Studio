@@ -353,7 +353,20 @@ def build_handler(root: Path, plan_path: Path, preview_dir: Path):
                 return
 
         def do_POST(self):
-            if urlparse(self.path).path != "/api/plan":
+            request_path = urlparse(self.path).path
+            if request_path == "/api/stop":
+                if not self.origin_allowed():
+                    self.send_json(403, {"error": "Origen no autorizado."})
+                    return
+                self.send_json(200, {"ok": True, "message": "Revisor local detenido."})
+
+                def stop_after_response():
+                    time.sleep(0.2)
+                    self.server.shutdown()
+
+                threading.Thread(target=stop_after_response, daemon=True).start()
+                return
+            if request_path != "/api/plan":
                 self.send_json(404, {"error": "No encontrado."})
                 return
             if not self.origin_allowed():

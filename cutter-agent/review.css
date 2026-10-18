@@ -85,6 +85,8 @@ button:disabled, select:disabled { opacity: .45; cursor: not-allowed; }
 .primary-button:not(:disabled):hover { background: #4693f5; }
 .empty-state { padding: 26px; border: 1px dashed #344256; border-radius: 12px; color: var(--muted); text-align: center; }
 .export-panel { margin-top: 24px; }
+.export-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; }
+.export-actions .secondary-button { min-height: 44px; padding: 11px 15px; }
 .export-panel .section-heading { align-items: center; }
 .small-print { margin: 0; border-top: 1px solid var(--border); padding-top: 14px; color: var(--muted); font-size: .78rem; }
 footer { max-width: 1180px; margin: 0 auto; padding: 0 24px 28px; color: #748398; font-size: .75rem; }
