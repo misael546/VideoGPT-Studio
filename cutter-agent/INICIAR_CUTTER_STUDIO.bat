@@ -86,7 +86,8 @@ echo.
 echo Se abrira el revisor local en el navegador.
 echo Los candidatos se revisan antes de eliminar cualquier tramo.
 echo Los videos permanecen en tu PC; el servidor escucha solo en 127.0.0.1.
-echo Cuando termines de revisar, exporta el plan y cierra el revisor con Ctrl+C en su ventana.
+echo Cuando termines, pulsa Guardar y finalizar revision en el navegador.
+echo Si el boton falla, Ctrl+C en la ventana del servidor sirve como alternativa.
 start "Cutter Studio Revisor" /min python "%~dp0review_server.py" --folder "%VIDEO_FOLDER%" --plan "%VIDEO_FOLDER%\edit-plan.json"
 pause
 goto menu
