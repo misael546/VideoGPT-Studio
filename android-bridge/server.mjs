@@ -6,7 +6,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-const HOST = process.env.VIDEOGPT_BRIDGE_HOST || '127.0.0.1';
+const HOST = '127.0.0.1';
 const PORT = Number(process.env.VIDEOGPT_BRIDGE_PORT || 43821);
 const FFMPEG = process.env.FFMPEG_PATH || 'ffmpeg';
 const HOME = os.homedir();
