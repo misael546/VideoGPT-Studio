@@ -119,7 +119,7 @@ function buildArgs(input, output, opts) {
     '-map', '0:v:0', '-map', '0:a?',
     '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23',
     '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k',
-    '-movflags', '+faststart', '-y', output
+    '-movflags', '+faststart', '-n', output
   );
   return args;
 }
