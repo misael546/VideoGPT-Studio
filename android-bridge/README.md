@@ -27,11 +27,13 @@ Clona el repositorio si aún no existe en Termux:
 ```sh
 cd ~
 git clone https://github.com/misael546/VideoGPT-Studio.git
-cd ~/VideoGPT-Studio/android-bridge
+cd ~/VideoGPT-Studio
+git switch feat/android-local-bridge
+cd android-bridge
 node server.mjs
 ```
 
-Si ya clonaste el repositorio, entra a su carpeta y ejecuta `git pull` en la rama `feat/android-local-bridge` antes de iniciar el servidor.
+Si ya clonaste el repositorio, entra a la carpeta del proyecto y ejecuta `git fetch origin && git switch feat/android-local-bridge && git pull` antes de iniciar el servidor.
 
 Al iniciar, el servidor imprime un token de sesión. **No lo publiques ni lo envíes a nadie.** El token cambia al reiniciar el proceso, salvo que configures `VIDEOGPT_BRIDGE_TOKEN` tú mismo.
 
