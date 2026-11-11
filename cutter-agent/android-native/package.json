@@ -1,0 +1,17 @@
+{
+  "name": "cutter-studio-android",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native Android wrapper for the Cutter Studio preparation companion",
+  "scripts": {
+    "build:android": "cap sync android",
+    "android:debug": "cd android && gradlew.bat assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3"
+  }
+}

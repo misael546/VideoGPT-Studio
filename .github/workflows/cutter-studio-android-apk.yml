@@ -1,0 +1,72 @@
+name: Build Cutter Studio Android APK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "cutter-agent/android/**"
+      - "cutter-agent/android-native/**"
+      - ".github/workflows/cutter-studio-android-apk.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cutter-studio-android-apk-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-35 build-tools;35.0.0
+
+      - name: Install Capacitor and prepare local web assets
+        working-directory: cutter-agent/android-native
+        run: |
+          npm install
+          mkdir -p www
+          cp -R ../android/. www/
+          test -s www/index.html
+          test -s www/app.js
+          test -s www/episode-order.js
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug APK
+        working-directory: cutter-agent/android-native/android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Verify APK exists
+        run: |
+          test -s cutter-agent/android-native/android/app/build/outputs/apk/debug/app-debug.apk
+          sha256sum cutter-agent/android-native/android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cutter-Studio-Android-APK
+          path: cutter-agent/android-native/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30

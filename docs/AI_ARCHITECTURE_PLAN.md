@@ -98,3 +98,26 @@ Los únicos valores aceptados deben ser los que el editor ya soporte. Rechazar c
 ## Próximo paso de implementación
 
 Revisar el editor actual y sus pruebas; implementar primero el esquema versionado, el validador y el intérprete determinista en una rama separada. Después conectar únicamente las operaciones que el editor ya soporte y probar en móvil y escritorio antes de fusionar o publicar.
+
+
+## Cutter Studio: PC anfitriona y APK Android como control remoto
+
+Este contrato es obligatorio para Cutter Studio y prevalece sobre cualquier interfaz provisional que permita seleccionar vídeos desde Android:
+
+- **Fuente de verdad:** los episodios originales, análisis, huellas/caché, planes de renderizado, archivos temporales de FFmpeg y el MP4 final residen en la PC Windows.
+- **APK Android:** conserva solo datos ligeros del proyecto (orden, nombres/IDs, ajustes, progreso y estado). No debe importar el vídeo original a su almacenamiento, crear copias offline ni descargar el MP4 completo.
+- **Vista previa:** la PC prepara y transmite fragmentos MP4 de baja resolución bajo demanda, con rango temporal acotado. El reproductor móvil no debe precargar el episodio entero; usar almacenamiento temporal acotado y no persistente, con limpieza al salir o cambiar de fuente.
+- **Control:** Android manda acciones (buscar, reproducir, cambiar orden, revisar/aprobar cortes, iniciar/detener trabajo); el agente local valida cada solicitud y ejecuta el procesamiento en la PC. La PC envía progreso y errores sin enviar el archivo fuente.
+- **Resultado:** el montaje final se guarda en la PC y se puede reproducir en Android por streaming. Descargar/guardar una copia local solo se podrá añadir como opción explícita futura, nunca como comportamiento predeterminado.
+- **Conexión segura:** para uso en casa, preferir red local autenticada; para uso remoto, una VPN o túnel privado con cifrado y autenticación. No exponer el servidor actual enlazado a `127.0.0.1` directamente a Internet ni abrir un puerto público sin protección. Validar rutas permitidas, identidad de cliente, tamaño de peticiones y permisos de cada operación.
+- **Separación de responsabilidades:** GitHub es el centro de código y automatización, no el almacén de episodios ni el servidor de streaming. No subir vídeos privados ni el resultado final a GitHub Actions/Pages.
+
+### Pruebas de aceptación específicas
+
+1. Importar una carpeta en la PC y ver los episodios desde Android sin seleccionar esos vídeos en el teléfono.
+2. Confirmar que el almacenamiento usado por la APK no crece proporcionalmente al tamaño/duración del vídeo.
+3. Buscar y reproducir varios puntos del episodio sin descargarlo completo.
+4. Cerrar/reabrir la APK: el proyecto ligero se recupera y la PC conserva los medios; reconectar no debe duplicar archivos.
+5. Ejecutar un montaje y comprobar que el resultado se crea en la PC y se reproduce en Android por streaming.
+6. Rechazar clientes no autenticados y rutas fuera de la carpeta autorizada; no abrir el agente a Internet de forma insegura.
+7. Si la PC está apagada o desconectada, mostrar el estado «PC no disponible» sin intentar buscar o copiar los vídeos al teléfono.
