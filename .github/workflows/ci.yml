@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Avoid wasting Actions minutes on superseded commits while a PR is changing rapidly.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -18,10 +23,16 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Install FFmpeg for local render integration tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
       - name: Validate resource library and video generator
         run: |
           python -m py_compile scripts/generate-free-isekai.py scripts/validate-resource-library.py
           python scripts/validate-resource-library.py
+          python -m py_compile cutter-agent/cutter.py cutter-agent/edit_plan.py cutter-agent/render.py cutter-agent/review_server.py
+          python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Check server syntax
         run: node --check src/server.js
       - name: Check browser script syntax
@@ -32,8 +43,13 @@ jobs:
           node --check public/natural-language.js
           node --check public/assistant-planner.js
           node --check public/advanced-tools.js
+          node --check cutter-agent/review.js
+          node --check cutter-agent/episode-order.js
           test -s public/editor.html
           test -s public/editor.css
+          test -s cutter-agent/review.html
+          test -s cutter-agent/review.css
+          test -s cutter-agent/episode-order.js
       - name: Test edit plan validator
         run: npm test
       - name: Smoke test API
@@ -49,3 +65,64 @@ jobs:
           done
           cat /tmp/videogpt.log
           exit 1
+      - name: Assemble standalone Cutter Studio local package
+        run: |
+          mkdir -p dist/Cutter-Studio
+          cp cutter-agent/cutter.py cutter-agent/edit_plan.py cutter-agent/render.py cutter-agent/review_server.py dist/Cutter-Studio/
+          cp cutter-agent/review.html cutter-agent/review.css cutter-agent/review.js cutter-agent/episode-order.js cutter-agent/INICIAR_CUTTER_STUDIO.bat cutter-agent/PREPARAR_REQUISITOS_WINDOWS.bat cutter-agent/seleccionar-ruta.ps1 cutter-agent/README.md dist/Cutter-Studio/
+          printf 'Commit: %s\nBuilt (UTC): %s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/Cutter-Studio/BUILD_INFO.txt
+          python -m py_compile dist/Cutter-Studio/cutter.py dist/Cutter-Studio/edit_plan.py dist/Cutter-Studio/render.py dist/Cutter-Studio/review_server.py
+          node --check dist/Cutter-Studio/review.js
+          node --check dist/Cutter-Studio/episode-order.js
+          test -s dist/Cutter-Studio/INICIAR_CUTTER_STUDIO.bat
+          test -s dist/Cutter-Studio/PREPARAR_REQUISITOS_WINDOWS.bat
+          test -s dist/Cutter-Studio/seleccionar-ruta.ps1
+          grep -q 'FolderBrowserDialog' dist/Cutter-Studio/seleccionar-ruta.ps1
+          grep -q 'SaveFileDialog' dist/Cutter-Studio/seleccionar-ruta.ps1
+          test -s dist/Cutter-Studio/review_server.py
+          (cd dist/Cutter-Studio && sha256sum *.py *.js *.html *.css *.bat *.ps1 *.md BUILD_INFO.txt > SHA256SUMS.txt && sha256sum --check SHA256SUMS.txt)
+          test -s dist/Cutter-Studio/SHA256SUMS.txt
+          test -s dist/Cutter-Studio/cutter.py
+          test -s dist/Cutter-Studio/edit_plan.py
+          test -s dist/Cutter-Studio/render.py
+          test -s dist/Cutter-Studio/review_server.py
+          test -s dist/Cutter-Studio/review.html
+          test -s dist/Cutter-Studio/review.css
+          test -s dist/Cutter-Studio/review.js
+          test -s dist/Cutter-Studio/episode-order.js
+      - name: Upload standalone Cutter Studio Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cutter-Studio-Windows-Local
+          path: dist/Cutter-Studio/
+          if-no-files-found: error
+          retention-days: 90
+
+  validate-windows-launcher:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Parse the native Windows picker with PowerShell
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          $pickerPath = (Resolve-Path "cutter-agent/seleccionar-ruta.ps1").Path
+          [void][System.Management.Automation.Language.Parser]::ParseFile($pickerPath, [ref]$tokens, [ref]$parseErrors)
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | Format-List
+            throw "PowerShell syntax validation failed."
+          }
+          $picker = Get-Content $pickerPath -Raw
+          foreach ($required in @("FolderBrowserDialog", "OpenFileDialog", "SaveFileDialog", "OverwritePrompt")) {
+            if (-not $picker.Contains($required)) { throw "Missing expected Windows picker capability: $required" }
+          }
+      - name: Check launcher calls all native pickers
+        shell: pwsh
+        run: |
+          $launcher = Get-Content "cutter-agent/INICIAR_CUTTER_STUDIO.bat" -Raw
+          foreach ($mode in @("Folder", "Plan", "OutputFolder", "OutputVideo", "Watermark")) {
+            if (-not $launcher.Contains("-Mode $mode")) { throw "Launcher does not provide picker mode: $mode" }
+          }
+          if (-not $launcher.Contains("edit-plan-reviewed.json")) { throw "Reviewed plan selection is missing." }

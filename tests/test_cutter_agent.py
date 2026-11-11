@@ -1,0 +1,584 @@
+import importlib.util
+import json
+import shutil
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+MODULE_PATH = Path(__file__).resolve().parents[1] / "cutter-agent" / "cutter.py"
+SPEC = importlib.util.spec_from_file_location("cutter_agent", MODULE_PATH)
+cutter = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(cutter)
+
+
+class SeasonNumberTests(unittest.TestCase):
+    def test_detects_common_season_labels(self):
+        self.assertEqual(cutter.season_number(Path("Anime_S01E12.mkv")), 1)
+        self.assertEqual(cutter.season_number(Path("Temporada 2 Capitulo 03.mp4")), 2)
+        self.assertEqual(cutter.season_number(Path("Season_03_Episode_07.webm")), 3)
+        self.assertIsNone(cutter.season_number(Path("Episode_07.mkv")))
+
+    def test_season_number_can_come_from_parent_folder(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            s1 = root / "Season 01"
+            s2 = root / "Temporada 02"
+            s1.mkdir()
+            s2.mkdir()
+            paths = [
+                s2 / "Episode 01.mkv",
+                s1 / "Episode 02.mkv",
+                s1 / "Episode 01.mkv",
+            ]
+            for path in paths:
+                path.write_bytes(path.name.encode("utf-8"))
+            metadata = {
+                "duration_seconds": 5.0,
+                "width": 320,
+                "height": 240,
+                "has_audio": False,
+                "size_bytes": 20,
+            }
+            with mock.patch.object(cutter, "probe", return_value=metadata):
+                report = cutter.scan(root, root / "scan.json", recursive=True, use_cache=False)
+            self.assertEqual(
+                [(video["season_number"], video["episode_number"], video["filename"])
+                 for video in report["videos_in_proposed_order"]],
+                [
+                    (1, 1, "Episode 01.mkv"),
+                    (1, 2, "Episode 02.mkv"),
+                    (2, 1, "Episode 01.mkv"),
+                ],
+            )
+
+
+    def test_recursive_scan_orders_by_season_then_episode(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            folder = Path(temp_name)
+            names = ["S02E01.mkv", "S01E02.mkv", "S01E01.mkv"]
+            for name in names:
+                (folder / name).write_bytes(name.encode("utf-8"))
+            metadata = {
+                "duration_seconds": 5.0,
+                "width": 320,
+                "height": 240,
+                "has_audio": False,
+                "size_bytes": 20,
+            }
+            with mock.patch.object(cutter, "probe", return_value=metadata):
+                report = cutter.scan(folder, folder / "scan.json", use_cache=False)
+            self.assertEqual(
+                [video["filename"] for video in report["videos_in_proposed_order"]],
+                ["S01E01.mkv", "S01E02.mkv", "S02E01.mkv"],
+            )
+
+
+class ProbeValidationTests(unittest.TestCase):
+    def test_rejects_non_finite_duration_from_ffprobe(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            path = Path(temp_name) / "bad.mp4"
+            path.write_bytes(b"synthetic")
+            payload = {
+                "format": {"duration": "NaN", "size": str(path.stat().st_size)},
+                "streams": [{"codec_type": "video", "width": 320, "height": 240}],
+            }
+            with mock.patch.object(cutter, "run", return_value=json.dumps(payload)):
+                with self.assertRaisesRegex(ValueError, "Duración no válida"):
+                    cutter.probe(path)
+
+    def test_rejects_missing_video_dimensions(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            path = Path(temp_name) / "audio-only.mp4"
+            path.write_bytes(b"synthetic")
+            payload = {
+                "format": {"duration": "3.0", "size": str(path.stat().st_size)},
+                "streams": [{"codec_type": "audio"}],
+            }
+            with mock.patch.object(cutter, "run", return_value=__import__("json").dumps(payload)):
+                with self.assertRaisesRegex(ValueError, "dimensiones"):
+                    cutter.probe(path)
+
+
+class EpisodeNumberTests(unittest.TestCase):
+    def test_episode_labels(self):
+        self.assertEqual(cutter.episode_number(Path("Anime_Ep_007.mkv")), 7)
+        self.assertEqual(cutter.episode_number(Path("Temporada S01E12.mp4")), 12)
+        self.assertEqual(cutter.episode_number(Path("Capitulo 03.webm")), 3)
+
+    def test_ignores_resolution_and_codec_tags_when_finding_episode_number(self):
+        self.assertEqual(cutter.episode_number(Path("Jujutsu-Kaisen-01 [1080p].mkv")), 1)
+        self.assertEqual(cutter.episode_number(Path("[SubsPlease] Frieren - 02 (720p HEVC).mkv")), 2)
+        self.assertEqual(cutter.episode_number(Path("Chainsaw Man 2x11 [1280x720 x265].mkv")), 11)
+        self.assertEqual(cutter.episode_number(Path("Dorohedoro - 04 [1080p 10bit AAC].mkv")), 4)
+        self.assertEqual(cutter.episode_number(Path("Frieren - E03 [1080p].mkv")), 3)
+        self.assertEqual(cutter.episode_number(Path("[SubsPlease] Kaiju No. 8 - 12 [1080p WEB-DL DDP5.1 x265].mkv")), 12)
+        self.assertEqual(cutter.episode_number(Path("Solo Leveling - 11 [1080p AAC2.0].mkv")), 11)
+        self.assertIsNone(cutter.episode_number(Path("Anime 1080p.mkv")))
+
+    def test_no_episode_number(self):
+        self.assertIsNone(cutter.episode_number(Path("opening-final.mkv")))
+
+
+class AbsoluteOffsetTests(unittest.TestCase):
+    def test_start_offset_is_already_absolute(self):
+        self.assertEqual(cutter.absolute_offset(12, 1200, "start"), 12)
+
+    def test_end_offset_accounts_for_tail_window(self):
+        self.assertEqual(cutter.absolute_offset(12, 1200, "end"), 1032)
+
+    def test_short_episode_end_offset_stays_inside_episode(self):
+        self.assertEqual(cutter.absolute_offset(4, 20, "end"), 4)
+
+    def test_end_offset_preserves_fractional_seek_position(self):
+        self.assertEqual(cutter.absolute_offset(0, 181.8, "end"), 1.8)
+        self.assertEqual(cutter.absolute_offset(12, 181.8, "end"), 13.8)
+
+
+class OutputDirectoryTests(unittest.TestCase):
+    def test_recursive_scan_skips_cutter_studio_output_folder(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            source = root / "Episode 01.mkv"
+            source.write_bytes(b"source episode")
+            output_dir = root / "Cutter-Studio-Output"
+            output_dir.mkdir()
+            prior_output = output_dir / "previous-final.mp4"
+            prior_output.write_bytes(b"previous rendered video")
+            metadata = {
+                "duration_seconds": 20.0,
+                "width": 640,
+                "height": 360,
+                "has_audio": False,
+                "size_bytes": source.stat().st_size,
+            }
+            with mock.patch.object(cutter, "probe", return_value=metadata) as probe_mock, \
+                 mock.patch.object(cutter, "frame_hashes", return_value=[int("A" * 64, 16)] * 20):
+                report = cutter.scan(root, root / "scan.json", recursive=True, use_cache=False)
+            self.assertEqual(report["video_count"], 1)
+            self.assertEqual(report["videos_in_proposed_order"][0]["filename"], source.name)
+            self.assertEqual(probe_mock.call_count, 1)
+
+
+class ScanCacheTests(unittest.TestCase):
+    def test_visual_decode_failure_keeps_episode_and_uses_shared_audio(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            first = folder / "Episode 01.mp4"
+            second = folder / "Episode 02.mp4"
+            first.write_bytes(b"synthetic 01")
+            second.write_bytes(b"synthetic 02")
+            visual_a = int("A" * 64, 16)
+            visual_b = int("5" * 64, 16)
+            shared_audio = [int("A" * 20, 16)] * 20
+
+            def fake_probe(path):
+                return {
+                    "duration_seconds": 20.0,
+                    "width": 640,
+                    "height": 360,
+                    "has_audio": True,
+                    "size_bytes": path.stat().st_size,
+                }
+
+            def fake_frames(path, duration, edge):
+                if path.name == second.name and edge == "end":
+                    raise RuntimeError("frame decode failed")
+                base = visual_a if path.name == first.name else visual_b
+                return [base] * 20
+
+            with mock.patch.object(cutter, "probe", side_effect=fake_probe), \
+                 mock.patch.object(cutter, "frame_hashes", side_effect=fake_frames), \
+                 mock.patch.object(cutter, "audio_frame_hashes", return_value=shared_audio):
+                report = cutter.scan(folder, root / "scan.json", use_cache=False)
+
+            self.assertEqual(report["video_count"], 2)
+            self.assertEqual(report["errors"], [])
+            self.assertEqual(len(report["visual_warnings"]), 1)
+            self.assertIn("frame decode failed", report["visual_warnings"][0]["error"])
+            audio_candidates = [
+                candidate for candidate in report["repeated_sequence_candidates"]
+                if "audio" in candidate["modalities"] and candidate["edge"] == "start"
+            ]
+            self.assertTrue(audio_candidates)
+            self.assertTrue(all(candidate["modalities"] == ["audio"] for candidate in audio_candidates))
+
+
+    def test_audio_extraction_warnings_survive_cache_hits(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            video = folder / "Episode 01.mp4"
+            video.write_bytes(b"synthetic test input with audio")
+            metadata = {
+                "duration_seconds": 20.0,
+                "width": 640,
+                "height": 360,
+                "has_audio": True,
+                "size_bytes": video.stat().st_size,
+            }
+            with mock.patch.object(cutter, "probe", return_value=metadata), \
+                 mock.patch.object(cutter, "frame_hashes", return_value=[int("A" * 64, 16)] * 20), \
+                 mock.patch.object(cutter, "audio_frame_hashes", side_effect=RuntimeError("synthetic audio failure")):
+                first = cutter.scan(folder, root / "first.json")
+            self.assertEqual(len(first["audio_warnings"]), 2)
+            second = cutter.scan(folder, root / "second.json")
+            self.assertEqual(second["cache"]["hits"], 1)
+            self.assertEqual(len(second["audio_warnings"]), 2)
+            self.assertTrue(all("synthetic audio failure" in item["error"] for item in second["audio_warnings"]))
+            third = cutter.scan(folder, root / "third.json")
+            self.assertEqual(third["cache"]["hits"], 1)
+            self.assertEqual(len(third["audio_warnings"]), 2)
+
+
+    def test_second_scan_reuses_metadata_and_frame_hashes(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            video = folder / "Episode 01.mp4"
+            video.write_bytes(b"synthetic test input")
+            report_one = root / "scan-one.json"
+            report_two = root / "scan-two.json"
+            metadata = {"duration_seconds": 20.0, "width": 640, "height": 360, "size_bytes": video.stat().st_size}
+            with mock.patch.object(cutter, "probe", return_value=metadata) as probe_mock, \
+                 mock.patch.object(cutter, "frame_hashes", return_value=[int("A" * 64, 16)] * 20) as frame_mock:
+                first = cutter.scan(folder, report_one)
+                self.assertEqual(probe_mock.call_count, 1)
+                self.assertEqual(frame_mock.call_count, 2)
+            with mock.patch.object(cutter, "probe", side_effect=AssertionError("cache miss")), \
+                 mock.patch.object(cutter, "frame_hashes", side_effect=AssertionError("cache miss")):
+                second = cutter.scan(folder, report_two)
+            self.assertEqual(first["cache"]["hits"], 0)
+            self.assertEqual(second["cache"]["hits"], 1)
+            self.assertEqual(second["cache"]["misses"], 0)
+            self.assertEqual(second["videos_in_proposed_order"][0]["duration_seconds"], 20.0)
+
+
+class PerceptualHashTests(unittest.TestCase):
+    def test_combined_hash_encodes_average_pattern_and_gradients(self):
+        pixels = bytes(50 + ((index * 13) % 80) for index in range(256))
+        fingerprint = cutter.perceptual_hash(pixels)
+        self.assertGreater(fingerprint.bit_length(), cutter.AHASH_BITS)
+        self.assertNotEqual(fingerprint & ((1 << cutter.DHASH_BITS) - 1), 0)
+
+    def test_uniform_brightness_shift_preserves_fingerprint(self):
+        pixels = bytes(40 + ((index * 13) % 80) for index in range(256))
+        brighter = bytes(value + 45 for value in pixels)
+        self.assertEqual(cutter.perceptual_hash(pixels), cutter.perceptual_hash(brighter))
+
+    def test_rejects_wrong_pixel_count(self):
+        with self.assertRaisesRegex(ValueError, "píxeles"):
+            cutter.perceptual_hash(b"short")
+
+
+class AudioFingerprintTests(unittest.TestCase):
+    @staticmethod
+    def make_pcm(scale=1.0):
+        from array import array
+        import math
+        samples = array("f")
+        for subchunk in range(10):
+            amplitudes = [
+                scale * (0.06 + 0.035 * ((subchunk + band) % 4))
+                for band in range(cutter.AUDIO_CHANNELS)
+            ]
+            for frame in range(cutter.AUDIO_SAMPLE_RATE // cutter.AUDIO_SUBCHUNKS_PER_SECOND):
+                time_value = (subchunk * 800 + frame) / cutter.AUDIO_SAMPLE_RATE
+                for band, amplitude in enumerate(amplitudes):
+                    frequency = 90 + band * 170
+                    samples.append(amplitude * math.sin(2 * math.pi * frequency * time_value))
+        return samples.tobytes()
+
+    def test_fingerprint_is_stable_under_uniform_gain_change(self):
+        normal = cutter.audio_fingerprints(self.make_pcm())
+        quieter = cutter.audio_fingerprints(self.make_pcm(0.6))
+        self.assertEqual(len(normal), 1)
+        self.assertEqual(normal, quieter)
+        self.assertGreater(normal[0], 0)
+
+    def test_silence_is_marked_invalid(self):
+        silent_pcm = bytes(cutter.AUDIO_SAMPLE_RATE * cutter.AUDIO_CHANNELS * 4)
+        self.assertEqual(cutter.audio_fingerprints(silent_pcm), [-1])
+
+    def test_matching_does_not_treat_silence_as_reliable_sequence(self):
+        self.assertEqual(
+            cutter.matching_runs([-1] * 12, [-1] * 12, "start", max_hash_distance=cutter.AUDIO_HASH_DISTANCE),
+            [],
+        )
+
+
+class MatchQualityTests(unittest.TestCase):
+    def test_high_quality_means_long_consistent_visual_match(self):
+        self.assertEqual(cutter.quality_level(45, 0.98, 20), "high")
+
+    def test_short_or_noisy_match_is_not_labeled_high(self):
+        self.assertEqual(cutter.quality_level(10, 0.75, 70), "low")
+        self.assertEqual(cutter.quality_level(20, 0.85, 50), "medium")
+
+
+@unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg/FFprobe no instalados")
+class ScannerIntegrationTests(unittest.TestCase):
+    def test_scanner_finds_shared_intro_in_synthetic_episodes(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            first = folder / "Episode 01.mp4"
+            second = folder / "Episode 02.mp4"
+
+            def make_episode(path, tail_source):
+                subprocess.run([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=10:duration=10",
+                    "-f", "lavfi", "-i", tail_source,
+                    "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0,format=yuv420p[v]",
+                    "-map", "[v]", "-c:v", "libx264", "-preset", "ultrafast",
+                    "-pix_fmt", "yuv420p", str(path),
+                ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            make_episode(first, "smptebars=size=320x240:rate=10:duration=8")
+            make_episode(second, "testsrc=size=320x240:rate=10:duration=8")
+            report = cutter.scan(folder, root / "scan.json", use_cache=False)
+
+            candidates = [
+                item for item in report["repeated_sequence_candidates"]
+                if item["edge"] == "start"
+                and item["episode_a_offset_seconds"] == 0
+                and item["episode_b_offset_seconds"] == 0
+                and item["duration_seconds"] >= 8
+            ]
+            self.assertTrue(candidates, "Se esperaba detectar los primeros 10 s repetidos")
+            candidate = max(candidates, key=lambda item: item["duration_seconds"])
+            self.assertEqual(candidate["episode_a_cut_start_seconds"], 0)
+            self.assertEqual(candidate["episode_b_cut_start_seconds"], 0)
+            self.assertIn(candidate["match_quality"]["visual"]["level"], {"low", "medium", "high"})
+
+    def test_scanner_finds_shared_ending_when_episode_openings_differ(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            first = folder / "Episode 01.mp4"
+            second = folder / "Episode 02.mp4"
+
+            def make_episode(path, intro_source, middle_source):
+                subprocess.run([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", f"{intro_source}=size=320x240:rate=10:duration=8",
+                    "-f", "lavfi", "-i", f"{middle_source}=size=320x240:rate=10:duration=8",
+                    "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=10:duration=10",
+                    "-filter_complex", "[0:v][1:v][2:v]concat=n=3:v=1:a=0,format=yuv420p[v]",
+                    "-map", "[v]", "-c:v", "libx264", "-preset", "ultrafast",
+                    "-pix_fmt", "yuv420p", str(path),
+                ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            make_episode(first, "testsrc", "smptebars")
+            make_episode(second, "smptebars", "testsrc")
+            report = cutter.scan(folder, root / "scan-ending.json", use_cache=False)
+
+            ending_candidates = [
+                item for item in report["repeated_sequence_candidates"]
+                if item["edge"] == "end"
+                and item["episode_a_offset_seconds"] >= 15
+                and item["episode_b_offset_seconds"] >= 15
+                and item["duration_seconds"] >= 8
+                and "visual" in item["modalities"]
+            ]
+            self.assertTrue(
+                ending_candidates,
+                "Se esperaba detectar los 10 s finales compartidos aunque los inicios fueran distintos",
+            )
+            best = max(ending_candidates, key=lambda item: item["duration_seconds"])
+            self.assertGreaterEqual(best["duration_seconds"], 8)
+            self.assertAlmostEqual(best["episode_a_offset_seconds"], 16, delta=2)
+            self.assertAlmostEqual(best["episode_b_offset_seconds"], 16, delta=2)
+
+    def test_same_filenames_in_different_seasons_do_not_cross_combine_evidence(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            season_one = root / "Season_01"
+            season_two = root / "Season_02"
+            season_one.mkdir()
+            season_two.mkdir()
+            files = {
+                "s1e1": season_one / "Episode 01.mkv",
+                "s1e2": season_one / "Episode 02.mkv",
+                "s2e1": season_two / "Episode 01.mkv",
+                "s2e2": season_two / "Episode 02.mkv",
+            }
+            for path in files.values():
+                path.write_bytes(path.name.encode("utf-8"))
+
+            visual_bases = {
+                "s1e1": 0,
+                "s1e2": 0,
+                "s2e1": sum(1 << bit for bit in range(0, 120)),
+                "s2e2": sum(1 << bit for bit in range(200, 320)),
+            }
+            audio_bases = {
+                "s1e1": sum(1 << bit for bit in range(0, 30)),
+                "s1e2": sum(1 << bit for bit in range(40, 70)),
+                "s2e1": 0,
+                "s2e2": 0,
+            }
+
+            def key_for_path(path):
+                for key, value in files.items():
+                    if value.resolve() == path.resolve():
+                        return key
+                raise AssertionError("unexpected test path: " + str(path))
+
+            def fake_probe(path):
+                return {
+                    "duration_seconds": 20.0,
+                    "width": 320,
+                    "height": 240,
+                    "has_audio": True,
+                    "size_bytes": path.stat().st_size,
+                }
+
+            def fake_visual(path, duration, edge):
+                base = visual_bases[key_for_path(path)]
+                return [base ^ (1 << (400 + (i % 20))) for i in range(20)]
+
+            def fake_audio(path, duration, edge):
+                base = audio_bases[key_for_path(path)]
+                return [base | (1 << (70 + (i % 10))) for i in range(20)]
+
+            with mock.patch.object(cutter, "probe", side_effect=fake_probe), \
+                 mock.patch.object(cutter, "frame_hashes", side_effect=fake_visual), \
+                 mock.patch.object(cutter, "audio_frame_hashes", side_effect=fake_audio):
+                report = cutter.scan(root, root / "scan.json", recursive=True, use_cache=False)
+
+            start_candidates = [
+                item for item in report["repeated_sequence_candidates"]
+                if item["edge"] == "start"
+            ]
+            s1_pair = {str(files["s1e1"].resolve()), str(files["s1e2"].resolve())}
+            s2_pair = {str(files["s2e1"].resolve()), str(files["s2e2"].resolve())}
+            visual_s1 = [
+                item for item in start_candidates
+                if {item["episode_a_path"], item["episode_b_path"]} == s1_pair
+            ]
+            audio_s2 = [
+                item for item in start_candidates
+                if {item["episode_a_path"], item["episode_b_path"]} == s2_pair
+            ]
+            self.assertTrue(visual_s1, "Debe existir la coincidencia visual en temporada 1")
+            self.assertTrue(audio_s2, "Debe existir la coincidencia de audio en temporada 2")
+            self.assertTrue(all(item["modalities"] == ["visual"] for item in visual_s1))
+            self.assertTrue(all(item["modalities"] == ["audio"] for item in audio_s2))
+
+
+    def test_scanner_finds_shared_audio_when_opening_images_differ(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            folder = root / "episodes"
+            folder.mkdir()
+            first = folder / "Episode 01.mp4"
+            second = folder / "Episode 02.mp4"
+
+            def make_episode(path, video_source):
+                subprocess.run([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", f"{video_source}=size=320x240:rate=10:duration=18",
+                    "-f", "lavfi", "-i", "aevalsrc=0.35*sin(2*PI*(100*t+30*t*t)):s=48000:d=18",
+                    "-map", "0:v:0", "-map", "1:a:0",
+                    "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+                    "-c:a", "aac", "-b:a", "128k", "-shortest", str(path),
+                ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            make_episode(first, "testsrc2")
+            make_episode(second, "testsrc")
+            report = cutter.scan(folder, root / "scan-audio.json", use_cache=False)
+
+            audio_candidates = [
+                item for item in report["repeated_sequence_candidates"]
+                if "audio" in item["modalities"] and item["edge"] == "start"
+                and item["duration_seconds"] >= 8
+            ]
+            self.assertTrue(audio_candidates, f"No se detectó el audio compartido. Avisos: {report['audio_warnings']}")
+            self.assertTrue(all("audio" in item["match_quality"] for item in audio_candidates))
+
+
+class RepeatedSequenceTests(unittest.TestCase):
+    def test_detects_eight_or_more_similar_samples(self):
+        frames = [int('A' * 64, 16) for _ in range(10)]
+        matches = cutter.matching_runs(frames, frames.copy(), "start")
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["duration_seconds"], 10)
+
+    def test_collapses_nearby_alignment_shifts_for_one_long_sequence(self):
+        frames = [int("A" * 64, 16)] * 60
+        matches = cutter.matching_runs(frames, frames.copy(), "start")
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["duration_seconds"], 60)
+        self.assertEqual(matches[0]["episode_a_offset_seconds"], 0)
+        self.assertEqual(matches[0]["episode_b_offset_seconds"], 0)
+
+    def test_ignores_short_matches(self):
+        frames = [int('A' * 64, 16) for _ in range(7)]
+        self.assertEqual(cutter.matching_runs(frames, frames.copy(), "end"), [])
+
+    def test_finds_sequence_with_small_timing_offset(self):
+        high = int("F" * 64, 16)
+        a = [0 if i % 2 == 0 else high for i in range(20)]
+        b = [high, high, *a]
+        matches = cutter.matching_runs(a, b, "start")
+        self.assertTrue(any(
+            m["episode_a_offset_seconds"] == 0
+            and m["episode_b_offset_seconds"] == 2
+            and m["duration_seconds"] == 20
+            for m in matches
+        ))
+
+    def test_tolerates_two_isolated_visual_mismatches_and_reports_quality(self):
+        frame = int("A" * 64, 16)
+        other = int("5" * 64, 16)
+        left = [frame] * 20
+        right = [frame] * 20
+        right[5] = other
+        right[13] = other
+        matches = cutter.matching_runs(left, right, "start")
+        self.assertTrue(matches)
+        best = max(matches, key=lambda item: item["duration_seconds"])
+        self.assertEqual(best["duration_seconds"], 20)
+        self.assertLess(best["match_ratio"], 1.0)
+        self.assertEqual(best["matched_samples"], 18)
+
+    def test_valid_eight_sample_run_survives_coarse_screen_with_two_misses(self):
+        frame = int("A" * 64, 16)
+        other = frame ^ ((1 << 120) - 1)
+        left = [frame] * 8
+        right = [frame] * 8
+        right[2] = other
+        right[6] = other
+        matches = cutter.matching_runs(left, right, "start")
+        self.assertTrue(matches)
+        self.assertEqual(max(item["duration_seconds"] for item in matches), 8)
+        best = max(matches, key=lambda item: item["duration_seconds"])
+        self.assertEqual(best["matched_samples"], 6)
+
+    def test_three_spaced_mismatches_do_not_stay_in_one_candidate_run(self):
+        frame = int("A" * 64, 16)
+        other = frame ^ ((1 << 120) - 1)
+        left = [frame] * 20
+        right = [frame] * 20
+        for index in (5, 10, 15):
+            right[index] = other
+        matches = cutter.matching_runs(left, right, "start")
+        self.assertTrue(matches)
+        self.assertLess(max(item["duration_seconds"] for item in matches), 20)
+
+
+    def test_empty_sequences_do_not_match(self):
+        self.assertEqual(cutter.matching_runs([], [1] * 20, "end"), [])
+
+
+if __name__ == "__main__":
+    unittest.main()
